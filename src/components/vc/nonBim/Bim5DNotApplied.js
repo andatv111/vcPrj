@@ -19,7 +19,7 @@ import {
   PIPE_COLUMNS,
   PIPE_TYPE_OPTIONS,
 } from "./core/NonBim.constant";
-import { isPipeFieldEditable, toDisplayText } from "./core/NonBim.helper";
+import { isCalculationLockedByDrawingStatus, isPipeFieldEditable, toDisplayText } from "./core/NonBim.helper";
 import VcResultPopup from "./popup/VcResultPopup";
 
 const h = React.createElement;
@@ -40,6 +40,7 @@ const Bim5DNotApplied = () => {
   const error = useSelector(selectError);
 
   const canEditPipe = Boolean(selectedDrawing && activeChamber);
+  const calculationLocked = isCalculationLockedByDrawingStatus(selectedDrawing?.requestStatus);
 
   useEffect(() => {
     // EQ ID 입력값이 바뀔 때마다 saga에서 debounce 후 자동완성 후보를 조회합니다.
@@ -79,6 +80,9 @@ const Bim5DNotApplied = () => {
       error,
       loading,
       onSearchChange: handleSearchChange,
+      // action: RESET_SEARCH
+      // 사용처: reducer가 검색 조건과 EQ 자동완성 후보를 초기 상태로 되돌립니다.
+      onResetSearch: () => dispatch(nonBimActions.resetSearch()),
       // action: FETCH_MANUAL_DRAWINGS_REQUEST
       // 사용처: saga가 현재 search state로 도면 목록 API를 호출하고, reducer가 drawings를 갱신합니다.
       onSearch: () => dispatch(nonBimActions.fetchManualDrawingsRequest()),
@@ -97,6 +101,7 @@ const Bim5DNotApplied = () => {
     h(ChamberPanel, {
       activeChamber,
       canEditPipe,
+      calculationLocked,
       chambers,
       loading,
       selectedDrawing,
@@ -129,7 +134,7 @@ const Bim5DNotApplied = () => {
   );
 };
 
-const SearchPanel = ({ search, eqSuggestions, error, onSearchChange, onSearch }) =>
+const SearchPanel = ({ search, eqSuggestions, error, loading, onSearchChange, onResetSearch, onSearch }) =>
   // 검색 조건 패널입니다. EQ ID는 datalist 자동완성을 쓰고, Search 버튼으로 도면 목록을 조회합니다.
   h(
     "section",
@@ -166,7 +171,21 @@ const SearchPanel = ({ search, eqSuggestions, error, onSearchChange, onSearch })
           onChange: onSearchChange("constructionNo"),
         })
       ),
-      h("button", { type: "button", className: "primary-button", onClick: onSearch }, "Search")
+      h(
+        "button",
+        {
+          type: "button",
+          className: "secondary-button",
+          disabled: loading.drawings || (!search.eqId && !search.constructionNo),
+          onClick: onResetSearch,
+        },
+        "Reset"
+      ),
+      h(
+        "button",
+        { type: "button", className: "primary-button", disabled: loading.drawings, onClick: onSearch },
+        loading.drawings ? "Searching..." : "Search"
+      )
     ),
     error ? h("div", { className: "error-box" }, error) : null
   );
@@ -255,6 +274,7 @@ const ChamberPanel = (props) => {
   const {
     activeChamber,
     canEditPipe,
+    calculationLocked,
     chambers,
     loading,
     selectedDrawing,
@@ -286,8 +306,10 @@ const ChamberPanel = (props) => {
           {
             type: "button",
             className: "secondary-button",
-            disabled: true,
-            title: `Disabled for now. Up to ${MAX_CHAMBER_COUNT} chambers`,
+            disabled: !selectedDrawing || chambers.length >= MAX_CHAMBER_COUNT,
+            title: selectedDrawing
+              ? `Up to ${MAX_CHAMBER_COUNT} chambers. Original drawing chambers cannot be removed.`
+              : "Select a drawing before adding a chamber.",
             onClick: onAddChamber,
           },
           "Add Chamber"
@@ -329,7 +351,9 @@ const ChamberPanel = (props) => {
             ? h(ActiveChamberEditor, {
                 activeChamber,
                 canEditPipe,
+                calculationLocked,
                 loading,
+                selectedDrawingStatus: selectedDrawing?.requestStatus,
                 onChamberChange,
                 onAddPipeRow,
                 onRemovePipeRow,
@@ -345,7 +369,9 @@ const ChamberPanel = (props) => {
 const ActiveChamberEditor = ({
   activeChamber,
   canEditPipe,
+  calculationLocked,
   loading,
+  selectedDrawingStatus,
   onChamberChange,
   onAddPipeRow,
   onRemovePipeRow,
@@ -413,7 +439,7 @@ const ActiveChamberEditor = ({
       h(
         "div",
         { className: "button-group" },
-        h("button", { type: "button", className: "secondary-button", disabled: !canEditPipe, onClick: onAddPipeRow }, "Add Pipe"),
+        h("button", { type: "button", className: "secondary-button", disabled: !canEditPipe, onClick: onAddPipeRow }, "Add"),
         h(
           "button",
           {
@@ -422,7 +448,7 @@ const ActiveChamberEditor = ({
             disabled: !activeChamber.selectedPipeRowId,
             onClick: onRemovePipeRow,
           },
-          "Remove Pipe"
+          "Remove"
         )
       )
     ),
@@ -430,12 +456,23 @@ const ActiveChamberEditor = ({
     h(
       "div",
       { className: "footer-actions" },
-      h(
-        "button",
-        { type: "button", className: "primary-button", disabled: loading.calculate, onClick: onCalculate },
-        "Calculate"
+      calculationLocked
+        ? h(
+            "span",
+            { className: "muted" },
+            `Status: ${toDisplayText(selectedDrawingStatus)}`
+          )
+        : h(
+            "button",
+            {
+              type: "button",
+              className: "primary-button",
+              disabled: loading.calculate,
+              onClick: onCalculate,
+            },
+            "Calculate"
+          )
       )
-    )
   );
 
 const PipeTable = ({ activeChamber, onSelectPipeRow, onPipeRowChange }) =>

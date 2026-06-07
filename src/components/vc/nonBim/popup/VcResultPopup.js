@@ -9,7 +9,6 @@ import {
   selectVcResultHasSpecOut,
   selectVcResultLoading,
   selectVcResultRows,
-  selectVcResultSavedInfo,
   selectVcResultVisible,
 } from "../../../../store/vc/vcResult/vcSimSelector";
 import { JUDGE, JUDGE_LABEL, RESULT_COLUMNS } from "../core/NonBim.constant";
@@ -26,7 +25,6 @@ const VcResultPopup = () => {
   const rows = useSelector(selectVcResultRows);
   const loading = useSelector(selectVcResultLoading);
   const error = useSelector(selectVcResultError);
-  const savedInfo = useSelector(selectVcResultSavedInfo);
   const draftPopup = useSelector(selectVcResultDraftPopup);
   const hasSpecOut = useSelector(selectVcResultHasSpecOut);
 
@@ -81,7 +79,6 @@ const VcResultPopup = () => {
         ? h("div", { className: "notice-box warning" }, "Spec Out Chamber가 있습니다. 최종결과저장 시 표준 기안 첨부가 필요합니다.")
         : h("div", { className: "notice-box success" }, "모든 Spec 판정이 IN입니다. 최종 결과 저장이 가능합니다."),
       error ? h("div", { className: "error-box" }, error) : null,
-      savedInfo ? h("div", { className: "notice-box success" }, `저장 완료: ${savedInfo.savedId}`) : null,
       h(
         "div",
         { className: "footer-actions" },
@@ -109,7 +106,7 @@ const VcResultPopup = () => {
           "취소"
         )
       ),
-      draftPopup.visible ? h(DraftAttachPopup, { draftPopup }) : null
+      draftPopup.visible ? h(DraftAttachPopup, { draftPopup, error, loading }) : null
     )
   );
 };
@@ -164,8 +161,13 @@ const ReadonlyField = ({ label, value }) =>
     h("input", { value: toDisplayText(value), readOnly: true })
   );
 
-const DraftAttachPopup = ({ draftPopup }) => {
+const DraftAttachPopup = ({ draftPopup, error, loading }) => {
   const dispatch = useDispatch();
+  const canSaveWithDraft = Boolean(draftPopup.title.trim() && draftPopup.attachmentName.trim());
+  const handleAttachmentChange = (event) => {
+    const fileName = event.target.files?.[0]?.name || "";
+    dispatch(vcResultActions.setDraftField({ name: "attachmentName", value: fileName }));
+  };
 
   // Non-BIM 결과 중 Spec Out이 있으면 최종 저장 전에 기안 첨부 정보를 요구하는 중첩 팝업입니다.
   return h(
@@ -206,17 +208,18 @@ const DraftAttachPopup = ({ draftPopup }) => {
           })
         ),
         h(
-          "label",
+          "div",
           { className: "field" },
-          h("span", null, "첨부 파일명"),
+          h("span", null, "첨부 파일"),
           h("input", {
-            value: draftPopup.attachmentName,
-            placeholder: "standard_draft.pdf",
+            type: "file",
             // action: SET_DRAFT_FIELD
-            // 사용처: reducer가 draftPopup.attachmentName을 갱신합니다.
-            onChange: (event) =>
-              dispatch(vcResultActions.setDraftField({ name: "attachmentName", value: event.target.value })),
-          })
+            // 사용처: reducer에는 실제 파일 객체 대신 저장 API mock이 쓰는 파일명만 보관합니다.
+            onChange: handleAttachmentChange,
+          }),
+          draftPopup.attachmentName
+            ? h("span", { className: "muted" }, draftPopup.attachmentName)
+            : null
         )
       ),
       h(
@@ -231,6 +234,7 @@ const DraftAttachPopup = ({ draftPopup }) => {
           onChange: (event) => dispatch(vcResultActions.setDraftField({ name: "comment", value: event.target.value })),
         })
       ),
+      error ? h("div", { className: "error-box" }, error) : null,
       h(
         "div",
         { className: "footer-actions" },
@@ -239,11 +243,12 @@ const DraftAttachPopup = ({ draftPopup }) => {
           {
             type: "button",
             className: "primary-button",
+            disabled: !canSaveWithDraft || loading.save,
             // action: SAVE_RESULT_REQUEST
             // 사용처: 기안 정보 입력 후 다시 저장 요청을 보내 saga 저장 API 흐름으로 진입합니다.
             onClick: () => dispatch(vcResultActions.saveResultRequest()),
           },
-          "기안 첨부 후 저장"
+          loading.save ? "Saving..." : "기안 첨부 후 저장"
         ),
         h(
           "button",

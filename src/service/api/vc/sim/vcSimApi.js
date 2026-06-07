@@ -483,12 +483,17 @@ export const vcSimApi = {
     // payload.draft는 Spec Out 기안 첨부 팝업 입력값이며, Calculator 저장에서는 비어 있을 수 있습니다.
     await sleep(250);
 
+    // B/E 저장 API도 저장 성공 후 Manual Drawing Results에 반영할 nextStatus/requestStatus를 반환해야 합니다.
+    // 조회 API의 requestStatus와 같은 값이면 저장 직후/재조회 후 Calculate 노출 기준이 일관됩니다.
+    const draftAttached = Boolean(payload.draft?.attachmentName || payload.draft?.title);
+
     return {
       savedId: `VC-SAVE-${Date.now()}`,
       sourceType: payload.sourceType,
       savedAt: new Date().toISOString(),
       rowCount: payload.rows?.length || 0,
-      draftAttached: Boolean(payload.draft?.attachmentName || payload.draft?.title),
+      draftAttached,
+      nextStatus: draftAttached ? "Draft Attached" : "Saved",
     };
   },
 };

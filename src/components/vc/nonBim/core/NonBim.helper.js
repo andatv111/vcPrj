@@ -1,5 +1,6 @@
 import {
   CHAMBER_PREFIX,
+  CALCULATION_LOCKED_DRAWING_STATUSES,
   EMPTY_TEXT,
   JUDGE,
   MAX_CHAMBER_COUNT,
@@ -40,6 +41,11 @@ export const toDisplayText = (value) => {
   if (value === undefined || value === null || value === "") return EMPTY_TEXT;
   return value;
 };
+
+// Manual Drawing Results의 Status만으로 Calculate 노출 여부를 판단합니다.
+// B/E 상태 코드가 추가되면 NonBim.constant.js의 CALCULATION_LOCKED_DRAWING_STATUSES에 매핑하세요.
+export const isCalculationLockedByDrawingStatus = (status) =>
+  CALCULATION_LOCKED_DRAWING_STATUSES.includes(String(status || ""));
 
 export const onlyNumberLike = (value) => {
   // 계산 API에는 숫자형 문자열만 넘기기 위해 입력 단계에서 허용 문자를 제한합니다.

@@ -19,6 +19,21 @@ export const PIPE_TYPE_OPTIONS = [
   { value: PIPE_TYPE.REDUCER, label: PIPE_TYPE_LABEL[PIPE_TYPE.REDUCER] },
 ];
 
+export const DRAWING_STATUS = {
+  READY: "Ready",
+  IN_REVIEW: "In Review",
+  DRAFT: "Draft",
+  SAVED: "Saved",
+  DRAFT_ATTACHED: "Draft Attached",
+};
+
+// B/E 조회 응답의 requestStatus가 아래 값 중 하나이면 이미 저장/기안 완료된 도면으로 보고
+// Non-BIM 화면의 Calculate 버튼을 숨깁니다. 실제 연동 시에는 회사 상태 코드도 여기로 매핑하세요.
+export const CALCULATION_LOCKED_DRAWING_STATUSES = [
+  DRAWING_STATUS.SAVED,
+  DRAWING_STATUS.DRAFT_ATTACHED,
+];
+
 // 배관 유형별 입력 가능 컬럼과 필수값 정책입니다.
 // reducer/helper는 이 정책을 기준으로 비활성 컬럼 값을 비우고 계산 전 필수값을 검증합니다.
 export const PIPE_TYPE_FIELD_POLICY = {
