@@ -49,6 +49,7 @@ export const NON_BIM_ACTION_TYPES = {
   FETCH_MANUAL_DRAWINGS_REQUEST: `${NON_BIM_ACTION_PREFIX}/FETCH_MANUAL_DRAWINGS_REQUEST`,
   FETCH_MANUAL_DRAWINGS_SUCCESS: `${NON_BIM_ACTION_PREFIX}/FETCH_MANUAL_DRAWINGS_SUCCESS`,
   FETCH_MANUAL_DRAWINGS_FAILURE: `${NON_BIM_ACTION_PREFIX}/FETCH_MANUAL_DRAWINGS_FAILURE`,
+  UPDATE_DRAWING_STATUS: `${NON_BIM_ACTION_PREFIX}/UPDATE_DRAWING_STATUS`,
 
   SELECT_DRAWING: `${NON_BIM_ACTION_PREFIX}/SELECT_DRAWING`,
 
@@ -136,8 +137,16 @@ export const nonBimActions = {
     payload: { error },
   }),
 
+  // dispatch: 결과 저장/기안 첨부 저장 성공 후 선택 도면 상태 갱신
+  // reducer: Manual Drawing Results row와 selectedDrawing의 requestStatus를 같은 값으로 맞춥니다.
+  // B/E 저장 API가 nextStatus/requestStatus를 반환하면 saga가 이 action으로 화면 상태를 갱신합니다.
+  updateDrawingStatus: ({ drawingId, requestStatus, savedInfo }) => ({
+    type: NON_BIM_ACTION_TYPES.UPDATE_DRAWING_STATUS,
+    payload: { drawingId, requestStatus, savedInfo },
+  }),
+
   // 첫 번째 그리드 Radio 선택.
-// reducer에서 선택된 drawing 기준으로 Chamber 탭을 생성한다.
+  // reducer에서 선택된 drawing 기준으로 Chamber 탭을 생성한다.
   // dispatch: 도면 결과 radio 선택
   // reducer: selectedDrawing과 chambers를 생성
   // saga: 같은 action을 받아 Model Standard option을 추가 조회합니다.

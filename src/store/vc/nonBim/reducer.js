@@ -88,6 +88,16 @@ const updateActiveChamberIdAfterRemove = (chambers, currentActiveChamberId) => {
   return chambers[0].id;
 };
 
+const updateDrawingStatus = (drawing, requestStatus, savedInfo) => {
+  if (!drawing) return drawing;
+
+  return {
+    ...drawing,
+    requestStatus,
+    savedInfo: savedInfo || drawing.savedInfo,
+  };
+};
+
 const nonBimReducer = (state = initialNonBimState, action = {}) => {
   switch (action.type) {
     // 조회조건 입력 변경 처리.
@@ -152,8 +162,27 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
         error: action.payload.error,
       };
 
+    // 저장 성공 후 수기도면 row 상태 갱신.
+    // 선택 row와 그리드 row를 동시에 갱신해야 저장 직후에도 조회 결과와 같은 화면 상태가 됩니다.
+    case NON_BIM_ACTION_TYPES.UPDATE_DRAWING_STATUS: {
+      const { drawingId, requestStatus, savedInfo } = action.payload;
+
+      // 저장 성공 후 Manual Drawing Results의 Status를 즉시 갱신합니다.
+      // B/E 조회 API도 같은 requestStatus를 내려주면, 화면은 이 상태값만 보고 Calculate 노출을 결정합니다.
+      return {
+        ...state,
+        drawings: state.drawings.map((drawing) =>
+          drawing.id === drawingId ? updateDrawingStatus(drawing, requestStatus, savedInfo) : drawing
+        ),
+        selectedDrawing:
+          state.selectedDrawing?.id === drawingId
+            ? updateDrawingStatus(state.selectedDrawing, requestStatus, savedInfo)
+            : state.selectedDrawing,
+      };
+    }
+
     // 첫 번째 그리드에서 수기도면 1건 선택.
-// 선택된 도면의 chamberCount/chambers를 기준으로 하단 Chamber 탭을 생성한다.
+    // 선택된 도면의 chamberCount/chambers를 기준으로 하단 Chamber 탭을 생성한다.
     case NON_BIM_ACTION_TYPES.SELECT_DRAWING: {
       const drawing = state.drawings.find((item) => item.id === action.payload.drawingId) || null;
       const chambers = drawing ? normalizeChambersFromDrawing(drawing) : [];

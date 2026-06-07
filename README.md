@@ -1,163 +1,200 @@
-#git
-1. 집 PC에서 Codex + Git 연결
-git init
-git remote add origin https://github.com/andatv111/vcPrj.git
-git add .
-git commit -m "initial commit"
-git branch -M main
-git push -u origin main
--이미 Git 연결된 폴더면 이것만 확인:
-git remote -v
-git status
-git pull
-2. 핸드폰 웹 Codex에서 작업한 뒤
+# V/C Simulation Preview
 
+`codex-work` 브랜치에서 작업 중인 V/C Simulation 프론트 미리보기입니다. 회사 B/E와 공통 UI에 붙이기 전에 Non-BIM 수기 도면 기반 계산, 수동 Calculator, 공유 결과 팝업 흐름을 React/Redux/Saga/mock API로 검증합니다.
 
-# V/C Simulation Front-End Conversion Guide
+## 실행
 
-이 프로젝트는 BIM/5D 미적용 Fab 화면, V/C Calculator, 결과 저장 팝업을 React/Redux/Saga로 구현한 프론트엔드 샘플입니다. 현재 코드는 UI 기능 검증을 위해 mock API와 HTML 기본 테이블/폼을 사용하고 있으며, 회사 프로젝트에 이관할 때는 회사의 공통 컴포넌트, 공통코드 조회 규칙, HTTP 인스턴스, Java/XML Query 기반 B/E API에 맞춰 연결해야 합니다.
+```bash
+npm install
+npm run dev
+npm run build
+```
 
-## 먼저 볼 파일
+개발 서버는 Vite 기본 포트인 `5173`에서 실행됩니다.
+
+## 화면 구성
+
+| 화면 | 설명 |
+| --- | --- |
+| BIM/5D Not Applied Fab | EQ/공사번호로 수기 도면을 조회하고, 선택 도면의 Chamber/배관 정보를 수정한 뒤 V/C를 계산합니다. |
+| V/C Calculator | 도면 없이 Fab/Model/Model Standard와 Chamber/배관 정보를 직접 입력해 V/C를 계산합니다. |
+| Test Data Guide | mock API에서 제공하는 샘플 EQ ID와 테스트 시나리오를 보여줍니다. |
+| Vacuum Conductance Result | Non-BIM과 Calculator가 공유하는 계산 결과 팝업입니다. 저장, Spec Out 기안 첨부, 오류 표시를 담당합니다. |
+
+## 최근 동작 기준
+
+### Non-BIM Chamber 추가/삭제
+
+`Manual Drawing Results`에서 도면을 선택하면 도면의 Chamber 수만큼 탭이 생성됩니다.
+
+- 도면에서 온 기본 Chamber는 `locked: true`입니다.
+- 기본 Chamber는 저장 여부와 관계없이 삭제할 수 없습니다.
+- `Add Chamber`는 도면 선택 후 최대 `MAX_CHAMBER_COUNT`까지 동작합니다.
+- 사용자가 추가한 Chamber만 `locked: false`이며, 해당 탭을 선택했을 때만 `Remove`가 활성화됩니다.
+- 삭제 후 active Chamber가 사라지면 reducer가 남아 있는 첫 Chamber로 active id를 보정합니다.
+- Pipe 영역의 버튼 라벨은 `Add`, `Remove`로 표기합니다.
+
+관련 파일:
+
+| 역할 | 파일 |
+| --- | --- |
+| 화면 버튼/탭 UI | `src/components/vc/nonBim/Bim5DNotApplied.js` |
+| locked Chamber와 사용자 Chamber 생성 | `src/components/vc/nonBim/core/NonBim.helper.js` |
+| 삭제 방어 및 active id 보정 | `src/store/vc/nonBim/reducer.js` |
+
+### 결과 저장 후 Non-BIM Calculate 노출 제어
+
+`BIM/5D Not Applied Fab`에서 `최종결과저장` 또는 Spec Out 기안 첨부 후 저장이 오류 없이 성공하면 `Manual Drawing Results`의 현재 선택 row `Status`를 갱신하고, 그 상태값으로 `Calculate` 버튼 노출 여부를 판단합니다.
+
+- 저장 성공 시 Saga가 B/E 응답의 `nextStatus`, `requestStatus`, `status` 중 하나를 읽어 선택 도면의 `requestStatus`로 반영합니다.
+- mock 저장 API는 일반 최종 저장이면 `Saved`, 기안 첨부 저장이면 `Draft Attached`를 `nextStatus`로 반환합니다.
+- `requestStatus`가 `Saved` 또는 `Draft Attached`이면 Non-BIM `Calculate` 버튼을 숨기고 현재 Status만 표시합니다.
+- 수기 도면 조회 API도 같은 `requestStatus`를 내려줘야 저장 직후와 재조회 후 화면 동작이 동일합니다.
+- 좌측 `V/C Calculator` 메뉴는 계속 클릭 가능해야 합니다.
+
+관련 파일:
+
+| 역할 | 파일 |
+| --- | --- |
+| Status 기반 Calculate 노출 제어 | `src/components/vc/nonBim/Bim5DNotApplied.js` |
+| 잠금 대상 Status 정의 | `src/components/vc/nonBim/core/NonBim.constant.js` |
+| 저장 성공 후 선택 도면 Status 갱신 | `src/saga/vc/nonBim/vcSimSaga.js` |
+| Manual Drawing Results 상태 보관 | `src/store/vc/nonBim/reducer.js` |
+
+### Spec Out 기안 첨부
+
+Non-BIM 계산 결과 중 `HIGH_OUT` 또는 `LOW_OUT`이 있으면 최종 저장 전에 표준 기안 첨부가 필요합니다.
+
+- 기안 제목은 텍스트로 입력합니다.
+- 첨부는 파일 선택 input으로 받습니다.
+- 현재 mock API에는 실제 파일 객체가 아니라 선택 파일명만 저장 payload에 포함합니다.
+- 기안 제목과 첨부 파일명이 모두 있어야 `기안 첨부 후 저장` 버튼이 활성화됩니다.
+- 공백만 입력한 값은 유효하지 않은 것으로 처리합니다.
+- 저장 실패 시 팝업을 유지하고 오류를 표시합니다.
+
+관련 파일:
+
+| 역할 | 파일 |
+| --- | --- |
+| 결과/기안 첨부 팝업 UI | `src/components/vc/nonBim/popup/VcResultPopup.js` |
+| 저장 전 필수 조건 판단 | `src/store/vc/vcResult/reducer.js` |
+| 저장 API 진입 방어 | `src/saga/vc/nonBim/vcSimSaga.js` |
+
+### 저장 성공/실패
+
+- 저장 성공 시 `Vacuum Conductance Result` 팝업과 기안 첨부 팝업이 자동으로 닫힙니다.
+- 저장 성공 후 팝업 안에 `저장 완료: VC-SAVE-...`를 남기지 않습니다.
+- 저장 중에는 버튼이 `Saving...`으로 바뀌고 중복 클릭을 막습니다.
+- 저장 실패 시 팝업은 닫히지 않고 오류 메시지를 보여줍니다.
+
+## 주요 파일
 
 | 목적 | 파일 |
 | --- | --- |
-| 화면 UI와 이벤트 연결 | `src/components/vc/nonBim/Bim5DNotApplied.js` |
-| V/C Calculator 화면 | `src/components/vc/nonBim/VcCalculator.js` |
-| 결과 팝업/저장/기안 첨부 | `src/components/vc/nonBim/popup/VcResultPopup.js` |
-| 화면 상태 변경 | `src/store/vc/nonBim/reducer.js`, `src/store/vc/vcCalculator/reducer.js`, `src/store/vc/vcResult/reducer.js` |
-| 화면에서 Redux state를 읽는 경로 | `src/store/vc/**/vcSimSelector.js` |
-| API 호출 흐름 | `src/saga/vc/nonBim/vcSimSaga.js` |
-| 임시 API 계약과 mock 구현 | `src/service/api/vc/sim/vcSimApi.js` |
-| B/E 응답을 화면 모델로 변환 | `src/components/vc/nonBim/core/NonBim.helper.js` |
-| 컬럼, 배관 유형, 판정 코드 등 기준값 | `src/components/vc/nonBim/core/NonBim.constant.js` |
+| 앱 shell, 좌측 메뉴, 테스트 데이터 안내 | `src/main.js` |
+| Non-BIM 수기 도면 화면 | `src/components/vc/nonBim/Bim5DNotApplied.js` |
+| 수동 V/C Calculator | `src/components/vc/nonBim/VcCalculator.js` |
+| 결과 팝업/기안 첨부 팝업 | `src/components/vc/nonBim/popup/VcResultPopup.js` |
+| Chamber/Pipe/결과 정규화 helper | `src/components/vc/nonBim/core/NonBim.helper.js` |
+| 컬럼, pipe type, 판정 코드 상수 | `src/components/vc/nonBim/core/NonBim.constant.js` |
+| Non-BIM Redux | `src/store/vc/nonBim/*` |
+| Calculator Redux | `src/store/vc/vcCalculator/*` |
+| 공유 결과 팝업 Redux | `src/store/vc/vcResult/*` |
+| Saga 흐름 | `src/saga/vc/nonBim/vcSimSaga.js` |
+| mock API와 B/E 교체 지점 | `src/service/api/vc/sim/vcSimApi.js` |
+| B/E API 전환 예시 | `src/service/api/vc/sim/vcSimBEApi.js` |
 
-## 회사 코드로 전환할 때의 원칙
+## 흐름 요약
 
-현재 구현은 회사 표준을 모르는 상태에서 기능 흐름을 먼저 맞춘 것입니다. 따라서 회사 프로젝트에 붙일 때는 다음 순서로 전환하면 됩니다.
+### 도면 조회
 
-1. 화면 컴포넌트의 HTML `select`, `input`, `table`, `button`을 회사 공통 컴포넌트로 교체합니다.
-2. `vcSimSelector.js`는 꼭 그대로 써야 하는 파일이 아니라 Redux state 접근을 한곳에 모으기 위한 임시 어댑터입니다. 회사에서 `useAppSelector`, `connect`, 화면별 selector 네이밍 규칙을 쓴다면 그 규칙으로 교체하되, 컴포넌트가 root state 경로를 직접 알지 않게 유지합니다.
-3. 콤보박스, 조회성 코드, 모델 기준 목록은 회사의 공통코드 API 또는 MDM API 규칙으로 교체합니다. 프론트 화면에는 `{ value, label }` 형태만 맞춰서 넘기면 됩니다.
-4. `vcSimApi.js`의 mock 함수들은 실제 B/E API 호출로 교체합니다. B/E 응답 필드명이 달라져도 `NonBim.helper.js`의 normalize 함수에서 흡수하면 화면 변경을 최소화할 수 있습니다.
-5. 그리드 데이터는 API 응답을 바로 뿌리지 말고 `normalizeDrawingList`, `normalizeCalculationResult`처럼 화면 표준 row 모델로 한 번 변환한 뒤 reducer에 저장합니다.
+1. 화면에서 EQ ID 또는 공사번호를 입력합니다.
+2. `FETCH_MANUAL_DRAWINGS_REQUEST`를 dispatch합니다.
+3. Saga가 `vcSimApi.searchManualDrawings(search)`를 호출합니다.
+4. `normalizeDrawingList`가 응답을 화면 row로 변환합니다.
+5. reducer가 `drawings`에 저장합니다.
 
-## 공통코드/콤보박스 전환 가이드
+### 도면 선택
 
-현재 `vcSimApi.js`의 `getCalculatorOptions`, `getEquipmentSpecOptions`는 Fab, Model, Model Standard 같은 조회성 데이터를 mock으로 반환합니다. 회사 코드에서는 다음 중 하나로 전환하면 됩니다.
+1. 도면 radio를 선택하면 `SELECT_DRAWING`을 dispatch합니다.
+2. reducer가 선택 도면과 Chamber 탭을 생성합니다.
+3. 도면 기본 Chamber는 locked 상태로 생성됩니다.
+4. Saga가 `getEquipmentSpecOptions`를 호출해 Model Standard 옵션을 보강합니다.
 
-| 현재 위치 | 현재 형태 | 회사 전환 방향 |
-| --- | --- | --- |
-| `getCalculatorOptions()` | `{ fabs, models, modelStandards }` | 회사 공통코드 조회 API 또는 MDM API 호출 |
-| `getEquipmentSpecOptions({ eqId, fab, model, drawingId })` | 선택 도면/설비 기준 Model Standard 목록 | 설비/모델 기준 V/C Spec 조회 API 호출 |
-| 화면의 HTML `select` | `{ value, label }` 배열 | 회사 공통 Select/Combo 컴포넌트의 option 규격으로 변환 |
+### 계산
 
-공통코드 API가 예를 들어 `code`, `codeName`을 반환한다면 프론트에서는 다음처럼 맞춥니다.
+1. `CALCULATE_REQUEST`를 dispatch합니다.
+2. Saga가 필수 pipe 값을 검증합니다.
+3. helper가 B/E 요청 payload를 만듭니다.
+4. mock API가 conductance와 judge를 반환합니다.
+5. `normalizeCalculationResult`가 공유 결과 팝업 모델로 변환합니다.
+6. `vcResultActions.openResultPopup(result)`로 결과 팝업을 엽니다.
 
-```js
-const options = response.list.map((item) => ({
-  value: item.code,
-  label: item.codeName,
-  raw: item,
-}));
-```
+### 저장
 
-중요한 점은 화면 컴포넌트가 회사 공통코드 응답 필드명을 직접 알지 않게 하는 것입니다. 변환은 API 레이어 또는 helper에서 끝내는 편이 안전합니다.
+1. 결과 팝업에서 `SAVE_RESULT_REQUEST`를 dispatch합니다.
+2. reducer가 Non-BIM Spec Out과 기안 첨부 누락 여부를 먼저 판단합니다.
+3. 기안 첨부가 필요하면 중첩 팝업을 열고 저장 loading을 시작하지 않습니다.
+4. 기안 제목과 파일이 모두 있으면 Saga가 `saveVcResult`를 호출합니다.
+5. Non-BIM 저장 성공이면 저장 응답의 `nextStatus`/`requestStatus`/`status`를 선택 도면 `requestStatus`에 반영합니다.
+6. 성공 시 `SAVE_RESULT_SUCCESS`로 팝업을 닫고, 실패 시 `SAVE_RESULT_FAILURE`로 오류를 표시합니다.
 
-## B/E 개발 요청 API
+## B/E 전환 원칙
 
-`src/service/api/vc/sim/vcSimApi.js`에 있는 함수 대부분은 B/E 개발자에게 “이런 API가 필요합니다”라고 전달할 계약 초안입니다. URL은 예시이며, 회사 표준 URI/Controller 명명 규칙에 맞춰 바꾸면 됩니다.
+실제 회사 API에 붙일 때는 화면 컴포넌트보다 `vcSimApi.js`와 `NonBim.helper.js`를 먼저 수정합니다.
 
-### 1. EQ ID 자동완성
+| 교체 대상 | 원칙 |
+| --- | --- |
+| URL, HTTP method, query/body | `vcSimApi.js`에서 흡수 |
+| B/E 응답 필드명 차이 | `NonBim.helper.js`의 normalize 함수에서 흡수 |
+| 공통코드/MDM option 구조 | `{ value, label, minSpec?, maxSpec?, raw? }` 형태로 변환 |
+| 결과 저장 DTO | `saveVcResult` 내부에서 회사 저장 API 계약에 맞게 변환 |
+| 저장 후 도면 상태 | 저장 응답의 `nextStatus` 또는 `requestStatus`를 `Manual Drawing Results.requestStatus`로 반영 |
+| 파일 업로드 | 현재는 파일명만 저장하므로 실제 연동 시 업로드 ID 또는 multipart 전송으로 확장 |
 
-- Front 함수: `searchEqSuggestions(keyword)`
-- 예시 URL: `GET /api/vc/sim/non-bim/equipments`
-- Query: `keyword`
-- 목적: 사용자가 EQ ID를 입력할 때 자동완성 후보를 조회합니다.
+### 파일 첨부 전환 방식
 
-요청 예시:
+현재 preview는 파일명을 `draft.attachmentName`에 저장합니다. 실제 연동에서는 다음 중 하나를 선택하는 것이 좋습니다.
+
+| 방식 | 설명 |
+| --- | --- |
+| 선 업로드 | 파일 업로드 API가 `attachmentId`를 반환하고 저장 API에는 `attachmentId`만 전달 |
+| multipart 저장 | 결과 저장 API를 `multipart/form-data`로 바꾸고 JSON blob과 file을 함께 전달 |
+
+## API 초안
+
+### 수기 도면 조회
 
 ```http
-GET /api/vc/sim/non-bim/equipments?keyword=EQ-VAC
+GET /api/vc/sim/non-bim/manual-drawings?eqId=EQ-VAC&constructionNo=VC-2026
 ```
-
-응답 예시:
 
 ```json
 {
   "list": [
     {
-      "eqId": "EQ-VAC-ETCH-1001",
+      "drawingId": "DWG-ETCH-001",
       "constructionNo": "VC-2026-ETCH-001",
+      "eqId": "EQ-VAC-ETCH-1001",
       "fab": "P3",
-      "area1": "ETCH",
-      "label": "EQ-VAC-ETCH-1001 (P3 / ETCH)"
+      "model": "VX-ETCH-300",
+      "requestStatus": "Ready",
+      "chamberCount": 3,
+      "chambers": [],
+      "foreline": {
+        "fileId": "FILE-001",
+        "fileName": "foreline.pdf"
+      }
     }
   ]
 }
 ```
 
-Java/XML Query 개발 포인트:
+### Model Standard 조회
 
-- `keyword`는 EQ ID 부분검색 조건으로 사용합니다.
-- 화면 자동완성이므로 최대 건수 제한이 필요합니다. 예: `ROWNUM <= 20`, `FETCH FIRST 20 ROWS ONLY`.
-- 회사 표준 공통검색이 있다면 label은 B/E에서 만들지 않고 F/E에서 조합해도 됩니다.
-
-### 2. 수기 도면 조회
-
-- Front 함수: `searchManualDrawings(params)`
-- 예시 URL: `GET /api/vc/sim/non-bim/manual-drawings`
-- Query: `eqId`, `constructionNo`
-- 목적: 첫 번째 그리드에 표시할 수기 도면 목록을 조회합니다.
-
-응답 필드:
-
-| 필드 | 설명 |
-| --- | --- |
-| `id` 또는 `drawingId` | 도면 식별자 |
-| `constructionNo` | 공사번호 |
-| `eqId` | 설비 ID |
-| `site`, `fab`, `area1`, `area2` | 위치/라인 정보 |
-| `changeType` | 변경 유형 |
-| `equipmentType` | 설비 유형 |
-| `requestStatus` | 요청 상태 |
-| `model`, `mainMaker` | 모델/제조사 |
-| `processLarge`, `processMiddle` | 공정 대/중분류 |
-| `chamberCount` | 기본 Chamber 수 |
-| `foreline.fileId`, `foreline.fileName` | Foreline 도면 파일 정보 |
-| `chambers[]` | 도면 선택 시 자동 생성할 Chamber 상세 |
-| `specOptions[]` | Model Standard 후보 |
-
-Java/XML Query 개발 포인트:
-
-- 목록 조회는 도면 기본정보와 Foreline 파일 메타를 함께 반환해야 합니다.
-- Chamber/배관 상세가 한 번에 조회 가능하면 `chambers[]`로 내려주고, 성능상 분리해야 하면 “도면 선택 후 Chamber 상세 조회 API”를 별도로 두어도 됩니다.
-- F/E는 현재 `normalizeDrawingList`에서 여러 필드명을 허용하지만, 실제 개발 시에는 B/E 표준명을 하나로 정하는 것이 좋습니다.
-
-### 3. Foreline 도면 다운로드
-
-- Front 함수: `downloadForelineDrawing({ drawingId, fileId })`
-- 예시 URL: `GET /api/vc/sim/non-bim/foreline-drawing/download`
-- Query: `drawingId`, `fileId`
-- 목적: 선택한 도면의 Foreline 파일을 다운로드합니다.
-
-B/E 응답:
-
-- 파일 Stream 또는 byte array
-- `Content-Type`: 실제 파일 MIME
-- `Content-Disposition`: attachment 파일명 포함
-
-Java/XML Query 개발 포인트:
-
-- `fileId` 기준으로 파일 저장소의 물리 경로 또는 BLOB을 조회합니다.
-- 권한 체크가 필요하면 `drawingId`와 사용자 권한을 함께 검증합니다.
-
-### 4. 설비별 Model Standard/Spec 조회
-
-- Front 함수: `getEquipmentSpecOptions({ eqId, fab, model, drawingId })`
-- 예시 URL: `GET /api/vc/sim/non-bim/equipment-spec-options`
-- 목적: 선택 도면 또는 설비/모델에 맞는 Model Standard, Min Spec, Max Spec 목록을 조회합니다.
-
-응답 예시:
+```http
+GET /api/vc/sim/non-bim/equipment-spec-options?drawingId=DWG-ETCH-001&eqId=EQ-VAC-ETCH-1001
+```
 
 ```json
 {
@@ -172,134 +209,22 @@ Java/XML Query 개발 포인트:
 }
 ```
 
-Java/XML Query 개발 포인트:
+### 계산
 
-- 주요 조회 조건은 `drawingId`, `eqId`, `fab`, `model`입니다.
-- 회사 MDM 테이블에서 모델 기준/Spec 기준을 조회하는 쿼리가 필요합니다.
-- Min/Max는 숫자 계산에 쓰이므로 문자열로 내려주더라도 숫자 변환 가능한 값이어야 합니다.
-
-### 5. Non-BIM V/C 계산
-
-- Front 함수: `calculateNonBim(payload)`
-- 예시 URL: `POST /api/vc/sim/non-bim/calculate`
-- 목적: 선택 도면과 Chamber/배관 입력값으로 Conductance를 계산하고 Spec 판정을 반환합니다.
-
-요청 payload 핵심 구조:
-
-```json
-{
-  "sourceType": "NON_BIM",
-  "manualDrawingId": "DWG-ETCH-001",
-  "equipment": {
-    "eqId": "EQ-VAC-ETCH-1001",
-    "constructionNo": "VC-2026-ETCH-001",
-    "fab": "P3",
-    "model": "VX-ETCH-300",
-    "modelStandard": "ETCH-LINE-A"
-  },
-  "chambers": [
-    {
-      "seq": 1,
-      "chamberId": "CH-ETCH-A",
-      "chamberName": "Ch01",
-      "modelStandard": "ETCH-LINE-A",
-      "minSpec": "35",
-      "maxSpec": "72",
-      "isSpecSkipped": false,
-      "pipeList": [
-        {
-          "seq": 1,
-          "type": "PIPE",
-          "inletDiameter": "4",
-          "length": "1200",
-          "angle": "",
-          "outletDiameter": "",
-          "quantity": "1"
-        }
-      ]
-    }
-  ]
-}
+```http
+POST /api/vc/sim/non-bim/calculate
+POST /api/vc/sim/calculator/calculate
 ```
 
-응답 payload 핵심 구조:
+요청은 `sourceType`, `equipment`, `chambers`, `pipeList`를 포함합니다. 응답은 결과 팝업 row로 변환 가능한 `rows` 배열을 반환해야 합니다.
 
-```json
-{
-  "data": {
-    "eqId": "EQ-VAC-ETCH-1001",
-    "fab": "P3",
-    "model": "ETCH-LINE-A",
-    "rows": [
-      {
-        "resultId": "RESULT-1",
-        "chamberId": "CH-ETCH-A",
-        "chamberName": "Ch01",
-        "confirmYn": "N",
-        "processLarge": "ETCH",
-        "processMiddle": "Metal Etch",
-        "modelStandard": "ETCH-LINE-A",
-        "minSpec": "35",
-        "maxSpec": "72",
-        "conductance": "55.21",
-        "judge": "IN"
-      }
-    ]
-  }
-}
+### 저장
+
+```http
+POST /api/vc/sim/result/save
 ```
 
-Java/XML Query 개발 포인트:
-
-- 계산식이 DB 함수, Java 서비스, 외부 엔진 중 어디에 있는지 먼저 확정해야 합니다.
-- 배관 유형은 현재 `PIPE`, `ELBOW`, `REDUCER` 세 가지입니다.
-- `PIPE`: `inletDiameter`, `length` 필수, 수량은 1 고정
-- `ELBOW`: `inletDiameter`, `angle`, `quantity` 필수
-- `REDUCER`: `inletDiameter`, `length`, `outletDiameter` 필수, 수량은 1 고정
-- 판정 코드는 F/E 표준으로 `IN`, `HIGH_OUT`, `LOW_OUT`, `NONE`, `PENDING`을 사용합니다. B/E가 `SPEC_IN`처럼 다른 코드를 쓰면 `normalizeJudge`에서 변환 가능합니다.
-
-### 6. Calculator 초기 옵션 조회
-
-- Front 함수: `getCalculatorOptions()`
-- 예시 URL: `GET /api/vc/sim/calculator/options`
-- 목적: 독립 계산기 화면의 Fab, Model, Model Standard 콤보 옵션을 조회합니다.
-
-응답 예시:
-
-```json
-{
-  "fabs": [{ "value": "P3", "label": "P3" }],
-  "models": [{ "value": "VX-ETCH-300", "label": "VX-ETCH-300" }],
-  "modelStandards": [
-    { "value": "ETCH-LINE-A", "label": "ETCH-LINE-A / General", "minSpec": "35", "maxSpec": "72" }
-  ]
-}
-```
-
-Java/XML Query 개발 포인트:
-
-- 회사 공통코드 또는 MDM 조회 결과를 화면 option 구조로 변환해 내려주거나, F/E API 레이어에서 변환합니다.
-- Fab와 Model 선택에 따라 Model Standard를 동적으로 다시 조회해야 한다면 `getEquipmentSpecOptions`를 재사용해도 됩니다.
-
-### 7. Calculator 계산
-
-- Front 함수: `calculateVcCalculator(payload)`
-- 예시 URL: `POST /api/vc/sim/calculator/calculate`
-- 목적: 도면 없이 사용자가 입력한 Chamber/배관 정보만으로 계산합니다.
-
-개발 포인트:
-
-- 요청/응답 구조는 `calculateNonBim`과 거의 같습니다.
-- 차이는 `sourceType`이 `CALCULATOR`이고 `manualDrawingId`가 없다는 점입니다.
-- Model Standard가 없으면 Spec 판정은 `NONE`으로 처리할 수 있습니다.
-
-### 8. 결과 저장
-
-- Front 함수: `saveVcResult(payload)`
-- 예시 URL: `POST /api/vc/sim/result/save`
-- 목적: 계산 결과 row와 기본정보, 필요 시 Spec Out 기안 첨부 정보를 저장합니다.
-
-요청 구조:
+Spec Out이 있는 Non-BIM 결과는 기안 첨부 정보가 필요합니다.
 
 ```json
 {
@@ -309,79 +234,46 @@ Java/XML Query 개발 포인트:
     "fab": "P3",
     "model": "ETCH-LINE-A"
   },
-  "rows": [
-    {
-      "chamberId": "CH-ETCH-A",
-      "conductance": "55.21",
-      "judge": "IN"
-    }
-  ],
+  "rows": [],
   "draft": {
-    "title": "Spec Out 검토 기안",
-    "attachmentName": "draft.pdf",
+    "title": "Spec Out 표준 기안",
+    "attachmentName": "standard_draft.pdf",
     "comment": "검토 요청"
   }
 }
 ```
 
-Java/XML Query 개발 포인트:
+권장 응답:
 
-- 저장 마스터 테이블과 결과 상세 테이블을 분리하는 것을 권장합니다.
-- `sourceType = NON_BIM`이고 Spec Out row가 있으면 기안 첨부 정보가 필요합니다.
-- 저장 성공 시 `savedId`, `savedAt`, `rowCount` 정도를 반환하면 화면 메시지에 사용할 수 있습니다.
-
-## 그리드 데이터 연결 방식
-
-첫 번째 그리드(도면 목록)는 `searchManualDrawings` 응답을 `normalizeDrawingList`로 변환한 뒤 `drawings` state에 저장합니다. 결과 그리드는 계산 API 응답을 `normalizeCalculationResult`로 변환한 뒤 공용 결과 팝업 state에 저장합니다.
-
-회사 그리드 컴포넌트로 바꿀 때는 다음만 지키면 됩니다.
-
-- API 응답을 그리드에 바로 넣지 않습니다.
-- 그리드 row의 key는 `id`, `drawingId`, `resultId` 중 하나를 안정적으로 사용합니다.
-- 회사 그리드 컬럼 정의가 별도 규격이면 `NonBim.constant.js`의 컬럼 배열만 변환합니다.
-- 페이징/정렬/필터가 B/E 방식이면 `searchManualDrawings` params에 page, size, sort를 추가하고 reducer에는 조회 결과와 paging meta를 함께 저장합니다.
-
-## selector 전환 방식
-
-현재 selector 파일은 다음 이유로 존재합니다.
-
-- root reducer 등록 경로가 바뀌어도 화면 컴포넌트를 크게 고치지 않기 위해서입니다.
-- `state.vc.nonBim` 같은 실제 Redux 경로를 화면에서 직접 쓰지 않기 위해서입니다.
-
-회사 프로젝트에서 selector 규칙이 다르다면 `vcSimSelector.js`를 그대로 유지할 필요는 없습니다. 다만 아래 원칙은 유지하는 것이 좋습니다.
-
-```js
-// 권장: 화면은 selector만 호출
-const drawings = useSelector(selectDrawings);
-
-// 비권장: 화면이 root state 경로를 직접 알고 있음
-const drawings = useSelector((state) => state.vc.nonBim.drawings);
+```json
+{
+  "savedId": "VC-SAVE-001",
+  "sourceType": "NON_BIM",
+  "savedAt": "2026-06-07T00:00:00.000Z",
+  "rowCount": 3,
+  "draftAttached": true,
+  "nextStatus": "Draft Attached"
+}
 ```
 
-root reducer 등록 예시:
+`nextStatus`는 저장 직후 `Manual Drawing Results`의 `Status`에 반영할 값입니다. 일반 최종 저장은 `Saved`, 표준 기안 첨부 저장은 `Draft Attached`처럼 업무 상태를 명확히 내려주세요.
 
-```js
-const rootReducer = combineReducers({
-  vc: combineReducers({
-    nonBim: nonBimReducer,
-    vcCalculator: vcCalculatorReducer,
-    vcResult: vcResultReducer,
-  }),
-});
-```
+## 검증 체크리스트
 
-## 실제 연동 시 수정 체크리스트
+1. `npm run build`
+2. Non-BIM 도면 검색
+3. 도면 선택 후 원본 Chamber 탭의 `Remove` 비활성 확인
+4. `Add Chamber` 후 새 탭의 `Remove` 활성 확인
+5. Pipe 버튼 라벨이 `Add`, `Remove`인지 확인
+6. Spec Out 결과 저장 시 기안 첨부 팝업 확인
+7. 파일 선택 전 저장 버튼 비활성 확인
+8. 파일 선택 후 저장 성공 시 팝업 자동 종료 확인
+9. Non-BIM 저장 성공 후 선택 도면 `Status`가 `Saved` 또는 `Draft Attached`로 바뀌고 `Calculate` 버튼이 숨겨지는지 확인
+10. Non-BIM 저장 성공 후 좌측 `V/C Calculator` 메뉴는 계속 클릭 가능한지 확인
 
-1. `vcSimApi.js`에서 mock `sleep`, `sampleDrawings`, mock 계산식을 제거하고 회사 HTTP client로 교체합니다.
-2. `VC_SIM_ENDPOINTS` 값을 회사 Controller URL로 변경합니다.
-3. B/E 응답 필드명이 확정되면 `NonBim.helper.js`의 normalize 함수에서 필드 alias를 정리합니다.
-4. 회사 공통 Select/Combo 규격에 맞춰 option 변환 함수를 추가합니다.
-5. 회사 Grid 컴포넌트로 바꾼 뒤 row key, 선택 이벤트, 다운로드 버튼 이벤트를 연결합니다.
-6. 저장 API가 확정되면 Spec Out 기안 첨부 필드명을 B/E DTO와 맞춥니다.
-7. Java/XML Query 개발자에게 위 API별 요청/응답 예시와 필수 조건을 전달합니다.
+## 남은 개선 후보
 
-## 메모
-
-- 현재 코드는 mock 기반이므로 `vcSimApi.js`의 계산 결과는 실제 물리 계산식이 아닙니다.
-- 회사 표준 HTTP 인스턴스가 있다면 `vcSimApi.js` 하나만 바꾸는 구조가 가장 유지보수에 좋습니다.
-- B/E 필드명이 바뀌어도 화면 컴포넌트까지 전파하지 말고 helper/API 레이어에서 흡수하세요.
+- 실제 파일 업로드 방식 결정 후 `File` 객체 또는 `attachmentId`를 저장 payload에 포함해야 합니다.
+- 저장 성공 후 Non-BIM `Calculate` 버튼을 다시 보여줘야 하는 업무 조건이 생기면 B/E 상태 코드와 `CALCULATION_LOCKED_DRAWING_STATUSES` 매핑을 함께 조정해야 합니다.
+- `dist` 산출물은 빌드 때마다 해시가 바뀌므로 배포 정책에 따라 commit 포함 여부를 정해야 합니다.
+- 회사 공통 Grid/Combo 컴포넌트 전환 시 현재 HTML table/select를 wrapper로 교체하면 됩니다.

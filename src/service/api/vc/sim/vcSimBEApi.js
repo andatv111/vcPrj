@@ -324,8 +324,12 @@
  *     "sourceType": "NON_BIM",
  *     "savedAt": "2026-06-07T00:00:00.000Z",
  *     "rowCount": 1,
- *     "draftAttached": true
+ *     "draftAttached": true,
+ *     "nextStatus": "Draft Attached"
  *   }
+ *
+ * - nextStatus/requestStatus는 저장 성공 후 Manual Drawing Results의 Status로 즉시 반영할 값입니다.
+ * - 수기 도면 재조회 API도 같은 requestStatus를 내려줘야 새로고침 후 Calculate 노출 기준이 유지됩니다.
  *
  * 10. F/E 연동 계획
  * - B/E가 준비되면 saga import를 vcSimApi에서 이 adapter로 바꾸거나,

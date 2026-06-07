@@ -7,6 +7,7 @@ import { selectDrawings, selectNonBimState, selectSearch } from "../../../store/
 import { VC_RESULT_ACTION_TYPES, vcResultActions } from "../../../store/vc/vcResult/action";
 import { selectVcResultState } from "../../../store/vc/vcResult/vcSimSelector";
 import vcSimApi from "../../../service/api/vc/sim/vcSimApi";
+import { DRAWING_STATUS } from "../../../components/vc/nonBim/core/NonBim.constant";
 
 /**
  * API 연결 흐름 가이드
@@ -37,6 +38,17 @@ const getErrorMessage = (error) => {
   if (!error) return "알 수 없는 오류가 발생했습니다.";
   if (typeof error === "string") return error;
   return error.message || error.errorMessage || "알 수 없는 오류가 발생했습니다.";
+};
+
+const getSavedDrawingStatus = (response) => {
+  // B/E 저장 API가 nextStatus/requestStatus/status 같은 업무 상태를 반환하면 그 값을 우선 사용합니다.
+  // mock API는 draftAttached만 반환하므로, 기안 첨부 저장은 Draft Attached, 일반 최종 저장은 Saved로 매핑합니다.
+  return (
+    response?.nextStatus ||
+    response?.requestStatus ||
+    response?.status ||
+    (response?.draftAttached ? DRAWING_STATUS.DRAFT_ATTACHED : DRAWING_STATUS.SAVED)
+  );
 };
 
 function* fetchEqSuggestionsFlow(action) {
@@ -205,8 +217,7 @@ function* saveResultFlow() {
     if (
       state.sourceType === "NON_BIM" &&
       hasSpecOutRows(state.rows) &&
-      !state.draftPopup.title &&
-      !state.draftPopup.attachmentName
+      (!state.draftPopup.title.trim() || !state.draftPopup.attachmentName.trim())
     ) {
       return;
     }
@@ -217,6 +228,23 @@ function* saveResultFlow() {
       rows: state.rows,
       draft: state.draftPopup,
     });
+
+    if (state.sourceType === "NON_BIM") {
+      const nonBimState = yield select(selectNonBimState);
+
+      if (nonBimState.selectedDrawingId) {
+        // 저장/기안 첨부 성공 후 Manual Drawing Results의 Status를 갱신합니다.
+        // 실제 B/E 저장 API는 저장 성공 응답에 nextStatus 또는 requestStatus를 내려주고,
+        // 재조회 API도 같은 상태를 내려주면 화면은 Status만 보고 Calculate 노출을 판단할 수 있습니다.
+        yield put(
+          nonBimActions.updateDrawingStatus({
+            drawingId: nonBimState.selectedDrawingId,
+            requestStatus: getSavedDrawingStatus(response),
+            savedInfo: response,
+          })
+        );
+      }
+    }
 
     yield put(vcResultActions.saveResultSuccess(response));
   } catch (error) {

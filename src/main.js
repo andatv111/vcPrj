@@ -22,7 +22,7 @@ const menuItems = [
     id: "calculator",
     group: "V/C Simulation",
     label: "V/C Calculator",
-    description: "Standalone calculator placeholder",
+    description: "Manual chamber and pipe V/C calculation",
   },
   {
     id: "testData",
@@ -95,7 +95,7 @@ function TestDataGuide() {
   const rows = [
     ["EQ-VAC-ETCH-1001", "3 chambers", "Pipe, Elbow, Reducer mixed. Good for tab and row editing."],
     ["EQ-VAC-CVD-2204", "2 chambers", "Spec ranges can produce IN, HIGH_OUT, and LOW_OUT after edits."],
-    ["EQ-VAC-PUMP-3307", "Spec skip", "Judge returns NONE when Spec Skip is checked."],
+    ["EQ-VAC-PUMP-3307", "No spec range", "Judge returns NONE when no min/max spec is applied."],
     ["EQ-VAC-TEST-9009", "Boundary", "Small lab data for strict min/max spec validation."],
   ];
 

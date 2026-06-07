@@ -23,6 +23,11 @@ export const initialVcResultState = {
 const hasSpecOut = (rows = []) =>
   rows.some((row) => row.judge === "HIGH_OUT" || row.judge === "LOW_OUT");
 
+const needsDraftAttachment = (state) =>
+  hasSpecOut(state.rows) &&
+  state.sourceType === "NON_BIM" &&
+  (!state.draftPopup.title.trim() || !state.draftPopup.attachmentName.trim());
+
 const vcResultReducer = (state = initialVcResultState, action = {}) => {
   switch (action.type) {
     case VC_RESULT_ACTION_TYPES.OPEN_RESULT_POPUP: {
@@ -55,12 +60,7 @@ const vcResultReducer = (state = initialVcResultState, action = {}) => {
     case VC_RESULT_ACTION_TYPES.SAVE_RESULT_REQUEST:
       // Non-BIM 결과에 Spec Out이 있으면 최종 저장 전에 기안 첨부 정보를 먼저 받습니다.
       // Calculator 결과는 단독 검토용이므로 동일 조건을 강제하지 않습니다.
-      if (
-        hasSpecOut(state.rows) &&
-        state.sourceType === "NON_BIM" &&
-        !state.draftPopup.title &&
-        !state.draftPopup.attachmentName
-      ) {
+      if (needsDraftAttachment(state)) {
         return {
           ...state,
           draftPopup: {
@@ -82,9 +82,14 @@ const vcResultReducer = (state = initialVcResultState, action = {}) => {
     case VC_RESULT_ACTION_TYPES.SAVE_RESULT_SUCCESS:
       return {
         ...state,
+        visible: false,
         loading: {
           ...state.loading,
           save: false,
+        },
+        draftPopup: {
+          ...initialVcResultState.draftPopup,
+          visible: false,
         },
         savedInfo: action.payload.savedInfo,
         error: null,
