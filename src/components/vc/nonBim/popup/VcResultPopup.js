@@ -4,8 +4,8 @@ import { useDispatch, useSelector } from "react-redux";
 import vcResultActions from "../../../../store/vc/vcResult/action";
 import {
   selectVcResultBasicInfo,
-  selectVcResultDraftPopup,
   selectVcResultError,
+  selectVcResultHasNaRows,
   selectVcResultHasSpecOut,
   selectVcResultLoading,
   selectVcResultRows,
@@ -16,17 +16,37 @@ import { shouldShowSpecColumns, toDisplayText } from "../core/NonBim.helper";
 
 const h = React.createElement;
 
+const getResultNotice = ({ hasSpecOut, hasNaRows }) => {
+  if (hasSpecOut) {
+    return {
+      className: "notice-box warning",
+      message: "Spec Out Chamber가 있습니다. 최종결과저장 시 표준 기안 첨부가 필요합니다.",
+    };
+  }
+
+  if (hasNaRows) {
+    return {
+      className: "notice-box info",
+      message: "산출대상 제외 또는 Spec 미적용 Chamber가 있습니다. 해당 row는 Conductance와 판정을 N/A로 표시합니다.",
+    };
+  }
+
+  return {
+    className: "notice-box success",
+    message: "모든 Spec 판정이 IN입니다. 최종결과저장이 가능합니다.",
+  };
+};
+
 const VcResultPopup = () => {
-  // 계산 결과 팝업은 Non-BIM과 Calculator가 함께 사용합니다.
-  // sourceType과 rows는 vcResult reducer에 저장되어 저장/기안첨부 분기에도 같은 데이터를 씁니다.
   const dispatch = useDispatch();
   const visible = useSelector(selectVcResultVisible);
   const basicInfo = useSelector(selectVcResultBasicInfo);
   const rows = useSelector(selectVcResultRows);
   const loading = useSelector(selectVcResultLoading);
   const error = useSelector(selectVcResultError);
-  const draftPopup = useSelector(selectVcResultDraftPopup);
   const hasSpecOut = useSelector(selectVcResultHasSpecOut);
+  const hasNaRows = useSelector(selectVcResultHasNaRows);
+  const notice = getResultNotice({ hasSpecOut, hasNaRows });
 
   if (!visible) return null;
 
@@ -42,7 +62,7 @@ const VcResultPopup = () => {
         h(
           "div",
           null,
-          h("div", { className: "breadcrumb" }, "Simulation > V/C Simulation > BIM/5D미적용 > Vacuum Conductance 결과"),
+          h("div", { className: "breadcrumb" }, "Simulation > V/C Simulation > BIM/5D 미적용 > Vacuum Conductance 결과"),
           h("h2", null, "Vacuum Conductance Result")
         ),
         h(
@@ -50,8 +70,6 @@ const VcResultPopup = () => {
           {
             type: "button",
             className: "link-button",
-            // action: CLOSE_RESULT_POPUP
-            // 사용처: reducer가 공용 결과 팝업 visible만 false로 바꿉니다.
             onClick: () => dispatch(vcResultActions.closeResultPopup()),
           },
           "Close"
@@ -75,9 +93,7 @@ const VcResultPopup = () => {
         h("div", { className: "section-title small" }, "결과정보"),
         h(ResultTable, { rows })
       ),
-      hasSpecOut
-        ? h("div", { className: "notice-box warning" }, "Spec Out Chamber가 있습니다. 최종결과저장 시 표준 기안 첨부가 필요합니다.")
-        : h("div", { className: "notice-box success" }, "모든 Spec 판정이 IN입니다. 최종 결과 저장이 가능합니다."),
+      h("div", { className: notice.className }, notice.message),
       error ? h("div", { className: "error-box" }, error) : null,
       h(
         "div",
@@ -88,8 +104,6 @@ const VcResultPopup = () => {
             type: "button",
             className: "primary-button",
             disabled: loading.save,
-            // action: SAVE_RESULT_REQUEST
-            // 사용처: reducer가 Spec Out 기안 첨부 필요 여부를 먼저 판단하고, saga가 저장 API를 호출합니다.
             onClick: () => dispatch(vcResultActions.saveResultRequest()),
           },
           loading.save ? "Saving..." : "최종결과저장"
@@ -99,20 +113,16 @@ const VcResultPopup = () => {
           {
             type: "button",
             className: "secondary-button",
-            // action: CLOSE_RESULT_POPUP
-            // 사용처: 저장하지 않고 결과 팝업만 닫습니다.
             onClick: () => dispatch(vcResultActions.closeResultPopup()),
           },
           "취소"
         )
-      ),
-      draftPopup.visible ? h(DraftAttachPopup, { draftPopup, error, loading }) : null
+      )
     )
   );
 };
 
 const ResultTable = ({ rows }) =>
-  // Spec Min/Max가 없는 row는 판정 대상이 아니므로 spec 컬럼과 judge를 "-"로 보여줍니다.
   h(
     "div",
     { className: "table-wrap" },
@@ -134,7 +144,7 @@ const ResultTable = ({ rows }) =>
             h("td", null, shouldShowSpecColumns(row) ? toDisplayText(row.minSpec) : "-"),
             h("td", null, shouldShowSpecColumns(row) ? toDisplayText(row.maxSpec) : "-"),
             h("td", null, toDisplayText(row.conductance)),
-            h("td", null, shouldShowSpecColumns(row) ? h(JudgeBadge, { judge: row.judge }) : "-")
+            h("td", null, row.calculationTarget === false || shouldShowSpecColumns(row) ? h(JudgeBadge, { judge: row.judge }) : "-")
           )
         )
       )
@@ -142,7 +152,6 @@ const ResultTable = ({ rows }) =>
   );
 
 const JudgeBadge = ({ judge }) => {
-  // 판정 결과는 색상 badge로 빠르게 구분합니다. 표준 judge 코드는 helper에서 normalize됩니다.
   const className =
     judge === JUDGE.IN
       ? "judge-badge in"
@@ -160,110 +169,5 @@ const ReadonlyField = ({ label, value }) =>
     h("span", null, label),
     h("input", { value: toDisplayText(value), readOnly: true })
   );
-
-const DraftAttachPopup = ({ draftPopup, error, loading }) => {
-  const dispatch = useDispatch();
-  const canSaveWithDraft = Boolean(draftPopup.title.trim() && draftPopup.attachmentName.trim());
-  const handleAttachmentChange = (event) => {
-    const fileName = event.target.files?.[0]?.name || "";
-    dispatch(vcResultActions.setDraftField({ name: "attachmentName", value: fileName }));
-  };
-
-  // Non-BIM 결과 중 Spec Out이 있으면 최종 저장 전에 기안 첨부 정보를 요구하는 중첩 팝업입니다.
-  return h(
-    "div",
-    { className: "modal-dim nested" },
-    h(
-      "div",
-      { className: "modal draft-modal" },
-      h(
-        "div",
-        { className: "modal-header" },
-        h("h2", null, "표준 기안 첨부"),
-        h(
-          "button",
-          {
-            type: "button",
-            className: "link-button",
-            // action: CLOSE_DRAFT_POPUP
-            // 사용처: 중첩 기안 첨부 팝업만 닫고 결과 팝업은 유지합니다.
-            onClick: () => dispatch(vcResultActions.closeDraftPopup()),
-          },
-          "Close"
-        )
-      ),
-      h(
-        "div",
-        { className: "form-grid" },
-        h(
-          "label",
-          { className: "field" },
-          h("span", null, "기안 제목"),
-          h("input", {
-            value: draftPopup.title,
-            placeholder: "Spec Out 표준 기안",
-            // action: SET_DRAFT_FIELD
-            // 사용처: reducer가 draftPopup.title을 갱신합니다.
-            onChange: (event) => dispatch(vcResultActions.setDraftField({ name: "title", value: event.target.value })),
-          })
-        ),
-        h(
-          "div",
-          { className: "field" },
-          h("span", null, "첨부 파일"),
-          h("input", {
-            type: "file",
-            // action: SET_DRAFT_FIELD
-            // 사용처: reducer에는 실제 파일 객체 대신 저장 API mock이 쓰는 파일명만 보관합니다.
-            onChange: handleAttachmentChange,
-          }),
-          draftPopup.attachmentName
-            ? h("span", { className: "muted" }, draftPopup.attachmentName)
-            : null
-        )
-      ),
-      h(
-        "label",
-        { className: "field full-field" },
-        h("span", null, "Comment"),
-        h("textarea", {
-          value: draftPopup.comment,
-          placeholder: "Spec Out 사유 및 조치 내용을 입력하세요.",
-          // action: SET_DRAFT_FIELD
-          // 사용처: reducer가 draftPopup.comment를 갱신합니다.
-          onChange: (event) => dispatch(vcResultActions.setDraftField({ name: "comment", value: event.target.value })),
-        })
-      ),
-      error ? h("div", { className: "error-box" }, error) : null,
-      h(
-        "div",
-        { className: "footer-actions" },
-        h(
-          "button",
-          {
-            type: "button",
-            className: "primary-button",
-            disabled: !canSaveWithDraft || loading.save,
-            // action: SAVE_RESULT_REQUEST
-            // 사용처: 기안 정보 입력 후 다시 저장 요청을 보내 saga 저장 API 흐름으로 진입합니다.
-            onClick: () => dispatch(vcResultActions.saveResultRequest()),
-          },
-          loading.save ? "Saving..." : "기안 첨부 후 저장"
-        ),
-        h(
-          "button",
-          {
-            type: "button",
-            className: "secondary-button",
-            // action: CLOSE_DRAFT_POPUP
-            // 사용처: 기안 첨부 입력을 취소하고 중첩 팝업만 닫습니다.
-            onClick: () => dispatch(vcResultActions.closeDraftPopup()),
-          },
-          "취소"
-        )
-      )
-    )
-  );
-};
 
 export default VcResultPopup;

@@ -1,24 +1,9 @@
 /**
- * Reducer 파일: reducer.js
- * ------------------------------------------------------------
- * 역할
- * - BIM/5D미적용 Fab 화면의 상태(state)를 관리합니다.
- * - API 호출 자체는 하지 않고, action을 받아서 state만 변경합니다.
- *
- * 중요한 상태 구조
- * - search              : EQ ID, 공사번호 조회조건
- * - eqSuggestions       : EQ ID 자동완성 후보
- * - drawings            : 수기도면 조회 결과 첫 번째 그리드
- * - selectedDrawing     : 사용자가 선택한 수기도면 1건
- * - chambers            : 선택 수기도면 기준으로 생성된 Chamber 탭 목록
- * - activeChamberId     : 현재 선택된 Chamber 탭
- * - loading             : 조회/다운로드/산출 중 여부
- *
- * 설계 원칙
- * - B/E API 호출은 saga에서 처리하고 reducer는 순수하게 상태만 변경합니다.
- * - 배관 유형 변경 시 불필요 필드는 reducer에서 즉시 비워서 데이터 정합성을 맞춥니다.
- * - MDM/도면에서 기본 생성된 Chamber는 locked=true로 두어 삭제되지 않게 했습니다.
+ * BIM/5D 미적용 Fab 화면 state reducer입니다.
+ * 이 화면은 계산용 화면이므로 저장/기안 상태를 상단 그리드에 영구 반영하지 않습니다.
+ * 선택 row의 업무 PK는 selectedConstructionNo이며 Chamber 탭은 chamberCount/chambers 기준으로 구성합니다.
  */
+
 
 import { NON_BIM_ACTION_TYPES } from "./action";
 import {
@@ -39,17 +24,14 @@ import {
 const getSpecByValue = (options = [], value) =>
   options.find((option) => option.value === value || option.label === value) || null;
 
-// Non-BIM 화면의 단일 데이터 모델입니다.
-// 검색 조건, 도면 목록, 선택 도면, Chamber/배관 편집값, 계산 결과 팝업 상태를 모두 이 slice에서 관리합니다.
-// 화면 전체 초기 state.
-// 이 구조가 이 화면의 데이터 모델이라고 보면 된다.
 export const initialNonBimState = {
   search: { ...DEFAULT_SEARCH },
 
   eqSuggestions: [],
   drawings: [],
 
-  selectedDrawingId: "",
+  // 첫 번째 그리드 선택 상태는 공사번호 기준으로 관리합니다.
+  selectedConstructionNo: "",
   selectedDrawing: null,
 
   chambers: [],
@@ -60,8 +42,6 @@ export const initialNonBimState = {
 
 };
 
-// loading 상태를 간단히 변경하기 위한 보조 함수.
-// key는 eqSuggestions/drawings/download/calculate 중 하나다.
 const setLoading = (state, key, value) => ({
   ...state,
   loading: {
@@ -70,8 +50,6 @@ const setLoading = (state, key, value) => ({
   },
 });
 
-// 특정 Chamber 하나만 찾아 수정하기 위한 보조 함수.
-// chamber 배열 전체를 직접 수정하지 않고 새 배열을 만들어 Redux 불변성을 지킨다.
 const updateChamber = (state, chamberId, updater) => ({
   ...state,
   chambers: state.chambers.map((chamber) =>
@@ -80,7 +58,6 @@ const updateChamber = (state, chamberId, updater) => ({
 });
 
 const updateActiveChamberIdAfterRemove = (chambers, currentActiveChamberId) => {
-  // 삭제 후 현재 active id가 사라졌다면 첫 번째 Chamber로 포커스를 이동합니다.
   if (!chambers.length) return "";
   if (chambers.some((chamber) => chamber.id === currentActiveChamberId)) {
     return currentActiveChamberId;
@@ -88,19 +65,8 @@ const updateActiveChamberIdAfterRemove = (chambers, currentActiveChamberId) => {
   return chambers[0].id;
 };
 
-const updateDrawingStatus = (drawing, requestStatus, savedInfo) => {
-  if (!drawing) return drawing;
-
-  return {
-    ...drawing,
-    requestStatus,
-    savedInfo: savedInfo || drawing.savedInfo,
-  };
-};
-
 const nonBimReducer = (state = initialNonBimState, action = {}) => {
   switch (action.type) {
-    // 조회조건 입력 변경 처리.
     case NON_BIM_ACTION_TYPES.SET_SEARCH_FIELD: {
       const { name, value } = action.payload;
 
@@ -137,13 +103,11 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
         error: action.payload.error,
       };
 
-    // 수기도면 조회 시작.
-// 이전 선택값과 Chamber를 초기화해서 새 조회 결과와 이전 편집 상태가 섞이지 않게 한다.
     case NON_BIM_ACTION_TYPES.FETCH_MANUAL_DRAWINGS_REQUEST:
       return {
         ...setLoading(state, "drawings", true),
         drawings: [],
-        selectedDrawingId: "",
+        selectedConstructionNo: "",
         selectedDrawing: null,
         chambers: [],
         activeChamberId: "",
@@ -161,35 +125,14 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
         ...setLoading(state, "drawings", false),
         error: action.payload.error,
       };
-
-    // 저장 성공 후 수기도면 row 상태 갱신.
-    // 선택 row와 그리드 row를 동시에 갱신해야 저장 직후에도 조회 결과와 같은 화면 상태가 됩니다.
-    case NON_BIM_ACTION_TYPES.UPDATE_DRAWING_STATUS: {
-      const { drawingId, requestStatus, savedInfo } = action.payload;
-
-      // 저장 성공 후 Manual Drawing Results의 Status를 즉시 갱신합니다.
-      // B/E 조회 API도 같은 requestStatus를 내려주면, 화면은 이 상태값만 보고 Calculate 노출을 결정합니다.
-      return {
-        ...state,
-        drawings: state.drawings.map((drawing) =>
-          drawing.id === drawingId ? updateDrawingStatus(drawing, requestStatus, savedInfo) : drawing
-        ),
-        selectedDrawing:
-          state.selectedDrawing?.id === drawingId
-            ? updateDrawingStatus(state.selectedDrawing, requestStatus, savedInfo)
-            : state.selectedDrawing,
-      };
-    }
-
-    // 첫 번째 그리드에서 수기도면 1건 선택.
-    // 선택된 도면의 chamberCount/chambers를 기준으로 하단 Chamber 탭을 생성한다.
     case NON_BIM_ACTION_TYPES.SELECT_DRAWING: {
-      const drawing = state.drawings.find((item) => item.id === action.payload.drawingId) || null;
+      // 공사번호로 row를 찾고, 해당 row의 chamberCount/chambers로 하단 탭을 다시 만듭니다.
+      const drawing = state.drawings.find((item) => item.constructionNo === action.payload.constructionNo) || null;
       const chambers = drawing ? normalizeChambersFromDrawing(drawing) : [];
 
       return {
         ...state,
-        selectedDrawingId: drawing?.id || "",
+        selectedConstructionNo: drawing?.constructionNo || "",
         selectedDrawing: drawing,
         chambers,
         activeChamberId: chambers[0]?.id || "",
@@ -197,10 +140,9 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
     }
 
     case NON_BIM_ACTION_TYPES.FETCH_MODEL_STANDARD_OPTIONS_SUCCESS: {
-      if (state.selectedDrawingId !== action.payload.drawingId) return state;
+      // Model Standard 옵션은 선택된 공사번호와 일치할 때만 반영해 늦게 도착한 응답이 화면을 덮지 않게 합니다.
+      if (state.selectedConstructionNo !== action.payload.constructionNo) return state;
 
-      // 도면 선택 후 받아온 Model Standard 목록을 선택 도면과 모든 Chamber에 반영합니다.
-      // Chamber에 기존 선택값이 없으면 첫 번째 option을 기본값으로 사용합니다.
       const options = action.payload.options || [];
       const selectedDrawing = state.selectedDrawing
         ? {
@@ -222,6 +164,7 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
             modelStandard: nextModelStandard,
             minSpec: spec ? spec.minSpec : chamber.minSpec,
             maxSpec: spec ? spec.maxSpec : chamber.maxSpec,
+            calculateEnabled: Boolean(spec && nextModelStandard && (spec.minSpec || spec.maxSpec)),
           };
         }),
       };
@@ -254,8 +197,6 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
         activeChamberId: action.payload.chamberId,
       };
 
-    // Chamber Add 버튼 처리.
-// 최대 개수 제한은 helper의 canAddChamber에서 판단한다.
     case NON_BIM_ACTION_TYPES.ADD_CHAMBER: {
       if (!canAddChamber(state.chambers)) return state;
 
@@ -269,8 +210,6 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
       };
     }
 
-    // Chamber 삭제 처리.
-// MDM/도면에서 기본 생성된 locked Chamber는 삭제하지 않는다.
     case NON_BIM_ACTION_TYPES.REMOVE_CHAMBER: {
       const target = state.chambers.find((chamber) => chamber.id === action.payload.chamberId);
       if (!target || target.locked) return state;
@@ -284,13 +223,12 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
       };
     }
 
-    // Chamber 상단 영역 변경 처리.
-// 모델관리기준 선택 시 Min/Max 자동 세팅, Spec Skip 시 관련 값을 비운다.
     case NON_BIM_ACTION_TYPES.UPDATE_CHAMBER_FIELD: {
       const { chamberId, name, value } = action.payload;
 
       return updateChamber(state, chamberId, (chamber) => {
         if (name === "modelStandard") {
+          // Model Standard 변경 시 Min/Max Spec은 옵션 데이터로만 세팅하고 직접 입력값은 받지 않습니다.
           return applySpecToChamber(chamber, value);
         }
 
@@ -301,10 +239,11 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
           };
         }
 
-        if (name === "minSpec" || name === "maxSpec") {
+        if (name === "calculateEnabled") {
+          // Spec이 없는 기준은 산출대상이 될 수 없으므로 스위치를 켜도 자동으로 false가 됩니다.
           return {
             ...chamber,
-            [name]: onlyNumberLike(value),
+            calculateEnabled: Boolean(value) && Boolean(chamber.modelStandard) && Boolean(chamber.minSpec || chamber.maxSpec),
           };
         }
 
@@ -328,7 +267,6 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
       const chamberId = action.payload.chamberId || state.activeChamberId;
 
       return updateChamber(state, chamberId, (chamber) => {
-        // 마지막 배관 row는 삭제 대신 빈 row로 교체해 사용자가 다시 추가하지 않아도 바로 입력할 수 있게 합니다.
         if (!chamber.selectedPipeRowId) return chamber;
         if (chamber.pipeRows.length <= 1) {
           return {
@@ -355,8 +293,6 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
       }));
     }
 
-    // 배관정보 row 변경 처리.
-// 유형 변경 시 normalizePipeRowByType으로 불필요 컬럼 값을 정리한다.
     case NON_BIM_ACTION_TYPES.UPDATE_PIPE_ROW: {
       const { chamberId, rowId, name, value } = action.payload;
 
@@ -381,9 +317,8 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
         error: null,
       };
 
-    // 산출 API 성공.
-// 결과 데이터 저장과 팝업 표시는 공용 vcResult slice가 담당하므로 여기서는 loading만 내린다.
     case NON_BIM_ACTION_TYPES.CALCULATE_SUCCESS:
+      // 계산 결과 데이터는 공통 vcResult slice가 보유하므로 여기서는 loading만 종료합니다.
       return {
         ...setLoading(state, "calculate", false),
       };

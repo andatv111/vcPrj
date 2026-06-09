@@ -111,6 +111,10 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       return {
         ...state,
         equipment,
+        chambers: state.chambers.map((chamber) => ({
+          ...chamber,
+          calculateEnabled: Boolean(equipment.modelStandard && (equipment.minSpec || equipment.maxSpec)),
+        })),
       };
     }
 
@@ -132,6 +136,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
           minSpec: spec?.minSpec || "",
           maxSpec: spec?.maxSpec || "",
           specOptions: state.options.modelStandards,
+          calculateEnabled: Boolean(spec && action.payload.value && (spec.minSpec || spec.maxSpec)),
         })),
       };
     }
@@ -170,7 +175,10 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
     case VC_CALCULATOR_ACTION_TYPES.UPDATE_CHAMBER_FIELD:
       return updateChamber(state, action.payload.chamberId, (chamber) => ({
         ...chamber,
-        [action.payload.name]: action.payload.value,
+        [action.payload.name]:
+          action.payload.name === "calculateEnabled"
+            ? Boolean(action.payload.value) && Boolean(state.equipment.modelStandard) && Boolean(state.equipment.minSpec || state.equipment.maxSpec)
+            : action.payload.value,
       }));
 
     case VC_CALCULATOR_ACTION_TYPES.ADD_PIPE_ROW:
