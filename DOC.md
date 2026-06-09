@@ -44,3 +44,6 @@ git checkout main
 git pull origin main
 git merge codex-work
 git push origin main
+# 로컬 main에서 원격 main소스 반영
+git checkout main
+git pull origin main

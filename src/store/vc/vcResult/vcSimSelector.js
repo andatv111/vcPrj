@@ -1,13 +1,10 @@
+/**
+ * Vacuum Conductance 결과 팝업 공통 selector입니다.
+ * 결과 팝업은 Non-BIM, Calculator뿐 아니라 향후 Master/이력 화면에서도 재사용될 수 있습니다.
+ */
+import { JUDGE } from "../../../components/vc/nonBim/core/NonBim.constant";
 import { initialVcResultState } from "./reducer";
 
-/**
- * 회사 코드 전환 메모
- *
- * 결과 팝업은 Non-BIM과 Calculator가 함께 쓰는 공용 state입니다.
- * 회사 selector 규칙으로 바꾸더라도 결과 팝업 컴포넌트가 root reducer 경로를 직접 알지 않게 유지하세요.
- */
-
-// 결과 팝업은 여러 화면에서 재사용되므로 selector로 접근점을 고정합니다.
 export const selectVcResultState = (state) => state?.vc?.vcResult || initialVcResultState;
 
 export const selectVcResultVisible = (state) => selectVcResultState(state).visible;
@@ -24,6 +21,12 @@ export const selectVcResultSavedInfo = (state) => selectVcResultState(state).sav
 
 export const selectVcResultDraftPopup = (state) => selectVcResultState(state).draftPopup;
 
+// Spec Out 안내와 표준 기안 첨부 필요 여부에 쓰는 조건입니다.
 export const selectVcResultHasSpecOut = (state) =>
-  // 화면 경고 문구와 저장 전 기안 첨부 조건에서 동일하게 쓰는 Spec Out 여부입니다.
-  selectVcResultRows(state).some((row) => row.judge === "HIGH_OUT" || row.judge === "LOW_OUT");
+  selectVcResultRows(state).some((row) => row.judge === JUDGE.HIGH_OUT || row.judge === JUDGE.LOW_OUT);
+
+// 산출대상 제외 또는 Spec 미적용 row가 있으면 성공 문구 대신 N/A 안내를 보여줍니다.
+export const selectVcResultHasNaRows = (state) =>
+  selectVcResultRows(state).some(
+    (row) => row.judge === JUDGE.NA || row.calculationTarget === false || row.conductance === "N/A"
+  );

@@ -11,7 +11,7 @@ import {
   selectLoading,
   selectSearch,
   selectSelectedDrawing,
-  selectSelectedDrawingId,
+  selectSelectedConstructionNo,
 } from "../../../store/vc/nonBim/vcSimSelector";
 import {
   DRAWING_COLUMNS,
@@ -20,19 +20,18 @@ import {
   PIPE_TYPE_OPTIONS,
 } from "./core/NonBim.constant";
 import { isCalculationLockedByDrawingStatus, isPipeFieldEditable, toDisplayText } from "./core/NonBim.helper";
+import VcDraftAttachPopup from "./popup/VcDraftAttachPopup";
 import VcResultPopup from "./popup/VcResultPopup";
 
 const h = React.createElement;
 const pipeEditableFields = ["inletDiameter", "length", "angle", "outletDiameter", "quantity"];
 
 const Bim5DNotApplied = () => {
-  // 화면은 Redux state를 읽고, 모든 사용자 이벤트는 action으로만 전달합니다.
-  // API 호출과 복잡한 상태 변경은 saga/reducer에서 담당해 컴포넌트는 렌더링에 집중합니다.
   const dispatch = useDispatch();
   const search = useSelector(selectSearch);
   const eqSuggestions = useSelector(selectEqSuggestions);
   const drawings = useSelector(selectDrawings);
-  const selectedDrawingId = useSelector(selectSelectedDrawingId);
+  const selectedConstructionNo = useSelector(selectSelectedConstructionNo);
   const selectedDrawing = useSelector(selectSelectedDrawing);
   const chambers = useSelector(selectChambers);
   const activeChamber = useSelector(selectActiveChamber);
@@ -43,15 +42,12 @@ const Bim5DNotApplied = () => {
   const calculationLocked = isCalculationLockedByDrawingStatus(selectedDrawing?.requestStatus);
 
   useEffect(() => {
-    // EQ ID 입력값이 바뀔 때마다 saga에서 debounce 후 자동완성 후보를 조회합니다.
     // action: FETCH_EQ_SUGGESTIONS_REQUEST
-    // 사용처: saga가 keyword로 후보 EQ 목록을 조회하고, reducer가 eqSuggestions를 갱신합니다.
     dispatch(nonBimActions.fetchEqSuggestionsRequest(search.eqId));
   }, [dispatch, search.eqId]);
 
   const handleSearchChange = (name) => (event) => {
     // action: SET_SEARCH_FIELD
-    // 사용처: reducer가 search[name]만 갱신합니다. eqId 변경 시 위 useEffect가 자동완성 조회를 이어서 요청합니다.
     dispatch(nonBimActions.setSearchField({ name, value: event.target.value }));
   };
 
@@ -59,7 +55,6 @@ const Bim5DNotApplied = () => {
     if (!activeChamber) return;
 
     // action: UPDATE_CHAMBER_FIELD
-    // 사용처: reducer가 활성 Chamber의 단일 필드를 바꾸고, modelStandard/minSpec/maxSpec은 업무 규칙에 맞게 보정합니다.
     dispatch(nonBimActions.updateChamberField({ chamberId: activeChamber.id, name, value }));
   };
 
@@ -67,7 +62,6 @@ const Bim5DNotApplied = () => {
     if (!activeChamber) return;
 
     // action: UPDATE_PIPE_ROW
-    // 사용처: reducer가 선택 row 값을 숫자형 문자열로 정리하고, pipe type 정책에 맞게 불필요한 컬럼을 비웁니다.
     dispatch(nonBimActions.updatePipeRow({ chamberId: activeChamber.id, rowId, name, value }));
   };
 
@@ -81,22 +75,18 @@ const Bim5DNotApplied = () => {
       loading,
       onSearchChange: handleSearchChange,
       // action: RESET_SEARCH
-      // 사용처: reducer가 검색 조건과 EQ 자동완성 후보를 초기 상태로 되돌립니다.
       onResetSearch: () => dispatch(nonBimActions.resetSearch()),
       // action: FETCH_MANUAL_DRAWINGS_REQUEST
-      // 사용처: saga가 현재 search state로 도면 목록 API를 호출하고, reducer가 drawings를 갱신합니다.
       onSearch: () => dispatch(nonBimActions.fetchManualDrawingsRequest()),
     }),
     h(DrawingPanel, {
       drawings,
       loading,
-      selectedDrawingId,
+      selectedConstructionNo,
       // action: SELECT_DRAWING
-      // 사용처: reducer가 selectedDrawing/chambers/activeChamberId를 만들고, saga가 spec option을 추가 조회합니다.
-      onSelectDrawing: (drawingId) => dispatch(nonBimActions.selectDrawing(drawingId)),
+      onSelectDrawing: (constructionNo) => dispatch(nonBimActions.selectDrawing(constructionNo)),
       // action: DOWNLOAD_FORELINE_REQUEST
-      // 사용처: saga가 선택 row의 foreline fileId로 Blob을 받아 브라우저 다운로드를 실행합니다.
-      onDownload: (drawingId) => dispatch(nonBimActions.downloadForelineRequest(drawingId)),
+      onDownload: (constructionNo) => dispatch(nonBimActions.downloadForelineRequest(constructionNo)),
     }),
     h(ChamberPanel, {
       activeChamber,
@@ -106,36 +96,29 @@ const Bim5DNotApplied = () => {
       loading,
       selectedDrawing,
       // action: ADD_CHAMBER
-      // 사용처: reducer가 사용자 추가 Chamber를 생성합니다. 현재 업무화면 버튼은 비활성이라 향후 활성화 시 쓰입니다.
       onAddChamber: () => dispatch(nonBimActions.addChamber()),
       // action: REMOVE_CHAMBER
-      // 사용처: reducer가 locked=false인 사용자 추가 Chamber만 삭제합니다.
       onRemoveChamber: () => activeChamber && dispatch(nonBimActions.removeChamber(activeChamber.id)),
       // action: SET_ACTIVE_CHAMBER
-      // 사용처: reducer가 편집 대상 Chamber id를 바꿉니다.
       onSetActiveChamber: (chamberId) => dispatch(nonBimActions.setActiveChamber(chamberId)),
       onChamberChange: handleChamberChange,
       // action: ADD_PIPE_ROW
-      // 사용처: reducer가 활성 Chamber에 기본 PIPE row를 추가합니다.
       onAddPipeRow: () => activeChamber && dispatch(nonBimActions.addPipeRow(activeChamber.id)),
       // action: REMOVE_SELECTED_PIPE_ROW
-      // 사용처: reducer가 radio로 선택한 pipe row를 삭제하고, 마지막 row면 빈 row 하나로 교체합니다.
       onRemovePipeRow: () => activeChamber && dispatch(nonBimActions.removeSelectedPipeRow(activeChamber.id)),
       // action: SELECT_PIPE_ROW
-      // 사용처: reducer가 삭제 대상 pipe row id를 저장합니다.
       onSelectPipeRow: (rowId) =>
         activeChamber && dispatch(nonBimActions.selectPipeRow({ chamberId: activeChamber.id, rowId })),
       onPipeRowChange: handlePipeRowChange,
       // action: CALCULATE_REQUEST
-      // 사용처: saga가 검증, payload 생성, 계산 API 호출, 공용 결과 팝업 오픈을 순서대로 처리합니다.
       onCalculate: () => dispatch(nonBimActions.calculateRequest()),
     }),
-    h(VcResultPopup)
+    h(VcResultPopup),
+    h(VcDraftAttachPopup)
   );
 };
 
 const SearchPanel = ({ search, eqSuggestions, error, loading, onSearchChange, onResetSearch, onSearch }) =>
-  // 검색 조건 패널입니다. EQ ID는 datalist 자동완성을 쓰고, Search 버튼으로 도면 목록을 조회합니다.
   h(
     "section",
     { className: "panel" },
@@ -190,8 +173,7 @@ const SearchPanel = ({ search, eqSuggestions, error, loading, onSearchChange, on
     error ? h("div", { className: "error-box" }, error) : null
   );
 
-const DrawingPanel = ({ drawings, loading, selectedDrawingId, onSelectDrawing, onDownload }) =>
-  // 조회 결과 도면을 하나 선택하면 reducer가 해당 도면 기준으로 Chamber/배관 편집 상태를 생성합니다.
+const DrawingPanel = ({ drawings, loading, selectedConstructionNo, onSelectDrawing, onDownload }) =>
   h(
     "section",
     { className: "panel" },
@@ -224,14 +206,14 @@ const DrawingPanel = ({ drawings, loading, selectedDrawingId, onSelectDrawing, o
             : drawings.map((row) =>
                 h(
                   "tr",
-                  { key: row.id, className: selectedDrawingId === row.id ? "selected-row" : "" },
+                  { key: row.id, className: selectedConstructionNo === row.id ? "selected-row" : "" },
                   h(
                     "td",
                     { className: "center" },
                     h("input", {
                       type: "radio",
                       name: "drawingRadio",
-                      checked: selectedDrawingId === row.id,
+                      checked: selectedConstructionNo === row.id,
                       onChange: () => onSelectDrawing(row.id),
                     })
                   ),
@@ -289,8 +271,6 @@ const ChamberPanel = (props) => {
     onCalculate,
   } = props;
 
-  // Chamber 탭은 선택한 도면의 chamber 목록을 표시합니다.
-  // locked Chamber는 원본 도면에서 온 데이터라 삭제를 막고, 사용자가 추가한 Chamber만 삭제할 수 있습니다.
   return h(
     "section",
     { className: "panel" },
@@ -379,8 +359,6 @@ const ActiveChamberEditor = ({
   onPipeRowChange,
   onCalculate,
 }) =>
-  // 활성 Chamber의 기준 정보와 배관 row를 한 번에 편집하는 영역입니다.
-  // Model Standard를 바꾸면 reducer에서 Min/Max Spec도 같이 맞춥니다.
   h(
     React.Fragment,
     null,
@@ -415,11 +393,22 @@ const ActiveChamberEditor = ({
       ),
       h(
         "label",
+        { className: "field switch-field" },
+        h("span", null, "Calculation Target"),
+        h("input", {
+          type: "checkbox",
+          checked: Boolean(activeChamber.calculateEnabled),
+          disabled: !activeChamber.modelStandard,
+          onChange: (event) => onChamberChange("calculateEnabled", event.target.checked),
+        })
+      ),
+      h(
+        "label",
         { className: "field narrow" },
         h("span", null, "Min Spec"),
         h("input", {
           value: activeChamber.minSpec,
-          onChange: (event) => onChamberChange("minSpec", event.target.value),
+          readOnly: true,
         })
       ),
       h(
@@ -428,7 +417,7 @@ const ActiveChamberEditor = ({
         h("span", null, "Max Spec"),
         h("input", {
           value: activeChamber.maxSpec,
-          onChange: (event) => onChamberChange("maxSpec", event.target.value),
+          readOnly: true,
         })
       )
     ),
@@ -476,7 +465,6 @@ const ActiveChamberEditor = ({
   );
 
 const PipeTable = ({ activeChamber, onSelectPipeRow, onPipeRowChange }) =>
-  // 배관 유형별 editable 정책은 helper의 isPipeFieldEditable을 통해 한 곳의 업무 규칙을 따릅니다.
   h(
     "div",
     { className: "table-wrap" },

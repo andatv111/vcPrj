@@ -153,7 +153,7 @@ const sampleDrawings = [
     changeType: "Relocation",
     equipmentType: "Pump Line",
     requestStatus: "Draft",
-    model: "Pump Rack 8",
+    model: "",
     mainMaker: "K-Vac",
     processLarge: "UTILITY",
     processMiddle: "Vacuum Pump",
@@ -346,19 +346,19 @@ export const vcSimApi = {
     return filtered.length ? filtered : sampleDrawings;
   },
 
-  async downloadForelineDrawing({ drawingId }) {
+  async downloadForelineDrawing({ drawingKey, constructionNo }) {
     // 실제 연동: GET file download API.
     // B/E는 Blob/Stream/ArrayBuffer로 파일을 내려주고 Content-Disposition에 파일명을 포함하는 것이 좋습니다.
     // 미리보기에서는 PDF 대신 텍스트 Blob을 내려 실제 다운로드 흐름만 검증합니다.
     // 호출 saga: downloadForelineFlow
     // 실제 연동 시에는 drawingId/fileId로 파일 API를 호출하고 Blob 또는 ArrayBuffer를 반환하면 됩니다.
     await sleep(120);
-    const drawing = sampleDrawings.find((item) => item.id === drawingId);
+    const drawing = sampleDrawings.find((item) => item.id === drawingKey || item.constructionNo === constructionNo);
 
     return new Blob(
       [
         "V/C Simulation preview file\n",
-        `Drawing ID: ${drawingId}\n`,
+        `Drawing Key: ${drawingKey || "-"}\n`,
         `EQ ID: ${drawing?.eqId || "-"}\n`,
         `Construction No.: ${drawing?.constructionNo || "-"}\n`,
       ],
@@ -366,7 +366,7 @@ export const vcSimApi = {
     );
   },
 
-  async getEquipmentSpecOptions({ eqId, fab, model, drawingId }) {
+  async getEquipmentSpecOptions({ eqId, fab, model, drawingKey, constructionNo }) {
     // 실제 연동: GET equipment/model standard options API.
     // 회사 MDM/공통코드 응답이 어떤 형태이든 최종 option은 { value, label, minSpec, maxSpec, raw? }로 맞춥니다.
     // 도면 선택 후 해당 장비/모델에 맞는 Model Standard 후보를 가져오는 API 역할입니다.
@@ -375,7 +375,8 @@ export const vcSimApi = {
     await sleep(180);
     const drawing = sampleDrawings.find(
       (item) =>
-        item.id === drawingId ||
+        item.id === drawingKey ||
+        item.constructionNo === constructionNo ||
         item.eqId === eqId ||
         (item.fab === fab && item.model === model)
     );
@@ -399,6 +400,22 @@ export const vcSimApi = {
         fab: payload.equipment.fab,
         model: payload.equipment.modelStandard || payload.equipment.model,
         rows: payload.chambers.map((chamber, index) => {
+          if (chamber.calculationTarget === false) {
+            return {
+              id: `RESULT-${index + 1}`,
+              chamberId: chamber.chamberId || `VC-${Date.now()}-${index + 1}`,
+              chamberName: chamber.chamberName,
+              confirmFlag: "N",
+              processLarge: chamber.processLarge,
+              processMiddle: chamber.processMiddle,
+              modelStandard: chamber.modelStandard,
+              minSpec: chamber.minSpec,
+              maxSpec: chamber.maxSpec,
+              conductance: "N/A",
+              judge: "NA",
+            };
+          }
+
           const conductance = calculateConductance(chamber.pipeList);
           const judge = judgeConductance({
             conductance,
@@ -448,6 +465,22 @@ export const vcSimApi = {
         fab: payload.equipment.fab,
         model: payload.equipment.modelStandard || payload.equipment.model,
         rows: payload.chambers.map((chamber, index) => {
+          if (chamber.calculationTarget === false) {
+            return {
+              id: `CALC-RESULT-${index + 1}`,
+              chamberId: chamber.chamberId || `CALC-CH-${index + 1}`,
+              chamberName: chamber.chamberName,
+              confirmFlag: "N",
+              processLarge: chamber.processLarge,
+              processMiddle: chamber.processMiddle,
+              modelStandard: chamber.modelStandard,
+              minSpec: chamber.minSpec,
+              maxSpec: chamber.maxSpec,
+              conductance: "N/A",
+              judge: "NA",
+            };
+          }
+
           const conductance = calculateConductance(chamber.pipeList);
           const judge = judgeConductance({
             conductance,

@@ -257,6 +257,12 @@ textarea {
   height: auto;
 }
 
+.switch-field input {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+}
+
 .primary-button,
 .secondary-button {
   height: 34px;
@@ -457,6 +463,12 @@ td select {
   border: 1px solid #f2c98b;
   background: #fff8eb;
   color: #9a5b00;
+}
+
+.notice-box.info {
+  border: 1px solid #9cc3e6;
+  background: #eef6ff;
+  color: #1768ac;
 }
 
 .judge-badge {
