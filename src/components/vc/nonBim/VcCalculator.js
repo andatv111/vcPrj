@@ -23,6 +23,8 @@ import VcResultPopup from "./popup/VcResultPopup";
 const h = React.createElement;
 const pipeFields = ["inletDiameter", "length", "angle", "outletDiameter", "quantity"];
 
+// V/C Calculator는 도면 선택 없이 수동 조건으로 계산하는 화면입니다.
+// Non-BIM과 같은 Chamber/배관 모델을 사용해 결과 팝업, validation, payload 변환 로직을 공유합니다.
 const VcCalculator = () => {
   const dispatch = useDispatch();
   const equipment = useSelector(selectVcCalculatorEquipment);
@@ -34,7 +36,7 @@ const VcCalculator = () => {
   const canSelectModelStandard = useSelector(selectCanSelectModelStandard);
 
   useEffect(() => {
-    // action: INIT_REQUEST
+    // action: INIT_REQUEST - 화면 최초 진입 시 Fab/Model/Model Standard 선택지를 조회합니다.
     dispatch(vcCalculatorActions.initRequest());
   }, [dispatch]);
 
@@ -45,9 +47,9 @@ const VcCalculator = () => {
       equipment,
       options,
       canSelectModelStandard,
-      // action: SET_EQUIPMENT_FIELD
+      // action: SET_EQUIPMENT_FIELD - Fab/Model 변경 시 reducer가 Model Standard와 Spec 유효성을 다시 계산합니다.
       onFieldChange: (name, value) => dispatch(vcCalculatorActions.setEquipmentField({ name, value })),
-      // action: SET_MODEL_STANDARD
+      // action: SET_MODEL_STANDARD - 선택한 기준의 Min/Max Spec을 장비와 전체 Chamber에 반영합니다.
       onModelStandardChange: (value) => dispatch(vcCalculatorActions.setModelStandard(value)),
     }),
     h(ChamberSection, {
@@ -151,6 +153,8 @@ const ChamberSection = ({
   onPipeRowChange,
   onCalculate,
 }) =>
+  // activeChamberId 하나로 탭과 편집 패널을 연결합니다.
+  // 삭제 후 현재 탭이 사라지면 reducer가 첫 번째 남은 Chamber로 activeChamberId를 보정합니다.
   h(
     "section",
     { className: "panel" },
@@ -223,6 +227,8 @@ const ChamberEditor = ({
   onPipeRowChange,
   onCalculate,
 }) =>
+  // Calculator는 장비 기준 Model Standard를 모든 Chamber에 공통 적용합니다.
+  // 산출대상 checkbox는 Chamber별 제외 여부만 다루고, Spec 범위는 상단 장비 기준을 따릅니다.
   h(
     React.Fragment,
     null,
@@ -289,6 +295,8 @@ const ChamberEditor = ({
   );
 
 const PipeGrid = ({ activeChamber, onSelectPipeRow, onPipeRowChange }) =>
+  // pipe row 선택은 삭제 대상을 표시하기 위한 상태입니다.
+  // radio group name을 Chamber id로 분리해 탭을 이동해도 다른 Chamber의 row 선택을 침범하지 않습니다.
   h(
     "div",
     { className: "table-wrap" },

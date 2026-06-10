@@ -26,6 +26,8 @@ import VcResultPopup from "./popup/VcResultPopup";
 const h = React.createElement;
 const pipeEditableFields = ["inletDiameter", "length", "angle", "outletDiameter", "quantity"];
 
+// BIM/5D 미적용 화면은 수기 도면 선택과 Chamber/배관 편집만 담당합니다.
+// 계산 결과 팝업과 저장/기안 첨부 흐름은 공용 vcResult slice가 처리하므로 이 화면에 팝업 상태를 두지 않습니다.
 const Bim5DNotApplied = () => {
   const dispatch = useDispatch();
   const search = useSelector(selectSearch);
@@ -42,26 +44,26 @@ const Bim5DNotApplied = () => {
   const calculationLocked = isCalculationLockedByDrawingStatus(selectedDrawing?.requestStatus);
 
   useEffect(() => {
-    // action: FETCH_EQ_SUGGESTIONS_REQUEST
+    // action: FETCH_EQ_SUGGESTIONS_REQUEST - EQ ID 입력값이 바뀔 때 자동완성 후보를 새로 조회합니다.
     dispatch(nonBimActions.fetchEqSuggestionsRequest(search.eqId));
   }, [dispatch, search.eqId]);
 
   const handleSearchChange = (name) => (event) => {
-    // action: SET_SEARCH_FIELD
+    // action: SET_SEARCH_FIELD - 검색 조건 input을 name/value 공통 payload로 reducer에 전달합니다.
     dispatch(nonBimActions.setSearchField({ name, value: event.target.value }));
   };
 
   const handleChamberChange = (name, value) => {
     if (!activeChamber) return;
 
-    // action: UPDATE_CHAMBER_FIELD
+    // action: UPDATE_CHAMBER_FIELD - 현재 활성 탭의 Chamber만 갱신합니다.
     dispatch(nonBimActions.updateChamberField({ chamberId: activeChamber.id, name, value }));
   };
 
   const handlePipeRowChange = (rowId, name, value) => {
     if (!activeChamber) return;
 
-    // action: UPDATE_PIPE_ROW
+    // action: UPDATE_PIPE_ROW - 현재 활성 Chamber 안의 대상 배관 row만 갱신합니다.
     dispatch(nonBimActions.updatePipeRow({ chamberId: activeChamber.id, rowId, name, value }));
   };
 
@@ -271,6 +273,8 @@ const ChamberPanel = (props) => {
     onCalculate,
   } = props;
 
+  // 탭의 원천은 chambers 배열이고, 현재 편집 대상은 activeChamberId로 찾은 activeChamber입니다.
+  // 탭 클릭은 데이터 복사 없이 id만 바꾸므로, 각 Chamber가 가진 pipeRows/selectedPipeRowId가 서로 섞이지 않습니다.
   return h(
     "section",
     { className: "panel" },
@@ -359,6 +363,8 @@ const ActiveChamberEditor = ({
   onPipeRowChange,
   onCalculate,
 }) =>
+  // Model Standard를 바꾸면 reducer가 Spec 범위와 산출대상 가능 여부를 함께 보정합니다.
+  // Calculate 버튼은 도면 requestStatus가 저장/기안첨부 완료 상태일 때 숨겨져 재계산 진입을 막습니다.
   h(
     React.Fragment,
     null,
@@ -465,6 +471,8 @@ const ActiveChamberEditor = ({
   );
 
 const PipeTable = ({ activeChamber, onSelectPipeRow, onPipeRowChange }) =>
+  // pipe row radio name에 activeChamber.id를 포함해 Chamber 탭마다 독립적인 선택 그룹을 만듭니다.
+  // 배관 유형을 바꾸면 reducer의 normalizePipeRowByType이 해당 유형에서 쓰지 않는 컬럼 값을 즉시 비웁니다.
   h(
     "div",
     { className: "table-wrap" },

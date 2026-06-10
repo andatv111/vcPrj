@@ -11,10 +11,13 @@ import { initialVcCalculatorState } from "./reducer";
 // 컴포넌트가 root state 구조를 직접 알지 않도록 계산기 state 접근을 selector에 모읍니다.
 export const selectVcCalculatorState = (state) => state?.vc?.vcCalculator || initialVcCalculatorState;
 
+// 상단 장비 기본정보입니다. Fab/Model/Model Standard/Spec이 계산 payload의 equipment로 내려갑니다.
 export const selectVcCalculatorEquipment = (state) => selectVcCalculatorState(state).equipment;
 
+// Calculator 초기 select box 선택지입니다. getCalculatorOptions API 응답으로 채워집니다.
 export const selectVcCalculatorOptions = (state) => selectVcCalculatorState(state).options;
 
+// 도면 없이 수동으로 구성한 Chamber 탭 목록입니다.
 export const selectVcCalculatorChambers = (state) => selectVcCalculatorState(state).chambers;
 
 export const selectVcCalculatorActiveChamber = (state) => {
@@ -26,6 +29,7 @@ export const selectVcCalculatorActiveChamber = (state) => {
 
 export const selectVcCalculatorLoading = (state) => selectVcCalculatorState(state).loading;
 
+// 초기 옵션 조회 또는 계산 실패 메시지를 화면 error 영역에 표시합니다.
 export const selectVcCalculatorError = (state) => selectVcCalculatorState(state).error;
 
 export const selectCanSelectModelStandard = (state) => {

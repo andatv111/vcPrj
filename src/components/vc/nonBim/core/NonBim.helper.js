@@ -14,21 +14,25 @@ import {
 } from "./NonBim.constant";
 
 export const createId = (prefix = "ID") => {
+  // 화면에서 즉시 추가되는 Chamber/pipe/result row의 임시 key입니다. 서버 PK가 오면 normalize 단계에서 서버 값을 우선합니다.
   const random = Math.random().toString(36).slice(2, 8);
   return `${prefix}_${Date.now()}_${random}`;
 };
 
+// API 응답이 단건/배열/null 중 어떤 형태로 와도 화면 로직은 배열 기준으로 처리합니다.
 export const toArray = (value) => {
   if (Array.isArray(value)) return value;
   if (value == null) return [];
   return [value];
 };
 
+// null/undefined만 fallback으로 바꾸고, 0 같은 유효값은 보존합니다.
 export const nvl = (value, fallback = "") => {
   if (value === undefined || value === null) return fallback;
   return value;
 };
 
+// 화면 표시 전용 변환입니다. 실제 payload에는 원본 값 또는 normalize된 값을 사용합니다.
 export const toDisplayText = (value) => {
   if (value === undefined || value === null || value === "") return EMPTY_TEXT;
   return value;
@@ -37,6 +41,7 @@ export const toDisplayText = (value) => {
 export const isCalculationLockedByDrawingStatus = (status) =>
   CALCULATION_LOCKED_DRAWING_STATUSES.includes(String(status || ""));
 
+// 배관 수치 입력은 숫자와 소수점만 허용합니다. 상세 단위/범위 검증은 B/E 또는 별도 validation에서 확장합니다.
 export const onlyNumberLike = (value) => {
   if (value === undefined || value === null) return "";
   return String(value).replace(/[^\d.]/g, "");
@@ -44,8 +49,10 @@ export const onlyNumberLike = (value) => {
 
 export const leftPad2 = (value) => String(value).padStart(2, "0");
 
+// 기본 Chamber명은 Ch01, Ch02처럼 탭에서 짧게 읽히는 형식으로 만듭니다.
 export const createChamberName = (seq) => `${CHAMBER_PREFIX}${leftPad2(seq)}`;
 
+// 긴 설비/도면 유래 Chamber명은 탭이 깨지지 않도록 앞 10자만 사용합니다.
 export const shortenChamberName = (name, fallback) => {
   const text = String(name || fallback || "").trim();
   return text ? text.slice(0, 10) : fallback;
@@ -54,9 +61,12 @@ export const shortenChamberName = (name, fallback) => {
 export const getPipePolicy = (type) =>
   PIPE_TYPE_FIELD_POLICY[type] || PIPE_TYPE_FIELD_POLICY[PIPE_TYPE.PIPE];
 
+// 배관 유형에 따라 input disabled 여부를 결정합니다.
 export const isPipeFieldEditable = (type, fieldName) => Boolean(getPipePolicy(type)[fieldName]);
 
 export const normalizePipeRowByType = (row = {}) => {
+  // type 변경 즉시 해당 유형에서 쓰지 않는 값을 비워 payload 오염을 막습니다.
+  // 예: ELBOW는 length/outletDiameter를 사용하지 않고 angle/quantity를 사용합니다.
   const type = row.type || PIPE_TYPE.PIPE;
   const policy = getPipePolicy(type);
 
@@ -79,6 +89,7 @@ export const createEmptyPipeRow = (type = PIPE_TYPE.PIPE) =>
   });
 
 // 수기 도면 조회 응답을 첫 번째 그리드 row 모델로 변환합니다. 화면 선택 키는 constructionNo입니다.
+// B/E DTO 필드명이 확정/변경되면 컴포넌트가 아니라 이 함수에서 alias를 흡수합니다.
 export const normalizeDrawing = (raw = {}) => {
   const foreline = raw.foreline || raw.forelineDrawing || {};
 
@@ -113,10 +124,12 @@ export const normalizeDrawing = (raw = {}) => {
 };
 
 export const normalizeDrawingList = (response) => {
+  // mock, REST list, result wrapper 등 응답 wrapper 차이를 한 번에 흡수합니다.
   const data = response?.data || response?.list || response?.result || response || [];
   return toArray(data).map(normalizeDrawing);
 };
 
+// Model Standard option은 화면 value/label과 Spec 범위를 함께 가져야 Chamber 산출 가능 여부를 판단할 수 있습니다.
 export const normalizeSpecOption = (raw = {}) => ({
   value: nvl(raw.value || raw.modelStandard || raw.modelStandardName || raw.specName || raw.cd),
   label: nvl(raw.label || raw.modelStandard || raw.modelStandardName || raw.specName || raw.cdNm || raw.cd),
@@ -129,6 +142,7 @@ export const normalizeSpecOptions = (rawList) =>
   toArray(rawList).map(normalizeSpecOption).filter((item) => item.value || item.label);
 
 // Chamber 원천 데이터가 없으면 도면의 specOptions와 chamberCount로 기본 탭을 만들 수 있게 표준 모델을 보정합니다.
+// locked=true인 Chamber는 도면 원본에서 온 탭으로 보고 삭제를 막습니다. 사용자가 추가한 Chamber만 unlocked입니다.
 export const normalizeChamberFromRaw = (raw = {}, index = 0, parentDrawing = {}) => {
   const fallbackSpecOptions = normalizeSpecOptions(parentDrawing.specOptions);
   const specOptions = normalizeSpecOptions(raw.specOptions || raw.modelStandardOptions || raw.specList);
@@ -174,6 +188,7 @@ export const normalizeChamberFromRaw = (raw = {}, index = 0, parentDrawing = {})
 };
 
 export const normalizeChambersFromDrawing = (drawing) => {
+  // 1순위는 API가 내려준 chamberList입니다. 없으면 chamberCount만큼 기본 탭을 만들어 사용자가 배관을 채울 수 있게 합니다.
   const rawChambers = toArray(drawing?.chambers);
   const chamberCount = Math.max(Number(drawing?.chamberCount || rawChambers.length || 1), 1);
 
@@ -193,6 +208,7 @@ export const getNextChamberSeq = (chambers = []) => Math.min(chambers.length + 1
 export const canAddChamber = (chambers = []) => toArray(chambers).length < MAX_CHAMBER_COUNT;
 
 export const createUserChamber = (chambers = [], selectedDrawing = {}) => {
+  // 사용자가 추가한 Chamber도 선택 도면의 공정/Spec option을 기본 상속해 기존 도면 탭과 같은 계산 규칙을 탑니다.
   const seq = getNextChamberSeq(chambers);
   const base = normalizeChamberFromRaw(
     {
@@ -228,11 +244,13 @@ export const applySpecToChamber = (chamber, modelStandardValue) => {
 };
 
 export const buildFileDownloadName = (drawing = {}) => {
+  // 서버 파일명이 있으면 그대로 쓰고, 없으면 사용자가 알아볼 수 있는 EQ/공사번호 조합으로 보정합니다.
   if (drawing.foreline?.fileName) return drawing.foreline.fileName;
   return `${drawing.eqId || "EQ"}_${drawing.constructionNo || "DRAWING"}_Foreline`;
 };
 
 export const downloadBlob = (blob, fileName) => {
+  // 브라우저 환경에서만 임시 anchor를 만들어 파일 다운로드를 트리거합니다.
   if (!blob || typeof window === "undefined") return;
 
   const objectUrl = window.URL.createObjectURL(blob instanceof Blob ? blob : new Blob([blob]));
@@ -246,11 +264,13 @@ export const downloadBlob = (blob, fileName) => {
 };
 
 export const findActiveChamber = (chambers = [], activeChamberId) => {
+  // activeChamberId가 삭제되었거나 비어 있으면 첫 Chamber를 fallback으로 반환해 화면이 비지 않게 합니다.
   if (!chambers.length) return null;
   return chambers.find((chamber) => chamber.id === activeChamberId) || chambers[0];
 };
 
 export const validateRequiredPipeFields = (row) => {
+  // 필수값 판단도 PIPE_TYPE_FIELD_POLICY를 사용해 화면 disabled 정책과 검증 정책을 일치시킵니다.
   const policy = getPipePolicy(row.type);
 
   const missingFields = policy.requiredFields.filter((fieldName) => {
@@ -274,6 +294,7 @@ export const validateNonBimBeforeCalculate = ({ selectedDrawing, chambers }) => 
 };
 
 export const validateChambersBeforeCalculate = (chambers) => {
+  // 산출대상이 꺼진 Chamber는 의도적으로 계산에서 제외되므로 Spec/배관 필수값 검증을 건너뜁니다.
   if (!toArray(chambers).length) {
     return { valid: false, message: "Chamber 정보가 없습니다." };
   }
@@ -305,6 +326,7 @@ export const validateChambersBeforeCalculate = (chambers) => {
 };
 
 // Non-BIM 계산 API payload입니다. V/C Master 저장 상태와 무관한 순수 계산 요청입니다.
+// 상단 도면 row는 설비/공정 메타를 제공하고, 실제 Model Standard/Spec/배관은 Chamber별 입력값을 우선합니다.
 export const buildNonBimCalculatePayload = (state) => {
   const selectedDrawing = state.selectedDrawing;
   const activeChamber =
@@ -357,6 +379,7 @@ export const buildNonBimCalculatePayload = (state) => {
 };
 
 // Calculator 계산 API payload입니다. 결과 팝업을 공유하기 위해 Non-BIM과 같은 rows 응답 구조를 기대합니다.
+// 장비 기준 Model Standard가 모든 Chamber에 공통 적용되므로 Chamber별 modelStandard 대신 equipment 값을 내려줍니다.
 export const buildCalculatorCalculatePayload = (state) => {
   const equipment = state.equipment || {};
 
@@ -397,6 +420,7 @@ export const buildCalculatorCalculatePayload = (state) => {
 };
 
 export const normalizeJudge = (value) => {
+  // B/E 응답이 SPEC_IN, HIGH_OUT, high 등으로 달라도 팝업 badge는 JUDGE 표준 코드만 보게 합니다.
   if (!value) return JUDGE.NONE;
   const upper = String(value).toUpperCase();
   if (upper === "IN" || upper === "SPEC_IN") return JUDGE.IN;
@@ -412,9 +436,11 @@ export const hasSpecOutRows = (rows = []) =>
 
 export const hasSpecBounds = (row = {}) => Boolean(row.minSpec || row.maxSpec);
 
+// Spec 범위가 없는 row는 Min/Max와 판정 컬럼을 '-' 또는 N/A 성격으로 보여줍니다.
 export const shouldShowSpecColumns = (row = {}) => hasSpecBounds(row);
 
 // 계산 응답을 Vacuum Conductance Result 공통 팝업 모델로 변환합니다. 산출대상 제외 row는 N/A로 보정합니다.
+// API가 rows를 주지 않는 preview/mock 상황에서도 payload의 chambers로 fallbackRows를 만들어 팝업 구조를 유지합니다.
 export const normalizeCalculationResult = (response, payload) => {
   const rawRows =
     response?.rows ||

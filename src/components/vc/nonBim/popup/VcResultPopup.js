@@ -17,6 +17,8 @@ import { shouldShowSpecColumns, toDisplayText } from "../core/NonBim.helper";
 const h = React.createElement;
 
 const getResultNotice = ({ hasSpecOut, hasNaRows }) => {
+  // 안내 문구 우선순위는 Spec Out > N/A row > 정상입니다.
+  // Spec Out은 저장 전에 기안 첨부가 필요할 수 있으므로 가장 강한 warning으로 노출합니다.
   if (hasSpecOut) {
     return {
       className: "notice-box warning",
@@ -37,6 +39,8 @@ const getResultNotice = ({ hasSpecOut, hasNaRows }) => {
   };
 };
 
+// Non-BIM과 Calculator가 공유하는 Vacuum Conductance Result 팝업입니다.
+// 계산 성공 saga가 vcResultActions.openResultPopup을 호출하면 이 컴포넌트가 selector로 표준 결과 모델을 읽습니다.
 const VcResultPopup = () => {
   const dispatch = useDispatch();
   const visible = useSelector(selectVcResultVisible);
@@ -123,6 +127,8 @@ const VcResultPopup = () => {
 };
 
 const ResultTable = ({ rows }) =>
+  // 결과 row는 helper에서 이미 표준 모델로 normalize됩니다.
+  // Spec 범위가 없는 row는 판정 의미가 없으므로 Min/Max와 judge 표시를 제한합니다.
   h(
     "div",
     { className: "table-wrap" },
@@ -152,6 +158,7 @@ const ResultTable = ({ rows }) =>
   );
 
 const JudgeBadge = ({ judge }) => {
+  // badge class는 표준 JUDGE 코드만 기준으로 결정합니다. 신규 판정 코드는 JUDGE/JUDGE_LABEL에 먼저 추가합니다.
   const className =
     judge === JUDGE.IN
       ? "judge-badge in"
@@ -163,6 +170,7 @@ const JudgeBadge = ({ judge }) => {
 };
 
 const ReadonlyField = ({ label, value }) =>
+  // 기본정보는 결과 확인용 read-only 필드이며 빈 값은 공통 표시문자 '-'로 보여줍니다.
   h(
     "label",
     { className: "field" },

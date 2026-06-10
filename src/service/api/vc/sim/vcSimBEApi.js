@@ -59,6 +59,12 @@
  *   "draftAttached": true,
  *   "nextStatus": "Draft Attached"
  * }
+ *
+ * B/E 협업 팁
+ * - 먼저 화면 단위로 회의하세요: "BIM/5D 미적용 Fab", "V/C Calculator", "Vacuum Conductance Result", "표준 기안 첨부".
+ * - 각 API마다 request sample, response sample, 빈 값 정책, 오류 message 정책을 1개씩 확정하면 F/E 전환이 빠릅니다.
+ * - F/E가 constructionNo를 첫 그리드 업무 키로 쓰므로, B/E도 조회/저장/재조회 대화에서 같은 키를 기준으로 설명해 주세요.
+ * - save 응답의 nextStatus와 manual-drawings 재조회 requestStatus가 같은 의미인지 꼭 맞춰야 합니다.
  */
 
 export const VC_SIM_BE_DEVELOPMENT_REQUEST = {
@@ -66,7 +72,15 @@ export const VC_SIM_BE_DEVELOPMENT_REQUEST = {
     responseWrapper: '{ success, data, message, errorCode } 권장. 배열 또는 { data/list/result } wrapper도 F/E에서 흡수 가능',
     primaryKey: 'BIM/5D 미적용 Fab 첫 번째 그리드의 업무 PK는 constructionNo입니다. drawingKey/drawingId는 다운로드 보조 키입니다.',
     savePolicy: '계산 화면은 저장 상태를 다시 조회해 잠그는 화면이 아닙니다. 저장 결과는 V/C Master 또는 이력 화면에서 조회합니다.',
+    communicationTip: '회의는 endpoint 목록보다 화면 workflow 기준으로 진행하세요. 사용자가 누르는 버튼, 필요한 request, 기대 response, 실패 message를 한 줄씩 맞추면 누락이 줄어듭니다.',
   },
+  communicationTips: [
+    'manual-drawings 조회 응답 sample을 먼저 받아 F/E normalizeDrawing alias와 맞춥니다.',
+    'calculate 응답 rows sample은 IN, HIGH_OUT, LOW_OUT, NA 케이스를 모두 포함해 주세요.',
+    'Spec Out 저장은 파일 업로드를 별도 API로 할지, save API를 multipart로 받을지 먼저 결정해야 합니다.',
+    '저장 성공 후 nextStatus를 내려준다면, 재조회 API의 requestStatus도 같은 값/의미로 내려와야 합니다.',
+    'B/E 오류 message는 alert/inline error에 그대로 노출될 수 있으므로 사용자가 이해할 문장으로 내려주세요.',
+  ],
   screens: [
     {
       name: 'BIM/5D 미적용 Fab',
@@ -82,6 +96,7 @@ export const VC_SIM_BE_DEVELOPMENT_REQUEST = {
         'chambers/chamberList가 있으면 해당 상세를 우선 사용하고, 없으면 chamberCount만큼 F/E가 기본 Chamber 탭을 생성합니다.',
         'Model Standard option은 value, label, minSpec, maxSpec을 포함해야 합니다.',
         '적용 가능한 Model Standard 또는 Spec이 없으면 빈 배열 또는 빈 min/max를 반환해 주세요. F/E는 산출대상을 off 처리합니다.',
+        'requestStatus는 Calculate 버튼 노출 판단에 쓰입니다. Saved, Draft Attached처럼 잠금 상태가 늘어나면 F/E 상수에도 공유가 필요합니다.',
       ],
     },
     {
@@ -109,6 +124,7 @@ export const VC_SIM_BE_DEVELOPMENT_REQUEST = {
       notes: [
         'Spec Out Non-BIM 결과 저장 시 draft.title과 attachmentName 또는 attachmentId를 전달합니다.',
         '실제 파일 업로드 방식은 별도 upload 후 attachmentId 전달 또는 multipart save 중 하나로 확정이 필요합니다.',
+        'save 응답에는 savedId, savedAt, rowCount, draftAttached, nextStatus를 포함하면 F/E 후속 처리와 사용자 안내가 쉬워집니다.',
       ],
     },
   ],
@@ -130,6 +146,7 @@ const DEFAULT_HEADERS = {
 };
 
 const createQueryString = (params = {}) => {
+  // undefined/null/빈 문자열은 query에서 제외해 B/E에서 불필요한 빈 조건을 받지 않게 합니다.
   const query = new URLSearchParams();
 
   Object.entries(params).forEach(([key, value]) => {
@@ -143,6 +160,7 @@ const createQueryString = (params = {}) => {
 };
 
 const unwrapJsonResponse = (payload) => {
+  // 권장 wrapper { success: false, message, errorCode }를 표준 Error로 변환해 saga catch에서 동일하게 처리합니다.
   if (payload && typeof payload === "object" && "success" in payload && payload.success === false) {
     const error = new Error(payload.message || "B/E API request failed.");
     error.errorCode = payload.errorCode;
@@ -154,6 +172,7 @@ const unwrapJsonResponse = (payload) => {
 };
 
 const requestJson = async (url, { method = "GET", params, body, headers } = {}) => {
+  // JSON API 공통 요청 함수입니다. 실제 프로젝트의 인증 header, CSRF token, baseUrl은 여기에서 주입하면 됩니다.
   const response = await fetch(`${url}${createQueryString(params)}`, {
     method,
     headers: {
@@ -179,6 +198,7 @@ const requestJson = async (url, { method = "GET", params, body, headers } = {}) 
 };
 
 const requestBlob = async (url, { params } = {}) => {
+  // 파일 다운로드는 JSON wrapper가 아니라 Blob을 반환합니다. 오류 body가 JSON이면 message만 추출합니다.
   const response = await fetch(`${url}${createQueryString(params)}`, {
     method: "GET",
   });
@@ -202,30 +222,35 @@ const requestBlob = async (url, { params } = {}) => {
 
 export const vcSimBEApi = {
   searchEqSuggestions(keyword) {
+    // EQ ID 자동완성: keyword 2글자 이상일 때 saga에서 호출합니다.
     return requestJson(VC_SIM_BE_ENDPOINTS.searchEqSuggestions, {
       params: { keyword },
     });
   },
 
   searchManualDrawings(params = {}) {
+    // Manual Drawing Results 조회: eqId/constructionNo 조건과 향후 paging 조건을 query로 전달합니다.
     return requestJson(VC_SIM_BE_ENDPOINTS.searchManualDrawings, {
       params,
     });
   },
 
   downloadForelineDrawing({ drawingKey, fileId, constructionNo }) {
+    // Foreline 다운로드: constructionNo는 업무 키, drawingKey/fileId는 파일 저장소 키입니다.
     return requestBlob(VC_SIM_BE_ENDPOINTS.downloadForelineDrawing, {
       params: { drawingKey, fileId, constructionNo },
     });
   },
 
   getEquipmentSpecOptions({ eqId, fab, model, drawingKey, constructionNo }) {
+    // 선택 도면 기준 Model Standard/Spec 후보 조회입니다.
     return requestJson(VC_SIM_BE_ENDPOINTS.equipmentSpecOptions, {
       params: { eqId, fab, model, drawingKey, constructionNo },
     });
   },
 
   calculateNonBim(payload) {
+    // Non-BIM 계산: buildNonBimCalculatePayload 결과를 그대로 전달합니다.
     return requestJson(VC_SIM_BE_ENDPOINTS.calculateNonBim, {
       method: "POST",
       body: payload,
@@ -233,10 +258,12 @@ export const vcSimBEApi = {
   },
 
   getCalculatorOptions() {
+    // Calculator 초기 공통코드 조회입니다.
     return requestJson(VC_SIM_BE_ENDPOINTS.calculatorOptions);
   },
 
   calculateVcCalculator(payload) {
+    // Calculator 계산: 결과 rows는 Non-BIM 계산 결과와 같은 모델로 맞추는 것이 핵심입니다.
     return requestJson(VC_SIM_BE_ENDPOINTS.calculateVcCalculator, {
       method: "POST",
       body: payload,
@@ -244,6 +271,7 @@ export const vcSimBEApi = {
   },
 
   saveVcResult(payload) {
+    // 결과 저장: Spec Out Non-BIM이면 draft 정보 또는 attachmentId가 함께 들어옵니다.
     return requestJson(VC_SIM_BE_ENDPOINTS.saveVcResult, {
       method: "POST",
       body: payload,
