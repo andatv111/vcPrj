@@ -309,10 +309,9 @@ export const vcSimApi = {
   async searchEqSuggestions(keyword) {
     // 실제 연동: GET equipment autocomplete API.
     // B/E query parameter 예시: { keyword }
-    // 화면 자동완성은 응답을 { value, label, raw }로 변환해 사용합니다.
-    // datalist 자동완성용 간단 검색입니다. 실제 API에서는 keyword query parameter로 대체됩니다.
     // 호출 saga: fetchEqSuggestionsFlow
     // 반환 형태: saga가 { value, label, raw }로 다시 감싸므로 eqId/equipmentId/value 중 하나만 있어도 됩니다.
+    // 미리보기 구현: sampleDrawings에서 EQ ID를 부분 검색해 datalist 후보를 만듭니다.
     await sleep(120);
     const needle = String(keyword || "").toLowerCase();
 
@@ -328,10 +327,9 @@ export const vcSimApi = {
   async searchManualDrawings(params = {}) {
     // 실제 연동: GET manual drawing list API.
     // B/E query parameter 예시: { eqId, constructionNo, page?, size?, sort? }
-    // 응답은 normalizeDrawingList에서 그리드 row 모델로 변환합니다.
-    // 검색값이 없거나 결과가 없을 때도 미리보기 화면이 비지 않도록 샘플 전체를 fallback으로 반환합니다.
     // 호출 saga: fetchManualDrawingsFlow
     // 반환 형태: helper.normalizeDrawingList가 표준 도면 row로 변환합니다.
+    // 미리보기 구현: 검색값이 없거나 결과가 없으면 샘플 전체를 반환해 화면 검증을 쉽게 합니다.
     await sleep(250);
     const eqId = String(params.eqId || "").toLowerCase();
     const constructionNo = String(params.constructionNo || "").toLowerCase();
@@ -349,9 +347,8 @@ export const vcSimApi = {
   async downloadForelineDrawing({ drawingKey, constructionNo }) {
     // 실제 연동: GET file download API.
     // B/E는 Blob/Stream/ArrayBuffer로 파일을 내려주고 Content-Disposition에 파일명을 포함하는 것이 좋습니다.
-    // 미리보기에서는 PDF 대신 텍스트 Blob을 내려 실제 다운로드 흐름만 검증합니다.
     // 호출 saga: downloadForelineFlow
-    // 실제 연동 시에는 drawingId/fileId로 파일 API를 호출하고 Blob 또는 ArrayBuffer를 반환하면 됩니다.
+    // 미리보기 구현: PDF 대신 텍스트 Blob을 내려 실제 다운로드 트리거만 검증합니다.
     await sleep(120);
     const drawing = sampleDrawings.find((item) => item.id === drawingKey || item.constructionNo === constructionNo);
 
@@ -369,9 +366,9 @@ export const vcSimApi = {
   async getEquipmentSpecOptions({ eqId, fab, model, drawingKey, constructionNo }) {
     // 실제 연동: GET equipment/model standard options API.
     // 회사 MDM/공통코드 응답이 어떤 형태이든 최종 option은 { value, label, minSpec, maxSpec, raw? }로 맞춥니다.
-    // 도면 선택 후 해당 장비/모델에 맞는 Model Standard 후보를 가져오는 API 역할입니다.
     // 호출 saga: fetchModelStandardOptionsFlow
     // 반환 형태: helper.normalizeSpecOptions가 value/label/minSpec/maxSpec으로 표준화할 수 있는 배열입니다.
+    // 미리보기 구현: 선택 도면 또는 장비 조건에 맞는 sample specOptions를 반환합니다.
     await sleep(180);
     const drawing = sampleDrawings.find(
       (item) =>
@@ -388,10 +385,10 @@ export const vcSimApi = {
     // 실제 연동: POST Non-BIM calculation API.
     // payload는 NonBim.helper.js의 buildNonBimCalculatePayload에서 만들어집니다.
     // B/E는 chamber별 conductance와 judge를 rows 배열로 반환하면 됩니다.
-    // Non-BIM 계산은 payload.chambers를 그대로 순회해 결과 row를 생성합니다.
     // 호출 saga: nonBimCalculateFlow
     // payload 생성 위치: helper.buildNonBimCalculatePayload
     // 결과 정규화 위치: helper.normalizeCalculationResult
+    // 미리보기 구현: payload.chambers를 순회하며 임시 계산식으로 conductance/judge를 생성합니다.
     await sleep(250);
 
     return {
@@ -446,7 +443,7 @@ export const vcSimApi = {
     // 실제 연동: GET calculator initial option API.
     // 회사 공통코드 규칙이 있으면 여기에서 호출하고 options.fabs/models/modelStandards 형태로 변환합니다.
     // 호출 saga: calculatorInitFlow
-    // Calculator 화면 select box에 들어갈 Fab/Model/Model Standard 후보를 반환합니다.
+    // 반환 형태: Calculator 화면 select box에 들어갈 Fab/Model/Model Standard 후보입니다.
     await sleep(120);
     return calculatorOptions;
   },
@@ -454,9 +451,9 @@ export const vcSimApi = {
   async calculateVcCalculator(payload) {
     // 실제 연동: POST standalone calculator API.
     // Non-BIM 계산과 같은 결과 row 구조를 쓰면 결과 팝업을 공용으로 유지할 수 있습니다.
-    // Calculator 계산도 같은 결과 포맷을 반환해 공용 결과 팝업을 재사용합니다.
     // 호출 saga: vcCalculatorCalculateFlow
     // payload 생성 위치: helper.buildCalculatorCalculatePayload
+    // 미리보기 구현: Non-BIM과 같은 임시 계산식과 rows 구조를 사용합니다.
     await sleep(250);
 
     return {
@@ -511,9 +508,9 @@ export const vcSimApi = {
     // 실제 연동: POST result save API.
     // sourceType, basicInfo, rows, draft를 Java DTO에 맞춰 저장합니다.
     // Spec Out 기안 첨부 필드가 회사 결재/문서 시스템과 연결된다면 여기에서 DTO를 변환합니다.
-    // 저장 API mock입니다. 기안 첨부 여부와 row 개수를 응답해 저장 완료 메시지 확인에 사용합니다.
     // 호출 saga: saveResultFlow
     // payload.draft는 Spec Out 기안 첨부 팝업 입력값이며, Calculator 저장에서는 비어 있을 수 있습니다.
+    // 미리보기 구현: 기안 첨부 여부와 row 개수를 응답해 저장 완료 흐름을 확인합니다.
     await sleep(250);
 
     // B/E 저장 API도 저장 성공 후 Manual Drawing Results에 반영할 nextStatus/requestStatus를 반환해야 합니다.

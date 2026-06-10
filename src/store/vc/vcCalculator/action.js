@@ -67,8 +67,8 @@ export const vcCalculatorActions = {
     type: VC_CALCULATOR_ACTION_TYPES.SET_ACTIVE_CHAMBER,
     payload: { chamberId },
   }),
-  // dispatch: Chamber 이름 등 단일 필드 변경
-  // reducer: 대상 Chamber의 name key만 갱신합니다.
+  // dispatch: Chamber 이름 또는 산출대상 checkbox 변경
+  // reducer: 대상 Chamber의 단일 필드만 갱신하고, 산출대상은 Spec 존재 여부까지 함께 검증합니다.
   updateChamberField: ({ chamberId, name, value }) => ({
     type: VC_CALCULATOR_ACTION_TYPES.UPDATE_CHAMBER_FIELD,
     payload: { chamberId, name, value },

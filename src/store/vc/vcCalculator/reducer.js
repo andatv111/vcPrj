@@ -67,6 +67,7 @@ const getSelectedSpec = (modelStandards, value) =>
 const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
   switch (action.type) {
     case VC_CALCULATOR_ACTION_TYPES.INIT_REQUEST:
+      // 화면 최초 진입 시 Fab/Model/Model Standard 선택지를 조회하는 동안 init loading을 켭니다.
       return {
         ...state,
         loading: {
@@ -76,6 +77,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       };
 
     case VC_CALCULATOR_ACTION_TYPES.INIT_SUCCESS:
+      // saga가 내려준 선택지 목록을 그대로 options에 저장해 상단 select box와 연결합니다.
       return {
         ...state,
         loading: {
@@ -86,6 +88,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       };
 
     case VC_CALCULATOR_ACTION_TYPES.INIT_FAILURE:
+      // 초기 선택지 조회 실패 시 기존 입력값은 유지하고 error만 표시합니다.
       return {
         ...state,
         loading: {
@@ -154,6 +157,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
     }
 
     case VC_CALCULATOR_ACTION_TYPES.REMOVE_CHAMBER: {
+      // Calculator는 도면 원본 탭이 없지만, 입력 시작점을 보장하기 위해 최소 1개 Chamber를 유지합니다.
       if (state.chambers.length <= 1) return state;
       const chambers = state.chambers.filter((chamber) => chamber.id !== action.payload.chamberId);
 
@@ -167,12 +171,14 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
     }
 
     case VC_CALCULATOR_ACTION_TYPES.SET_ACTIVE_CHAMBER:
+      // 탭 클릭은 activeChamberId만 갱신합니다. selector가 이 id로 편집 대상 Chamber를 계산합니다.
       return {
         ...state,
         activeChamberId: action.payload.chamberId,
       };
 
     case VC_CALCULATOR_ACTION_TYPES.UPDATE_CHAMBER_FIELD:
+      // 산출대상 checkbox는 Model Standard와 Spec이 있을 때만 true가 되도록 reducer에서 한 번 더 막습니다.
       return updateChamber(state, action.payload.chamberId, (chamber) => ({
         ...chamber,
         [action.payload.name]:
@@ -182,6 +188,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       }));
 
     case VC_CALCULATOR_ACTION_TYPES.ADD_PIPE_ROW:
+      // 현재 활성 Chamber 또는 명시된 Chamber에 기본 PIPE row를 추가합니다.
       return updateChamber(state, action.payload.chamberId || state.activeChamberId, (chamber) => ({
         ...chamber,
         pipeRows: [...chamber.pipeRows, createEmptyPipeRow(PIPE_TYPE.PIPE)],
@@ -207,6 +214,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       });
 
     case VC_CALCULATOR_ACTION_TYPES.SELECT_PIPE_ROW:
+      // pipe radio 선택값은 삭제 대상 추적용이며, 배관 값 자체는 변경하지 않습니다.
       return updateChamber(state, action.payload.chamberId, (chamber) => ({
         ...chamber,
         selectedPipeRowId: action.payload.rowId,
@@ -228,6 +236,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       }));
 
     case VC_CALCULATOR_ACTION_TYPES.CALCULATE_REQUEST:
+      // 실제 필수값 검증과 API 호출은 saga가 처리하고, reducer는 버튼 중복 클릭을 막는 loading만 켭니다.
       return {
         ...state,
         loading: {
@@ -238,6 +247,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       };
 
     case VC_CALCULATOR_ACTION_TYPES.CALCULATE_SUCCESS:
+      // 계산 결과는 공용 vcResult slice가 보관하므로 Calculator slice는 loading만 종료합니다.
       return {
         ...state,
         loading: {
@@ -247,6 +257,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       };
 
     case VC_CALCULATOR_ACTION_TYPES.CALCULATE_FAILURE:
+      // 실패 시 입력값을 그대로 유지해 사용자가 수정 후 재시도할 수 있게 합니다.
       return {
         ...state,
         loading: {

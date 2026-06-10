@@ -10,6 +10,8 @@ import {
 
 const h = React.createElement;
 
+// Spec Out이 포함된 Non-BIM 결과를 저장할 때 필요한 표준 기안 첨부 팝업입니다.
+// 이 팝업은 결과 팝업 위에 뜨는 중첩 팝업이며, 저장 완료 처리는 동일한 SAVE_RESULT_REQUEST 흐름을 다시 사용합니다.
 const VcDraftAttachPopup = () => {
   const dispatch = useDispatch();
   const draftPopup = useSelector(selectVcResultDraftPopup);
@@ -20,6 +22,7 @@ const VcDraftAttachPopup = () => {
   if (!draftPopup.visible) return null;
 
   const handleAttachmentChange = (event) => {
+    // preview 단계에서는 실제 파일 업로드 대신 파일명을 저장 payload의 첨부 식별값으로 사용합니다.
     const fileName = event.target.files?.[0]?.name || "";
     dispatch(vcResultActions.setDraftField({ name: "attachmentName", value: fileName }));
   };

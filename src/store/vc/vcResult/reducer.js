@@ -23,6 +23,7 @@ export const initialVcResultState = {
 const hasSpecOut = (rows = []) =>
   rows.some((row) => row.judge === "HIGH_OUT" || row.judge === "LOW_OUT");
 
+// Non-BIM 저장 정책: Spec Out 결과는 표준 기안 첨부 정보가 있어야 최종 저장으로 넘어갑니다.
 const needsDraftAttachment = (state) =>
   hasSpecOut(state.rows) &&
   state.sourceType === "NON_BIM" &&
@@ -51,6 +52,7 @@ const vcResultReducer = (state = initialVcResultState, action = {}) => {
     }
 
     case VC_RESULT_ACTION_TYPES.CLOSE_RESULT_POPUP:
+      // 닫기/취소는 화면만 숨깁니다. rows/basicInfo를 남겨 두면 재오픈/디버깅 시 마지막 결과를 확인하기 쉽습니다.
       return {
         ...state,
         visible: false,
@@ -80,6 +82,7 @@ const vcResultReducer = (state = initialVcResultState, action = {}) => {
       };
 
     case VC_RESULT_ACTION_TYPES.SAVE_RESULT_SUCCESS:
+      // 저장 성공 후 결과 팝업과 기안 첨부 팝업을 모두 닫고, 저장 응답은 savedInfo로 보관합니다.
       return {
         ...state,
         visible: false,
@@ -96,6 +99,7 @@ const vcResultReducer = (state = initialVcResultState, action = {}) => {
       };
 
     case VC_RESULT_ACTION_TYPES.SAVE_RESULT_FAILURE:
+      // 저장 실패 시 팝업은 유지해 사용자가 기안 정보 또는 입력값을 보정해 다시 저장할 수 있게 합니다.
       return {
         ...state,
         loading: {
@@ -106,6 +110,7 @@ const vcResultReducer = (state = initialVcResultState, action = {}) => {
       };
 
     case VC_RESULT_ACTION_TYPES.CLOSE_DRAFT_POPUP:
+      // 중첩 팝업만 닫고 입력값은 유지합니다. 사용자가 다시 저장을 누르면 기존 입력을 이어서 볼 수 있습니다.
       return {
         ...state,
         draftPopup: {
