@@ -28,7 +28,7 @@ const createCalculatorChamber = (chambers = [], equipment = {}, modelStandardOpt
     modelStandard: equipment.modelStandard || chamber.modelStandard,
     minSpec: equipment.minSpec || chamber.minSpec,
     maxSpec: equipment.maxSpec || chamber.maxSpec,
-    calculateEnabled: Boolean((equipment.modelStandard || chamber.modelStandard) && (equipment.minSpec || equipment.maxSpec || chamber.minSpec || chamber.maxSpec)),
+    calculationTarget: Boolean((equipment.modelStandard || chamber.modelStandard) && (equipment.minSpec || equipment.maxSpec || chamber.minSpec || chamber.maxSpec)),
   };
 };
 
@@ -132,7 +132,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
                 minSpec: "",
                 maxSpec: "",
                 specOptions: state.options.modelStandards,
-                calculateEnabled: false,
+                calculationTarget: false,
               }
         ),
       };
@@ -202,7 +202,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
         return {
           ...chamber,
           [action.payload.name]:
-            action.payload.name === "calculateEnabled"
+            action.payload.name === "calculationTarget"
               ? Boolean(action.payload.value) && Boolean(chamber.modelStandard) && Boolean(chamber.minSpec || chamber.maxSpec)
               : action.payload.value,
         };
@@ -212,24 +212,24 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       // 현재 활성 Chamber 또는 명시된 Chamber에 기본 PIPE row를 추가합니다.
       return updateChamber(state, action.payload.chamberId || state.activeChamberId, (chamber) => ({
         ...chamber,
-        pipeRows: [...chamber.pipeRows, createEmptyPipeRow(PIPE_TYPE.PIPE)],
+        pipeList: [...chamber.pipeList, createEmptyPipeRow(PIPE_TYPE.PIPE)],
       }));
 
     case VC_CALCULATOR_ACTION_TYPES.REMOVE_SELECTED_PIPE_ROW:
       return updateChamber(state, action.payload.chamberId || state.activeChamberId, (chamber) => {
         // 마지막 row를 삭제할 때는 완전히 비우지 않고 새 빈 row 하나를 남겨 입력 흐름을 유지합니다.
         if (!chamber.selectedPipeRowId) return chamber;
-        if (chamber.pipeRows.length <= 1) {
+        if (chamber.pipeList.length <= 1) {
           return {
             ...chamber,
-            pipeRows: [createEmptyPipeRow(PIPE_TYPE.PIPE)],
+            pipeList: [createEmptyPipeRow(PIPE_TYPE.PIPE)],
             selectedPipeRowId: "",
           };
         }
 
         return {
           ...chamber,
-          pipeRows: chamber.pipeRows.filter((row) => row.id !== chamber.selectedPipeRowId),
+          pipeList: chamber.pipeList.filter((row) => row.id !== chamber.selectedPipeRowId),
           selectedPipeRowId: "",
         };
       });
@@ -244,7 +244,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
     case VC_CALCULATOR_ACTION_TYPES.UPDATE_PIPE_ROW:
       return updateChamber(state, action.payload.chamberId, (chamber) => ({
         ...chamber,
-        pipeRows: chamber.pipeRows.map((row) => {
+        pipeList: chamber.pipeList.map((row) => {
           if (row.id !== action.payload.rowId) return row;
 
           // 유형별로 쓰지 않는 필드는 normalizePipeRowByType에서 즉시 정리됩니다.

@@ -219,7 +219,7 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
             modelStandard: nextModelStandard,
             minSpec: spec ? spec.minSpec : chamber.minSpec,
             maxSpec: spec ? spec.maxSpec : chamber.maxSpec,
-            calculateEnabled: Boolean(spec && nextModelStandard && (spec.minSpec || spec.maxSpec)),
+            calculationTarget: Boolean(spec && nextModelStandard && (spec.minSpec || spec.maxSpec)),
           };
         }),
       };
@@ -303,11 +303,11 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
           };
         }
 
-        if (name === "calculateEnabled") {
+        if (name === "calculationTarget") {
           // Spec이 없는 기준은 산출대상이 될 수 없으므로 스위치를 켜도 자동으로 false가 됩니다.
           return {
             ...chamber,
-            calculateEnabled: Boolean(value) && Boolean(chamber.modelStandard) && Boolean(chamber.minSpec || chamber.maxSpec),
+            calculationTarget: Boolean(value) && Boolean(chamber.modelStandard) && Boolean(chamber.minSpec || chamber.maxSpec),
           };
         }
 
@@ -324,7 +324,7 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
 
       return updateChamber(state, chamberId, (chamber) => ({
         ...chamber,
-        pipeRows: [...chamber.pipeRows, createEmptyPipeRow(PIPE_TYPE.PIPE)],
+        pipeList: [...chamber.pipeList, createEmptyPipeRow(PIPE_TYPE.PIPE)],
       }));
     }
 
@@ -334,18 +334,18 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
 
       return updateChamber(state, chamberId, (chamber) => {
         if (!chamber.selectedPipeRowId) return chamber;
-        if (chamber.pipeRows.length <= 1) {
+        if (chamber.pipeList.length <= 1) {
           // 마지막 row를 지울 때 표를 비우면 입력 UI가 사라지므로 빈 PIPE row 하나를 남깁니다.
           return {
             ...chamber,
-            pipeRows: [createEmptyPipeRow(PIPE_TYPE.PIPE)],
+            pipeList: [createEmptyPipeRow(PIPE_TYPE.PIPE)],
             selectedPipeRowId: "",
           };
         }
 
         return {
           ...chamber,
-          pipeRows: chamber.pipeRows.filter((row) => row.id !== chamber.selectedPipeRowId),
+          pipeList: chamber.pipeList.filter((row) => row.id !== chamber.selectedPipeRowId),
           selectedPipeRowId: "",
         };
       });
@@ -367,7 +367,7 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
 
       return updateChamber(state, chamberId, (chamber) => ({
         ...chamber,
-        pipeRows: chamber.pipeRows.map((row) => {
+        pipeList: chamber.pipeList.map((row) => {
           if (row.id !== rowId) return row;
 
           const nextRow = {

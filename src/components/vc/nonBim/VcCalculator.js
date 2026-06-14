@@ -20,6 +20,10 @@ import VcResultPopup from "./popup/VcResultPopup";
 import { ChamberWorkspace } from "./ui/ChamberWorkspace";
 import { SelectField } from "./ui/FormFields";
 
+/**
+ * 도면 선택 없이 FAB, Model, Chamber, 배관 정보를 직접 입력해 V/C를 계산하는 화면입니다.
+ * Chamber 편집 UI와 결과 팝업은 Non-BIM 화면과 공유하고 상태는 Calculator 전용 Redux slice에서 관리합니다.
+ */
 const VcCalculator = () => {
   const dispatch = useDispatch();
   const equipment = useSelector(selectVcCalculatorEquipment);
@@ -30,27 +34,35 @@ const VcCalculator = () => {
   const error = useSelector(selectVcCalculatorError);
 
   useEffect(() => {
+    // 최초 진입 시 FAB, Model, Model Standard 및 배관 유형 선택지를 조회합니다.
     dispatch(vcCalculatorActions.initRequest());
   }, [dispatch]);
 
   const handleChamberChange = (name, value) => {
     if (!activeChamber) return;
+    // 현재 Chamber의 기준정보를 변경하고 Model Standard 연계 Spec은 reducer에서 동기화합니다.
     dispatch(vcCalculatorActions.updateChamberField({ chamberId: activeChamber.id, name, value }));
   };
 
   const handlePipeRowChange = (rowId, name, value) => {
     if (!activeChamber) return;
+    // 현재 Chamber의 배관 행을 변경하며 유형별 비사용 필드와 숫자 형식은 reducer에서 정리합니다.
     dispatch(vcCalculatorActions.updatePipeRow({ chamberId: activeChamber.id, rowId, name, value }));
   };
 
   return (
     <main className="page embedded-page">
+      {/* FAB 또는 Model 변경 시 reducer가 기존 Model Standard와 Spec을 초기화한 후 적용 가능한 기본값을 다시 설정합니다. */}
       <CalculatorSearchPanel
         equipment={equipment}
         options={options}
         onFieldChange={(name, value) => dispatch(vcCalculatorActions.setEquipmentField({ name, value }))}
       />
 
+      {/*
+        Chamber/배관 추가, 삭제, 선택, 수정은 Calculator reducer가 처리합니다.
+        Calculate는 saga의 입력 검증, DTO 생성, API 호출 및 결과 팝업 흐름을 시작합니다.
+      */}
       <ChamberWorkspace
         activeChamber={activeChamber}
         canAddChamber={chambers.length < MAX_CHAMBER_COUNT}
@@ -84,6 +96,7 @@ const VcCalculator = () => {
   );
 };
 
+/** Calculator 계산에 공통 적용할 FAB와 Model을 입력받는 상단 조건 영역입니다. */
 const CalculatorSearchPanel = ({ equipment, options, onFieldChange }) => (
   <section className="panel">
     <div className="section-title">조회조건</div>

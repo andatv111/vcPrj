@@ -33,10 +33,10 @@ npm run build
 | `src/components/vc/nonBim/VcCalculator.js` | V/C Calculator 화면 업무 연결 |
 | `src/components/vc/nonBim/ui` | 퍼블리셔가 교체하기 쉬운 JSX 그리드/폼 컴포넌트 |
 | `src/components/vc/nonBim/popup` | 결과 및 표준 기안 첨부 팝업 |
-| `src/store/vc` | Redux action/reducer/selector |
+| `src/store/vc` | Redux action/reducer/selector. 화면과 saga가 root state 경로를 직접 참조하지 않도록 기능별 selector 제공 |
 | `src/saga/vc/nonBim/vcSimSaga.js` | 화면 비동기 흐름과 API 호출 조정 |
 | `src/service/api/vc/sim/vcSimApi.js` | V/C B/E 호출의 유일한 HTTP adapter |
-| `src/components/vc/nonBim/core/NonBim.helper.js` | 요청 payload 생성과 응답 DTO 정규화 |
+| `src/components/vc/nonBim/core/NonBim.helper.js` | Chamber/Pipe 공통 규칙, 입력 검증, 요청 DTO 생성, 결과 변환 |
 | `README_API.md` | B/E 개발팀 전달용 공식 API 요청 문서 |
 
 ## 스타일 관리 규칙
@@ -62,11 +62,25 @@ npm run build
 
 - 화면과 Saga는 `vcSimApi.js`만 사용합니다.
 - endpoint, HTTP method, query/body 조립, 공통 오류 처리는 `vcSimApi.js`에서 관리합니다.
-- B/E 응답 필드명이 달라질 경우 `NonBim.helper.js`의 normalize 함수에서 흡수합니다.
+- F/E 필드명은 현재 Java DTO의 camelCase 이름을 기준으로 사용합니다. `chId`, `chambNm`처럼 여러 alias를 동시에 허용하지 않습니다.
+- `NonBim.helper.js`는 임의의 필드명을 살려주는 호환 계층이 아닙니다. 조회 DTO의 `pipeRows`를 계산 DTO의 `pipeList`로 바꾸는 명시적 변환, 공통 입력 규칙, 검증, 계산 요청/결과 처리를 담당합니다.
 - `vcSimBEApi.js`는 사용하지 않으며 삭제했습니다.
 - API 계약 변경 시 `vcSimApi.js`, Java Controller/DTO, `README_API.md`를 함께 수정합니다.
 - 콤보 option, 조회 결과, 그리드 row 등 업무 데이터는 F/E 상수로 만들지 않고 B/E API에서 조회합니다.
 - API 연동을 이유로 조회조건/콤보/그리드 위치를 임의 변경하지 않습니다. 화면 배치는 퍼블리싱/F/E 책임입니다.
+
+## Redux selector 사용 원칙
+
+- 컴포넌트와 saga는 `state.vc.nonBim` 같은 root state 경로를 직접 읽지 않고 기능별 selector를 사용합니다.
+- selector는 root reducer 접근, 활성 Chamber fallback, Spec Out/N/A 여부처럼 여러 사용처가 공유하는 상태 계산을 담당합니다.
+- 현재 파일명은 `vcSimSelector.js`이지만 회사 표준에 맞춰 변경할 경우 `nonBimSelector.js`, `vcCalculatorSelector.js`, `vcResultSelector.js`처럼 기능명이 드러나는 이름을 권장합니다.
+- selector를 제거해 동일한 접근 로직을 컴포넌트와 saga에 중복 작성하지 않습니다.
+
+## 유지보수 주석 원칙
+
+- 화면 컴포넌트에는 컴포넌트 역할과 상태 관리 주체를 설명합니다.
+- `useEffect`에는 실행 시점과 조회 목적을, `dispatch` 주변에는 reducer 또는 saga가 수행하는 후속 업무를 간결하게 설명합니다.
+- 코드 한 줄을 그대로 번역하는 주석보다 업무 규칙, 상태 변경 이유, API 흐름처럼 코드만으로 파악하기 어려운 내용을 우선합니다.
 
 현재 API 데이터 대상:
 

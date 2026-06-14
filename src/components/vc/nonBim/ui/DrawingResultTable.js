@@ -3,6 +3,10 @@ import React from "react";
 import { DRAWING_COLUMNS } from "../core/NonBim.constant";
 import { toDisplayText } from "../core/NonBim.helper";
 
+/**
+ * 수기 도면 조회 결과를 업무 컬럼과 Foreline 도면 컬럼으로 나누어 표시합니다.
+ * 선택값은 공사번호를 기준으로 관리하며 실제 상세 조회와 다운로드는 상위 callback이 수행합니다.
+ */
 export const DrawingResultTable = ({
   drawings,
   loading,
@@ -51,9 +55,11 @@ export const DrawingResultTable = ({
   </div>
 );
 
+/** 수기 도면 한 건의 선택 상태, 업무정보, Foreline 다운로드 동작을 표시합니다. */
 export const DrawingResultRow = ({ row, loading, selected, onSelectDrawing, onDownload }) => (
   <tr className={selected ? "selected-row" : ""}>
     <td className="center">
+      {/* 공사번호를 전달하면 상위 화면에서 Chamber 및 Spec 상세 조회 action을 시작합니다. */}
       <input
         type="radio"
         name="drawingRadio"
@@ -74,6 +80,7 @@ export const DrawingResultRow = ({ row, loading, selected, onSelectDrawing, onDo
     <td>{toDisplayText(row.foreline?.registeredAt)}</td>
     <td>{toDisplayText(row.foreline?.registeredBy)}</td>
     <td className="center">
+      {/* 상위 saga가 공사번호에 해당하는 drawingKey와 fileId를 찾아 파일 API를 호출합니다. */}
       <button
         type="button"
         className="link-button"

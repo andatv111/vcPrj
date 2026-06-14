@@ -58,9 +58,9 @@ function* fetchEqSuggestionsFlow(action) {
     }
 
     const response = yield call(vcSimApi.searchEqSuggestions, keyword);
-    const items = toArray(response?.data || response?.list || response?.result || response).map((item) => ({
-      value: item.eqId || item.equipmentId || item.value || item,
-      label: item.label || item.eqId || item.equipmentId || item.value || item,
+    const items = toArray(response).map((item) => ({
+      value: item.eqId,
+      label: item.label,
       raw: item,
     }));
 
@@ -112,9 +112,7 @@ function* fetchSelectedDrawingDetailsFlow(action) {
   try {
     // 목록 응답에 Chamber가 포함돼도 radio 선택 시 상세 API를 다시 호출해 최신 설비 구성을 사용합니다.
     const chamberResponse = yield call(vcSimApi.getDrawingChambers, buildEquipmentContextParams(drawing));
-    const rawChambers = toArray(
-      chamberResponse?.data || chamberResponse?.list || chamberResponse?.result || chamberResponse
-    );
+    const rawChambers = toArray(chamberResponse);
     const chambers = normalizeChambersFromDrawing({ ...drawing, chambers: rawChambers });
     yield put(nonBimActions.fetchDrawingChambersSuccess({ constructionNo, chambers }));
   } catch (error) {

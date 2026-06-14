@@ -1,6 +1,6 @@
 /**
- * Non-BIM/Calculator 화면 모델 변환 helper입니다.
- * B/E DTO가 바뀔 때 컴포넌트보다 이 파일의 normalize/build 함수에서 먼저 흡수합니다.
+ * Non-BIM과 Calculator의 화면 모델, 검증, API DTO 생성을 담당하는 공통 helper입니다.
+ * B/E Java DTO와 동일한 camelCase 필드를 사용하며 조회 DTO와 계산 DTO가 다른 지점만 명시적으로 변환합니다.
  */
 import {
   CHAMBER_PREFIX,
@@ -38,6 +38,7 @@ export const toDisplayText = (value) => {
   return value;
 };
 
+// 선택 도면의 요청상태가 계산 제한 정책에 포함되는지 판단합니다.
 export const isCalculationLockedByDrawingStatus = (status) =>
   CALCULATION_LOCKED_DRAWING_STATUSES.includes(String(status || ""));
 
@@ -47,16 +48,21 @@ export const onlyNumberLike = (value) => {
   return String(value).replace(/[^\d.]/g, "");
 };
 
+// 순번을 두 자리 문자열로 표시해야 하는 화면 값에 사용합니다.
 export const leftPad2 = (value) => String(value).padStart(2, "0");
 
 // 기본 Chamber명은 Ch01, Ch02처럼 탭에서 짧게 읽히는 형식으로 만듭니다.
 export const createChamberName = (seq) => `${CHAMBER_PREFIX}${seq}`;
 
+// B/E 원본 Chamber명은 유지하고 사용자가 추가한 Chamber만 현재 배열 순서에 맞춰 다시 명명합니다.
 export const resequenceChambers = (chambers = []) =>
   toArray(chambers).map((chamber, index) => ({
     ...chamber,
     // B/E에서 조회한 원본 Chamber명은 유지하고, 사용자가 Add한 탭만 현재 순번 이름을 사용합니다.
-    name: chamber.locked && chamber.name ? chamber.name : createChamberName(index + 1),
+    chamberName:
+      chamber.locked && chamber.chamberName
+        ? chamber.chamberName
+        : createChamberName(index + 1),
   }));
 
 // 긴 설비/도면 유래 Chamber명은 탭이 깨지지 않도록 앞 10자만 사용합니다.
@@ -65,6 +71,7 @@ export const shortenChamberName = (name, fallback) => {
   return text ? text.slice(0, 10) : fallback;
 };
 
+// 알 수 없는 유형은 기본 PIPE 정책으로 처리해 입력 화면이 비정상 상태가 되지 않도록 합니다.
 export const getPipePolicy = (type) =>
   PIPE_TYPE_FIELD_POLICY[type] || PIPE_TYPE_FIELD_POLICY[PIPE_TYPE.PIPE];
 
@@ -88,6 +95,7 @@ export const normalizePipeRowByType = (row = {}) => {
   };
 };
 
+// 배관 추가 시 유형 정책이 반영된 빈 입력 행을 생성합니다.
 export const createEmptyPipeRow = (type = PIPE_TYPE.PIPE) =>
   normalizePipeRowByType({
     id: createId("PIPE_ROW"),
@@ -95,53 +103,51 @@ export const createEmptyPipeRow = (type = PIPE_TYPE.PIPE) =>
     quantity: getPipePolicy(type).fixedQuantity || "",
   });
 
-// 수기 도면 조회 응답을 첫 번째 그리드 row 모델로 변환합니다. 화면 선택 키는 constructionNo입니다.
-// B/E DTO 필드명이 확정/변경되면 컴포넌트가 아니라 이 함수에서 alias를 흡수합니다.
+// Java PortalManualDrawing 필드를 같은 camelCase 이름으로 유지합니다. 화면 선택 키는 constructionNo입니다.
 export const normalizeDrawing = (raw = {}) => {
-  const foreline = raw.foreline || raw.forelineDrawing || {};
+  const foreline = raw.foreline || {};
 
   return {
-    id: raw.constructionNo || raw.cnstNo || raw.workNo || raw.id || raw.manualDrawingId || createId("DRAWING"),
-    drawingKey: nvl(raw.drawingKey || raw.drawingId || raw.manualDrawingId || raw.id || raw.ifId),
-    constructionNo: nvl(raw.constructionNo || raw.cnstNo || raw.workNo),
-    eqId: nvl(raw.eqId || raw.equipmentId || raw.mainEqId || raw.eqpId),
-    site: nvl(raw.site || raw.siteCd),
-    fab: nvl(raw.fab || raw.fabCd),
-    area1: nvl(raw.area1 || raw.areaCd || raw.area),
-    area2: nvl(raw.area2 || raw.dareaCd || raw.darea),
-    changeType: nvl(raw.changeType || raw.chgType),
-    equipmentType: nvl(raw.equipmentType || raw.eqType || raw.eqpType),
-    requestStatus: nvl(raw.requestStatus || raw.status || raw.reqStatus),
-    model: nvl(raw.model || raw.mainModel || raw.mainModelNm),
-    mainMaker: nvl(raw.mainMaker || raw.mainMakerNm),
-    processLarge: nvl(raw.processLarge || raw.procLcls || raw.processCd),
-    processMiddle: nvl(raw.processMiddle || raw.procMcls || raw.subProcessCd),
-    chamberCount: Number(raw.chamberCount || raw.chCnt || raw.chamberCnt || 1),
-    chambers: toArray(raw.chambers || raw.chamberList),
-    specOptions: toArray(raw.specOptions || raw.modelStandardOptions || raw.specList),
+    id: raw.id || raw.constructionNo || createId("DRAWING"),
+    drawingKey: nvl(raw.drawingKey),
+    constructionNo: nvl(raw.constructionNo),
+    eqId: nvl(raw.eqId),
+    site: nvl(raw.site),
+    fab: nvl(raw.fab),
+    area1: nvl(raw.area1),
+    area2: nvl(raw.area2),
+    changeType: nvl(raw.changeType),
+    equipmentType: nvl(raw.equipmentType),
+    requestStatus: nvl(raw.requestStatus),
+    model: nvl(raw.model),
+    mainMaker: nvl(raw.mainMaker),
+    processLarge: nvl(raw.processLarge),
+    processMiddle: nvl(raw.processMiddle),
+    chamberCount: Number(raw.chamberCount || 1),
+    chambers: toArray(raw.chambers),
+    specOptions: toArray(raw.specOptions),
     foreline: {
-      categoryName: nvl(foreline.categoryName || raw.forelineCategoryName || raw.categoryName),
-      registeredAt: nvl(foreline.registeredAt || raw.forelineRegisteredAt || raw.regDt),
-      registeredBy: nvl(foreline.registeredBy || raw.forelineRegisteredBy || raw.regUserNm),
-      fileId: nvl(foreline.fileId || raw.forelineFileId || raw.fileId),
-      fileName: nvl(foreline.fileName || raw.forelineFileName || raw.fileName),
+      categoryName: nvl(foreline.categoryName),
+      registeredAt: nvl(foreline.registeredAt),
+      registeredBy: nvl(foreline.registeredBy),
+      fileId: nvl(foreline.fileId),
+      fileName: nvl(foreline.fileName),
     },
     raw,
   };
 };
 
 export const normalizeDrawingList = (response) => {
-  // mock, REST list, result wrapper 등 응답 wrapper 차이를 한 번에 흡수합니다.
-  const data = response?.data || response?.list || response?.result || response || [];
-  return toArray(data).map(normalizeDrawing);
+  // VcSimController.manualDrawings는 PortalManualDrawing 배열을 직접 반환합니다.
+  return toArray(response).map(normalizeDrawing);
 };
 
-// Model Standard option은 화면 value/label과 Spec 범위를 함께 가져야 Chamber 산출 가능 여부를 판단할 수 있습니다.
+// Java PortalManualDrawing.SpecOption 필드를 그대로 사용합니다.
 export const normalizeSpecOption = (raw = {}) => ({
-  value: nvl(raw.value || raw.modelStandard || raw.modelStandardName || raw.specName || raw.cd),
-  label: nvl(raw.label || raw.modelStandard || raw.modelStandardName || raw.specName || raw.cdNm || raw.cd),
-  minSpec: nvl(raw.minSpec || raw.min || raw.minValue),
-  maxSpec: nvl(raw.maxSpec || raw.max || raw.maxValue),
+  value: nvl(raw.value),
+  label: nvl(raw.label),
+  minSpec: nvl(raw.minSpec),
+  maxSpec: nvl(raw.maxSpec),
   raw,
 });
 
@@ -152,40 +158,41 @@ export const normalizeSpecOptions = (rawList) =>
 // locked=true인 Chamber는 도면 원본에서 온 탭으로 보고 삭제를 막습니다. 사용자가 추가한 Chamber만 unlocked입니다.
 export const normalizeChamberFromRaw = (raw = {}, index = 0, parentDrawing = {}) => {
   const fallbackSpecOptions = normalizeSpecOptions(parentDrawing.specOptions);
-  const specOptions = normalizeSpecOptions(raw.specOptions || raw.modelStandardOptions || raw.specList);
+  const specOptions = normalizeSpecOptions(raw.specOptions);
   const mergedSpecOptions = specOptions.length > 0 ? specOptions : fallbackSpecOptions;
   const firstSpec = mergedSpecOptions[0] || null;
-  const modelStandard = nvl(raw.modelStandard || raw.modelStandardName || firstSpec?.value);
-  const minSpec = nvl(raw.minSpec || firstSpec?.minSpec);
-  const maxSpec = nvl(raw.maxSpec || firstSpec?.maxSpec);
-  const rawPipeRows = toArray(raw.pipeRows || raw.pipeList || raw.parts);
+  const modelStandard = nvl(raw.modelStandard, firstSpec?.value);
+  const minSpec = nvl(raw.minSpec, firstSpec?.minSpec);
+  const maxSpec = nvl(raw.maxSpec, firstSpec?.maxSpec);
+  const rawPipeRows = toArray(raw.pipeRows);
 
   return {
-    id: raw.id || raw.chamberId || createId("CHAMBER"),
-    chamberId: nvl(raw.chamberId || raw.chId || raw.id),
+    id: raw.chamberId || createId("CHAMBER"),
+    chamberId: nvl(raw.chamberId),
     // 기존 탭의 표시명은 설계포탈/B/E의 chamberName이 원천입니다.
-    name: nvl(raw.chamberName || raw.chambNm || raw.name, createChamberName(index + 1)),
+    chamberName: nvl(raw.chamberName, createChamberName(index + 1)),
     modelStandard,
     minSpec,
     maxSpec,
     processLarge: nvl(raw.processLarge || parentDrawing.processLarge),
     processMiddle: nvl(raw.processMiddle || parentDrawing.processMiddle),
     isSpecSkipped: false,
-    calculateEnabled:
-      raw.calculateEnabled !== undefined
-        ? Boolean(raw.calculateEnabled)
+    calculationTarget:
+      raw.calculationTarget !== undefined
+        ? Boolean(raw.calculationTarget)
         : Boolean(modelStandard && (minSpec || maxSpec)),
     specOptions: mergedSpecOptions,
-    pipeRows: rawPipeRows.length
+    // 조회 모델의 pipeRows를 계산 DTO의 pipeList로 한 번만 변환합니다.
+    pipeList: rawPipeRows.length
       ? rawPipeRows.map((row) =>
           normalizePipeRowByType({
-            id: row.id || row.pipeId,
-            type: row.type || row.pipeType || PIPE_TYPE.PIPE,
-            inletDiameter: row.inletDiameter || row.inletDia,
-            length: row.length || row.pipeLength,
+            id: createId("PIPE_ROW"),
+            type: row.pipeType || PIPE_TYPE.PIPE,
+            inletDiameter: row.inletDia,
+            length: row.pipeLength,
             angle: row.angle,
-            outletDiameter: row.outletDiameter || row.outletDia,
-            quantity: row.quantity || row.qty,
+            outletDiameter: row.outletDia,
+            quantity: row.qty,
           })
         )
       : [createEmptyPipeRow()],
@@ -196,7 +203,7 @@ export const normalizeChamberFromRaw = (raw = {}, index = 0, parentDrawing = {})
 };
 
 export const normalizeChambersFromDrawing = (drawing) => {
-  // 1순위는 API가 내려준 chamberList입니다. 없으면 chamberCount만큼 기본 탭을 만들어 사용자가 배관을 채울 수 있게 합니다.
+  // 1순위는 API가 내려준 chambers입니다. 없으면 chamberCount만큼 기본 탭을 만들어 사용자가 배관을 채울 수 있게 합니다.
   const rawChambers = toArray(drawing?.chambers);
   const chamberCount = Math.max(Number(drawing?.chamberCount || rawChambers.length || 1), 1);
 
@@ -210,13 +217,15 @@ export const normalizeChambersFromDrawing = (drawing) => {
 
   return resequenceChambers(
     Array.from({ length: Math.min(chamberCount, MAX_CHAMBER_COUNT) }).map((_, index) =>
-      normalizeChamberFromRaw({ name: createChamberName(index + 1), locked: true }, index, drawing)
+      normalizeChamberFromRaw({ chamberName: createChamberName(index + 1), locked: true }, index, drawing)
     )
   );
 };
 
+// 신규 Chamber의 화면 순번은 현재 개수 다음 값으로 계산하되 업무 상한을 넘지 않습니다.
 export const getNextChamberSeq = (chambers = []) => Math.min(chambers.length + 1, MAX_CHAMBER_COUNT);
 
+// Chamber 추가 버튼 활성화 여부를 공통 상한 기준으로 판단합니다.
 export const canAddChamber = (chambers = []) => toArray(chambers).length < MAX_CHAMBER_COUNT;
 
 export const createUserChamber = (chambers = [], selectedDrawing = {}) => {
@@ -224,7 +233,7 @@ export const createUserChamber = (chambers = [], selectedDrawing = {}) => {
   const seq = getNextChamberSeq(chambers);
   const base = normalizeChamberFromRaw(
     {
-      name: createChamberName(seq),
+      chamberName: createChamberName(seq),
       locked: false,
     },
     seq - 1,
@@ -251,7 +260,7 @@ export const applySpecToChamber = (chamber, modelStandardValue) => {
     minSpec: spec ? spec.minSpec : "",
     maxSpec: spec ? spec.maxSpec : "",
     isSpecSkipped: false,
-    calculateEnabled: Boolean(spec && modelStandardValue && (spec.minSpec || spec.maxSpec)),
+    calculationTarget: Boolean(spec && modelStandardValue && (spec.minSpec || spec.maxSpec)),
   };
 };
 
@@ -328,24 +337,24 @@ export const validateChambersBeforeCalculate = (chambers) => {
   }
 
   for (const chamber of chambers) {
-    if (chamber.calculateEnabled === false) continue;
+    if (chamber.calculationTarget === false) continue;
 
     if (!chamber.modelStandard) {
-      return { valid: false, message: `${chamber.name}의 모델관리기준을 선택해 주세요.` };
+      return { valid: false, message: `${chamber.chamberName}의 모델관리기준을 선택해 주세요.` };
     }
 
     if (!chamber.minSpec && !chamber.maxSpec) {
-      return { valid: false, message: `${chamber.name}의 Min/Max Spec을 확인해 주세요.` };
+      return { valid: false, message: `${chamber.chamberName}의 Min/Max Spec을 확인해 주세요.` };
     }
 
-    if (!toArray(chamber.pipeRows).length) {
-      return { valid: false, message: `${chamber.name}의 배관 정보를 입력해 주세요.` };
+    if (!toArray(chamber.pipeList).length) {
+      return { valid: false, message: `${chamber.chamberName}의 배관 정보를 입력해 주세요.` };
     }
 
-    for (const row of chamber.pipeRows) {
+    for (const row of chamber.pipeList) {
       const rowCheck = validateRequiredPipeFields(row);
       if (!rowCheck.valid) {
-        return { valid: false, message: `${chamber.name}의 ${row.type} 필수값을 입력해 주세요.` };
+        return { valid: false, message: `${chamber.chamberName}의 ${row.type} 필수값을 입력해 주세요.` };
       }
     }
   }
@@ -386,15 +395,15 @@ export const buildNonBimCalculatePayload = (state) => {
     chambers: toArray(state.chambers).map((chamber, index) => ({
       seq: index + 1,
       chamberId: chamber.chamberId,
-      chamberName: chamber.name || createChamberName(index + 1),
-      calculationTarget: Boolean(chamber.calculateEnabled),
+      chamberName: chamber.chamberName || createChamberName(index + 1),
+      calculationTarget: Boolean(chamber.calculationTarget),
       modelStandard: chamber.modelStandard,
       minSpec: chamber.minSpec,
       maxSpec: chamber.maxSpec,
-      isSpecSkipped: chamber.isSpecSkipped || !chamber.calculateEnabled,
+      isSpecSkipped: chamber.isSpecSkipped || !chamber.calculationTarget,
       processLarge: chamber.processLarge || selectedDrawing?.processLarge,
       processMiddle: chamber.processMiddle || selectedDrawing?.processMiddle,
-      pipeList: toArray(chamber.pipeRows).map((row, rowIndex) => ({
+      pipeList: toArray(chamber.pipeList).map((row, rowIndex) => ({
         seq: rowIndex + 1,
         type: row.type,
         inletDiameter: row.inletDiameter,
@@ -424,15 +433,15 @@ export const buildCalculatorCalculatePayload = (state) => {
     chambers: toArray(state.chambers).map((chamber, index) => ({
       seq: index + 1,
       chamberId: chamber.chamberId,
-      chamberName: chamber.name || createChamberName(index + 1),
-      calculationTarget: Boolean(chamber.calculateEnabled),
+      chamberName: chamber.chamberName || createChamberName(index + 1),
+      calculationTarget: Boolean(chamber.calculationTarget),
       modelStandard: chamber.modelStandard,
       minSpec: chamber.minSpec,
       maxSpec: chamber.maxSpec,
-      isSpecSkipped: !chamber.modelStandard || !chamber.calculateEnabled,
+      isSpecSkipped: !chamber.modelStandard || !chamber.calculationTarget,
       processLarge: chamber.processLarge || "Manual",
       processMiddle: chamber.processMiddle || "Calculator",
-      pipeList: toArray(chamber.pipeRows).map((row, rowIndex) => ({
+      pipeList: toArray(chamber.pipeList).map((row, rowIndex) => ({
         seq: rowIndex + 1,
         type: row.type,
         inletDiameter: row.inletDiameter,
@@ -445,62 +454,46 @@ export const buildCalculatorCalculatePayload = (state) => {
   };
 };
 
-export const normalizeJudge = (value) => {
-  // B/E 응답이 SPEC_IN, HIGH_OUT, high 등으로 달라도 팝업 badge는 JUDGE 표준 코드만 보게 합니다.
-  if (!value) return JUDGE.NONE;
-  const upper = String(value).toUpperCase();
-  if (upper === "IN" || upper === "SPEC_IN") return JUDGE.IN;
-  if (upper.includes("HIGH")) return JUDGE.HIGH_OUT;
-  if (upper.includes("LOW")) return JUDGE.LOW_OUT;
-  if (upper === "NA" || upper === "N/A") return JUDGE.NA;
-  if (upper === "PENDING") return JUDGE.PENDING;
-  return value;
-};
-
 export const hasSpecOutRows = (rows = []) =>
   toArray(rows).some((row) => row.judge === JUDGE.HIGH_OUT || row.judge === JUDGE.LOW_OUT);
 
+// Min 또는 Max 중 하나라도 있으면 판정 기준이 존재하는 결과로 봅니다.
 export const hasSpecBounds = (row = {}) => Boolean(row.minSpec || row.maxSpec);
 
 // Spec 범위가 없는 row는 Min/Max와 판정 컬럼을 '-' 또는 N/A 성격으로 보여줍니다.
 export const shouldShowSpecColumns = (row = {}) => hasSpecBounds(row);
 
-// 계산 응답을 Vacuum Conductance Result 공통 팝업 모델로 변환합니다. 산출대상 제외 row는 N/A로 보정합니다.
-// API가 rows를 주지 않는 preview/mock 상황에서도 payload의 chambers로 fallbackRows를 만들어 팝업 구조를 유지합니다.
+// Java VcSimResultRow 응답을 공통 팝업 모델로 옮깁니다. 산출대상 제외 row는 N/A로 보정합니다.
+// 응답 wrapper는 현재 VcSimFacadeService의 { success, data } 계약만 허용합니다.
 export const normalizeCalculationResult = (response, payload) => {
-  const rawRows =
-    response?.rows ||
-    response?.resultRows ||
-    response?.result?.rows ||
-    response?.data?.rows ||
-    response?.data?.resultRows ||
-    [];
+  const rawRows = response?.data?.rows || [];
 
   const rows = toArray(rawRows).map((raw, index) => {
     const payloadChamber = payload?.chambers?.[index] || {};
-    const modelStandard = nvl(raw.modelStandard || raw.modelStandardName || payloadChamber.modelStandard);
+    const modelStandard = nvl(raw.modelStandard, payloadChamber.modelStandard);
     const calculationTarget = payloadChamber.calculationTarget !== false;
 
     return {
-      id: raw.id || raw.resultId || createId("RESULT"),
-      chamberId: nvl(raw.chamberId || raw.chId || payloadChamber.chamberId || createId("CHAMBER_KEY")),
-      chamberName: nvl(raw.chamberName || payloadChamber.chamberName),
-      confirmFlag: nvl(raw.confirmFlag || raw.confirmYn, "N"),
-      processLarge: nvl(raw.processLarge || raw.procLcls || payloadChamber.processLarge),
-      processMiddle: nvl(raw.processMiddle || raw.procMcls || payloadChamber.processMiddle),
+      id: raw.id || createId("RESULT"),
+      chamberId: nvl(raw.chamberId, payloadChamber.chamberId || createId("CHAMBER_KEY")),
+      chamberName: nvl(raw.chamberName, payloadChamber.chamberName),
+      confirmFlag: nvl(raw.confirmFlag, "N"),
+      processLarge: nvl(raw.processLarge, payloadChamber.processLarge),
+      processMiddle: nvl(raw.processMiddle, payloadChamber.processMiddle),
       modelStandard,
-      minSpec: nvl(raw.minSpec || payloadChamber.minSpec),
-      maxSpec: nvl(raw.maxSpec || payloadChamber.maxSpec),
+      minSpec: nvl(raw.minSpec, payloadChamber.minSpec),
+      maxSpec: nvl(raw.maxSpec, payloadChamber.maxSpec),
       calculationTarget,
       conductance: calculationTarget
-        ? nvl(raw.conductance || raw.vcValue || raw.value)
+        ? nvl(raw.conductance)
         : CALCULATION_NA_TEXT,
-      judge: calculationTarget ? normalizeJudge(raw.judge || raw.resultJudge) : JUDGE.NA,
+      judge: calculationTarget ? nvl(raw.judge, JUDGE.NONE) : JUDGE.NA,
       hasModelStandard: Boolean(modelStandard),
       raw,
     };
   });
 
+  // 응답 row가 없는 개발/예외 상황에도 사용자가 요청한 Chamber 기준으로 결과 표 구조를 유지합니다.
   const fallbackRows = toArray(payload?.chambers).map((chamber) => ({
     id: createId("RESULT"),
     chamberId: chamber.chamberId || createId("CHAMBER_KEY"),
@@ -528,9 +521,9 @@ export const normalizeCalculationResult = (response, payload) => {
   return {
     sourceType: payload?.sourceType,
     basicInfo: {
-      eqId: response?.eqId || response?.data?.eqId || equipment.eqId,
-      fab: response?.fab || response?.data?.fab || equipment.fab,
-      model: response?.model || response?.data?.model || equipment.model,
+      eqId: response?.data?.eqId || equipment.eqId,
+      fab: response?.data?.fab || equipment.fab,
+      model: response?.data?.model || equipment.model,
       constructionNo: equipment.constructionNo,
       site: equipment.site,
       area1: equipment.area1,
