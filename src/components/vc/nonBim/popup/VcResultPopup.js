@@ -14,11 +14,7 @@ import {
 import { JUDGE, JUDGE_LABEL, RESULT_COLUMNS } from "../core/NonBim.constant";
 import { shouldShowSpecColumns, toDisplayText } from "../core/NonBim.helper";
 
-const h = React.createElement;
-
 const getResultNotice = ({ hasSpecOut, hasNaRows }) => {
-  // 안내 문구 우선순위는 Spec Out > N/A row > 정상입니다.
-  // Spec Out은 저장 전에 기안 첨부가 필요할 수 있으므로 가장 강한 warning으로 노출합니다.
   if (hasSpecOut) {
     return {
       className: "notice-box warning",
@@ -39,8 +35,6 @@ const getResultNotice = ({ hasSpecOut, hasNaRows }) => {
   };
 };
 
-// Non-BIM과 Calculator가 공유하는 Vacuum Conductance Result 팝업입니다.
-// 계산 성공 saga가 vcResultActions.openResultPopup을 호출하면 이 컴포넌트가 selector로 표준 결과 모델을 읽습니다.
 const VcResultPopup = () => {
   const dispatch = useDispatch();
   const visible = useSelector(selectVcResultVisible);
@@ -54,111 +48,95 @@ const VcResultPopup = () => {
 
   if (!visible) return null;
 
-  return h(
-    "div",
-    { className: "modal-dim" },
-    h(
-      "div",
-      { className: "modal result-modal" },
-      h(
-        "div",
-        { className: "modal-header" },
-        h(
-          "div",
-          null,
-          h("div", { className: "breadcrumb" }, "Simulation > V/C Simulation > BIM/5D 미적용 > Vacuum Conductance 결과"),
-          h("h2", null, "Vacuum Conductance Result")
-        ),
-        h(
-          "button",
-          {
-            type: "button",
-            className: "link-button",
-            onClick: () => dispatch(vcResultActions.closeResultPopup()),
-          },
-          "Close"
-        )
-      ),
-      h(
-        "section",
-        { className: "result-section" },
-        h("div", { className: "section-title small" }, "기본정보"),
-        h(
-          "div",
-          { className: "form-grid" },
-          h(ReadonlyField, { label: "EQ ID", value: basicInfo?.eqId }),
-          h(ReadonlyField, { label: "FAB", value: basicInfo?.fab }),
-          h(ReadonlyField, { label: "MODEL", value: basicInfo?.model })
-        )
-      ),
-      h(
-        "section",
-        { className: "result-section" },
-        h("div", { className: "section-title small" }, "결과정보"),
-        h(ResultTable, { rows })
-      ),
-      h("div", { className: notice.className }, notice.message),
-      error ? h("div", { className: "error-box" }, error) : null,
-      h(
-        "div",
-        { className: "footer-actions" },
-        h(
-          "button",
-          {
-            type: "button",
-            className: "primary-button",
-            disabled: loading.save,
-            onClick: () => dispatch(vcResultActions.saveResultRequest()),
-          },
-          loading.save ? "Saving..." : "최종결과저장"
-        ),
-        h(
-          "button",
-          {
-            type: "button",
-            className: "secondary-button",
-            onClick: () => dispatch(vcResultActions.closeResultPopup()),
-          },
-          "취소"
-        )
-      )
-    )
+  return (
+    <div className="modal-dim">
+      <div className="modal result-modal">
+        <ResultPopupHeader onClose={() => dispatch(vcResultActions.closeResultPopup())} />
+
+        <section className="result-section">
+          <div className="section-title small">기본정보</div>
+          <div className="form-grid">
+            <ReadonlyField label="FAB" value={basicInfo?.fab} />
+            <ReadonlyField label="MODEL" value={basicInfo?.model} />
+            <ReadonlyField label="EQ ID" value={basicInfo?.eqId} />
+          </div>
+        </section>
+
+        <section className="result-section">
+          <div className="section-title small">결과정보</div>
+          <ResultTable rows={rows} />
+        </section>
+
+        <div className={notice.className}>{notice.message}</div>
+        {error ? <div className="error-box">{error}</div> : null}
+
+        <div className="footer-actions">
+          <button
+            type="button"
+            className="primary-button"
+            disabled={loading.save}
+            onClick={() => dispatch(vcResultActions.saveResultRequest())}
+          >
+            {loading.save ? "Saving..." : "최종결과저장"}
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => dispatch(vcResultActions.closeResultPopup())}
+          >
+            취소
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
-const ResultTable = ({ rows }) =>
-  // 결과 row는 helper에서 이미 표준 모델로 normalize됩니다.
-  // Spec 범위가 없는 row는 판정 의미가 없으므로 Min/Max와 judge 표시를 제한합니다.
-  h(
-    "div",
-    { className: "table-wrap" },
-    h(
-      "table",
-      null,
-      h("thead", null, h("tr", null, RESULT_COLUMNS.map((column) => h("th", { key: column.key }, column.label)))),
-      h(
-        "tbody",
-        null,
-        rows.map((row) =>
-          h(
-            "tr",
-            { key: row.id },
-            h("td", null, toDisplayText(row.chamberId)),
-            h("td", null, toDisplayText(row.processLarge)),
-            h("td", null, toDisplayText(row.processMiddle)),
-            h("td", null, toDisplayText(row.modelStandard)),
-            h("td", null, shouldShowSpecColumns(row) ? toDisplayText(row.minSpec) : "-"),
-            h("td", null, shouldShowSpecColumns(row) ? toDisplayText(row.maxSpec) : "-"),
-            h("td", null, toDisplayText(row.conductance)),
-            h("td", null, row.calculationTarget === false || shouldShowSpecColumns(row) ? h(JudgeBadge, { judge: row.judge }) : "-")
-          )
-        )
-      )
-    )
-  );
+const ResultPopupHeader = ({ onClose }) => (
+  <div className="modal-header">
+    <div>
+      <div className="breadcrumb">Simulation &gt; V/C Simulation &gt; BIM/5D 미적용Fab &gt; Vacuum Conductance 결과</div>
+      <h2>Vacuum Conductance Result</h2>
+    </div>
+    <button type="button" className="link-button" onClick={onClose}>
+      Close
+    </button>
+  </div>
+);
+
+const ResultTable = ({ rows }) => (
+  <div className="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          {RESULT_COLUMNS.map((column) => (
+            <th key={column.key}>{column.label}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <ResultTableRow key={row.id} row={row} />
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+const ResultTableRow = ({ row }) => (
+  <tr>
+    <td>{toDisplayText(row.chamberId)}</td>
+    <td>{toDisplayText(row.processLarge)}</td>
+    <td>{toDisplayText(row.processMiddle)}</td>
+    <td>{toDisplayText(row.modelStandard)}</td>
+    <td>{shouldShowSpecColumns(row) ? toDisplayText(row.minSpec) : "-"}</td>
+    <td>{shouldShowSpecColumns(row) ? toDisplayText(row.maxSpec) : "-"}</td>
+    <td>{toDisplayText(row.conductance)}</td>
+    <td>{row.calculationTarget === false || shouldShowSpecColumns(row) ? <JudgeBadge judge={row.judge} /> : "-"}</td>
+  </tr>
+);
 
 const JudgeBadge = ({ judge }) => {
-  // badge class는 표준 JUDGE 코드만 기준으로 결정합니다. 신규 판정 코드는 JUDGE/JUDGE_LABEL에 먼저 추가합니다.
   const className =
     judge === JUDGE.IN
       ? "judge-badge in"
@@ -166,16 +144,14 @@ const JudgeBadge = ({ judge }) => {
         ? "judge-badge out"
         : "judge-badge none";
 
-  return h("span", { className }, JUDGE_LABEL[judge] || toDisplayText(judge));
+  return <span className={className}>{JUDGE_LABEL[judge] || toDisplayText(judge)}</span>;
 };
 
-const ReadonlyField = ({ label, value }) =>
-  // 기본정보는 결과 확인용 read-only 필드이며 빈 값은 공통 표시문자 '-'로 보여줍니다.
-  h(
-    "label",
-    { className: "field" },
-    h("span", null, label),
-    h("input", { value: toDisplayText(value), readOnly: true })
-  );
+const ReadonlyField = ({ label, value }) => (
+  <label className="field">
+    <span>{label}</span>
+    <input value={toDisplayText(value)} readOnly />
+  </label>
+);
 
 export default VcResultPopup;

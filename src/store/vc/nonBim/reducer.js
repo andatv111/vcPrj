@@ -16,9 +16,9 @@ import {
   canAddChamber,
   createEmptyPipeRow,
   createUserChamber,
-  normalizeChambersFromDrawing,
   normalizePipeRowByType,
   onlyNumberLike,
+  resequenceChambers,
 } from "../../../components/vc/nonBim/core/NonBim.helper";
 
 const getSpecByValue = (options = [], value) =>
@@ -28,6 +28,11 @@ const getSpecByValue = (options = [], value) =>
 // 계산 결과 팝업/저장 상태는 vcResult slice가 맡으므로 여기에는 편집 중인 입력 상태만 둡니다.
 export const initialNonBimState = {
   search: { ...DEFAULT_SEARCH },
+
+  options: {
+    fabs: [],
+    pipeTypes: [],
+  },
 
   eqSuggestions: [],
   drawings: [],
@@ -72,6 +77,22 @@ const updateActiveChamberIdAfterRemove = (chambers, currentActiveChamberId) => {
 
 const nonBimReducer = (state = initialNonBimState, action = {}) => {
   switch (action.type) {
+    case NON_BIM_ACTION_TYPES.INIT_OPTIONS_REQUEST:
+      return setLoading(state, "options", true);
+
+    case NON_BIM_ACTION_TYPES.INIT_OPTIONS_SUCCESS:
+      return {
+        ...setLoading(state, "options", false),
+        options: action.payload.options || initialNonBimState.options,
+        error: null,
+      };
+
+    case NON_BIM_ACTION_TYPES.INIT_OPTIONS_FAILURE:
+      return {
+        ...setLoading(state, "options", false),
+        error: action.payload.error,
+      };
+
     case NON_BIM_ACTION_TYPES.SET_SEARCH_FIELD: {
       // 검색 input은 name/value 공통 payload로 들어오므로 DEFAULT_SEARCH key만 갱신합니다.
       const { name, value } = action.payload;
@@ -139,18 +160,39 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
         error: action.payload.error,
       };
     case NON_BIM_ACTION_TYPES.SELECT_DRAWING: {
-      // 공사번호로 row를 찾고, 해당 row의 chamberCount/chambers로 하단 탭을 다시 만듭니다.
+      // row 선택 후 Chamber 탭은 별도 B/E 조회 결과로 구성합니다.
       const drawing = state.drawings.find((item) => item.constructionNo === action.payload.constructionNo) || null;
-      const chambers = drawing ? normalizeChambersFromDrawing(drawing) : [];
 
       return {
-        ...state,
+        ...setLoading(state, "chambers", Boolean(drawing)),
         selectedConstructionNo: drawing?.constructionNo || "",
         selectedDrawing: drawing,
-        chambers,
-        activeChamberId: chambers[0]?.id || "",
+        chambers: [],
+        activeChamberId: "",
+        error: null,
       };
     }
+
+    case NON_BIM_ACTION_TYPES.FETCH_DRAWING_CHAMBERS_SUCCESS: {
+      // 늦게 도착한 이전 row 응답은 현재 선택된 공사번호와 다르면 무시합니다.
+      if (state.selectedConstructionNo !== action.payload.constructionNo) return state;
+      const chambers = action.payload.chambers || [];
+
+      return {
+        ...setLoading(state, "chambers", false),
+        chambers,
+        activeChamberId: chambers[0]?.id || "",
+        error: null,
+      };
+    }
+
+    case NON_BIM_ACTION_TYPES.FETCH_DRAWING_CHAMBERS_FAILURE:
+      return {
+        ...setLoading(state, "chambers", false),
+        chambers: [],
+        activeChamberId: "",
+        error: action.payload.error,
+      };
 
     case NON_BIM_ACTION_TYPES.FETCH_MODEL_STANDARD_OPTIONS_SUCCESS: {
       // Model Standard 옵션은 선택된 공사번호와 일치할 때만 반영해 늦게 도착한 응답이 화면을 덮지 않게 합니다.
@@ -220,7 +262,7 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
       if (!canAddChamber(state.chambers)) return state;
 
       const chamber = createUserChamber(state.chambers, state.selectedDrawing);
-      const chambers = [...state.chambers, chamber];
+      const chambers = resequenceChambers([...state.chambers, chamber]);
 
       return {
         ...state,
@@ -234,7 +276,9 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
       const target = state.chambers.find((chamber) => chamber.id === action.payload.chamberId);
       if (!target || target.locked) return state;
 
-      const chambers = state.chambers.filter((chamber) => chamber.id !== action.payload.chamberId);
+      const chambers = resequenceChambers(
+        state.chambers.filter((chamber) => chamber.id !== action.payload.chamberId)
+      );
 
       return {
         ...state,

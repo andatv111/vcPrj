@@ -19,6 +19,9 @@ export const selectNonBimState = (state) => {
 
 export const selectSearch = (state) => selectNonBimState(state).search;
 
+// FAB/Pipe Type 등 B/E에서 조회한 화면 선택지입니다.
+export const selectNonBimOptions = (state) => selectNonBimState(state).options;
+
 // EQ ID datalist 후보입니다. 화면은 API 응답 원형이 아니라 { value, label, raw } 형태만 사용합니다.
 export const selectEqSuggestions = (state) => selectNonBimState(state).eqSuggestions;
 

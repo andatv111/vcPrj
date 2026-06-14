@@ -1,10 +1,12 @@
 import { MAX_CHAMBER_COUNT, PIPE_TYPE } from "../../../components/vc/nonBim/core/NonBim.constant";
 import {
+  applySpecToChamber,
   createEmptyPipeRow,
   createId,
   createUserChamber,
   normalizePipeRowByType,
   onlyNumberLike,
+  resequenceChambers,
 } from "../../../components/vc/nonBim/core/NonBim.helper";
 import { VC_CALCULATOR_ACTION_TYPES } from "./action";
 
@@ -23,6 +25,10 @@ const createCalculatorChamber = (chambers = [], equipment = {}, modelStandardOpt
     id: createId("CALC_CHAMBER"),
     locked: false,
     specOptions: modelStandardOptions,
+    modelStandard: equipment.modelStandard || chamber.modelStandard,
+    minSpec: equipment.minSpec || chamber.minSpec,
+    maxSpec: equipment.maxSpec || chamber.maxSpec,
+    calculateEnabled: Boolean((equipment.modelStandard || chamber.modelStandard) && (equipment.minSpec || equipment.maxSpec || chamber.minSpec || chamber.maxSpec)),
   };
 };
 
@@ -41,6 +47,7 @@ export const initialVcCalculatorState = {
     fabs: [],
     models: [],
     modelStandards: [],
+    pipeTypes: [],
   },
   chambers: [firstChamber],
   activeChamberId: firstChamber.id,
@@ -58,8 +65,6 @@ const updateChamber = (state, chamberId, updater) => ({
     chamber.id === chamberId ? updater(chamber) : chamber
   ),
 });
-
-const isEquipmentReadyForStandard = (equipment) => Boolean(equipment.fab && equipment.model);
 
 const getSelectedSpec = (modelStandards, value) =>
   modelStandards.find((item) => item.value === value || item.label === value) || null;
@@ -103,21 +108,33 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       const equipment = {
         ...state.equipment,
         [action.payload.name]: action.payload.value,
+        modelStandard: "",
+        minSpec: "",
+        maxSpec: "",
       };
+      const defaultSpec = equipment.fab && equipment.model ? state.options.modelStandards[0] : null;
 
-      if (!isEquipmentReadyForStandard(equipment)) {
-        equipment.modelStandard = "";
-        equipment.minSpec = "";
-        equipment.maxSpec = "";
+      if (defaultSpec) {
+        equipment.modelStandard = defaultSpec.value;
+        equipment.minSpec = defaultSpec.minSpec;
+        equipment.maxSpec = defaultSpec.maxSpec;
       }
 
       return {
         ...state,
         equipment,
-        chambers: state.chambers.map((chamber) => ({
-          ...chamber,
-          calculateEnabled: Boolean(equipment.modelStandard && (equipment.minSpec || equipment.maxSpec)),
-        })),
+        chambers: state.chambers.map((chamber) =>
+          defaultSpec
+            ? applySpecToChamber({ ...chamber, specOptions: state.options.modelStandards }, defaultSpec.value)
+            : {
+                ...chamber,
+                modelStandard: "",
+                minSpec: "",
+                maxSpec: "",
+                specOptions: state.options.modelStandards,
+                calculateEnabled: false,
+              }
+        ),
       };
     }
 
@@ -133,14 +150,9 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
           minSpec: spec?.minSpec || "",
           maxSpec: spec?.maxSpec || "",
         },
-    chambers: state.chambers.map((chamber) => ({
-          ...chamber,
-          modelStandard: action.payload.value,
-          minSpec: spec?.minSpec || "",
-          maxSpec: spec?.maxSpec || "",
-          specOptions: state.options.modelStandards,
-          calculateEnabled: Boolean(spec && action.payload.value && (spec.minSpec || spec.maxSpec)),
-        })),
+        chambers: state.chambers.map((chamber) =>
+          applySpecToChamber({ ...chamber, specOptions: state.options.modelStandards }, action.payload.value)
+        ),
       };
     }
 
@@ -148,10 +160,11 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       // Chamber는 업무 상한(MAX_CHAMBER_COUNT)을 넘지 않게 제한합니다.
       if (state.chambers.length >= MAX_CHAMBER_COUNT) return state;
       const chamber = createCalculatorChamber(state.chambers, state.equipment, state.options.modelStandards);
+      const chambers = resequenceChambers([...state.chambers, chamber]);
 
       return {
         ...state,
-        chambers: [...state.chambers, chamber],
+        chambers,
         activeChamberId: chamber.id,
       };
     }
@@ -159,7 +172,9 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
     case VC_CALCULATOR_ACTION_TYPES.REMOVE_CHAMBER: {
       // Calculator는 도면 원본 탭이 없지만, 입력 시작점을 보장하기 위해 최소 1개 Chamber를 유지합니다.
       if (state.chambers.length <= 1) return state;
-      const chambers = state.chambers.filter((chamber) => chamber.id !== action.payload.chamberId);
+      const chambers = resequenceChambers(
+        state.chambers.filter((chamber) => chamber.id !== action.payload.chamberId)
+      );
 
       return {
         ...state,
@@ -179,13 +194,19 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
 
     case VC_CALCULATOR_ACTION_TYPES.UPDATE_CHAMBER_FIELD:
       // 산출대상 checkbox는 Model Standard와 Spec이 있을 때만 true가 되도록 reducer에서 한 번 더 막습니다.
-      return updateChamber(state, action.payload.chamberId, (chamber) => ({
-        ...chamber,
-        [action.payload.name]:
-          action.payload.name === "calculateEnabled"
-            ? Boolean(action.payload.value) && Boolean(state.equipment.modelStandard) && Boolean(state.equipment.minSpec || state.equipment.maxSpec)
-            : action.payload.value,
-      }));
+      return updateChamber(state, action.payload.chamberId, (chamber) => {
+        if (action.payload.name === "modelStandard") {
+          return applySpecToChamber({ ...chamber, specOptions: state.options.modelStandards }, action.payload.value);
+        }
+
+        return {
+          ...chamber,
+          [action.payload.name]:
+            action.payload.name === "calculateEnabled"
+              ? Boolean(action.payload.value) && Boolean(chamber.modelStandard) && Boolean(chamber.minSpec || chamber.maxSpec)
+              : action.payload.value,
+        };
+      });
 
     case VC_CALCULATOR_ACTION_TYPES.ADD_PIPE_ROW:
       // 현재 활성 Chamber 또는 명시된 Chamber에 기본 PIPE row를 추가합니다.

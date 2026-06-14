@@ -14,11 +14,14 @@ import vcSimApi from "../../../service/api/vc/sim/vcSimApi";
 
 import {
   buildCalculatorCalculatePayload,
+  buildEquipmentContextParams,
   buildFileDownloadName,
+  buildForelineDownloadParams,
   buildNonBimCalculatePayload,
   downloadBlob,
   hasSpecOutRows,
   normalizeCalculationResult,
+  normalizeChambersFromDrawing,
   normalizeDrawingList,
   toArray,
   validateChambersBeforeCalculate,
@@ -31,6 +34,15 @@ const getErrorMessage = (error) => {
   if (typeof error === "string") return error;
   return error.message || error.errorMessage || "알 수 없는 오류가 발생했습니다.";
 };
+
+function* nonBimOptionsInitFlow() {
+  try {
+    const response = yield call(vcSimApi.getNonBimOptions);
+    yield put(nonBimActions.initOptionsSuccess(response));
+  } catch (error) {
+    yield put(nonBimActions.initOptionsFailure(getErrorMessage(error)));
+  }
+}
 
 // EQ ID 자동완성은 마지막 입력값만 화면에 반영합니다.
 function* fetchEqSuggestionsFlow(action) {
@@ -80,11 +92,7 @@ function* downloadForelineFlow(action) {
 
     if (!drawing) throw new Error("다운로드할 수기 도면을 찾을 수 없습니다.");
 
-    const blob = yield call(vcSimApi.downloadForelineDrawing, {
-      drawingKey: drawing.drawingKey,
-      fileId: drawing.foreline?.fileId,
-      constructionNo: drawing.constructionNo,
-    });
+    const blob = yield call(vcSimApi.downloadForelineDrawing, buildForelineDownloadParams(drawing));
 
     yield call(downloadBlob, blob, buildFileDownloadName(drawing));
     yield put(nonBimActions.downloadForelineSuccess());
@@ -93,24 +101,28 @@ function* downloadForelineFlow(action) {
   }
 }
 
-// 도면 선택 직후 장비/모델/공사번호에 맞는 Model Standard 목록을 보강 조회합니다.
-function* fetchModelStandardOptionsFlow(action) {
+// 도면 선택 직후 실제 Chamber명과 Model Standard 목록을 B/E에서 조회합니다.
+function* fetchSelectedDrawingDetailsFlow(action) {
+  const constructionNo = action.payload?.constructionNo;
+  const drawings = yield select(selectDrawings);
+  const drawing = drawings.find((item) => item.constructionNo === constructionNo);
+
+  if (!drawing) return;
+
   try {
-    // SELECT_DRAWING 직후 실행됩니다. 도면 row에 이미 specOptions가 있어도 B/E 기준 옵션으로 보강할 수 있습니다.
-    const constructionNo = action.payload?.constructionNo;
-    const drawings = yield select(selectDrawings);
-    const drawing = drawings.find((item) => item.constructionNo === constructionNo);
+    // 목록 응답에 Chamber가 포함돼도 radio 선택 시 상세 API를 다시 호출해 최신 설비 구성을 사용합니다.
+    const chamberResponse = yield call(vcSimApi.getDrawingChambers, buildEquipmentContextParams(drawing));
+    const rawChambers = toArray(
+      chamberResponse?.data || chamberResponse?.list || chamberResponse?.result || chamberResponse
+    );
+    const chambers = normalizeChambersFromDrawing({ ...drawing, chambers: rawChambers });
+    yield put(nonBimActions.fetchDrawingChambersSuccess({ constructionNo, chambers }));
+  } catch (error) {
+    yield put(nonBimActions.fetchDrawingChambersFailure(getErrorMessage(error)));
+  }
 
-    if (!drawing) return;
-
-    const options = yield call(vcSimApi.getEquipmentSpecOptions, {
-      eqId: drawing.eqId,
-      fab: drawing.fab,
-      model: drawing.model,
-      drawingKey: drawing.drawingKey,
-      constructionNo: drawing.constructionNo,
-    });
-
+  try {
+    const options = yield call(vcSimApi.getEquipmentSpecOptions, buildEquipmentContextParams(drawing));
     yield put(nonBimActions.fetchModelStandardOptionsSuccess({ constructionNo, options }));
   } catch (error) {
     yield put(nonBimActions.fetchModelStandardOptionsFailure(getErrorMessage(error)));
@@ -205,10 +217,11 @@ function* saveResultFlow() {
 // 빠르게 반복되는 요청은 takeLatest로 마지막 요청만 유효하게 처리합니다.
 export function* watchNonBimSaga() {
   // watcher 등록표입니다. 새 action 흐름을 추가할 때 action -> flow -> api/helper 책임이 맞는지 여기서 함께 점검합니다.
+  yield takeLatest(NON_BIM_ACTION_TYPES.INIT_OPTIONS_REQUEST, nonBimOptionsInitFlow);
   yield takeLatest(NON_BIM_ACTION_TYPES.FETCH_EQ_SUGGESTIONS_REQUEST, fetchEqSuggestionsFlow);
   yield takeLatest(NON_BIM_ACTION_TYPES.FETCH_MANUAL_DRAWINGS_REQUEST, fetchManualDrawingsFlow);
   yield takeLatest(NON_BIM_ACTION_TYPES.DOWNLOAD_FORELINE_REQUEST, downloadForelineFlow);
-  yield takeLatest(NON_BIM_ACTION_TYPES.SELECT_DRAWING, fetchModelStandardOptionsFlow);
+  yield takeLatest(NON_BIM_ACTION_TYPES.SELECT_DRAWING, fetchSelectedDrawingDetailsFlow);
   yield takeLatest(NON_BIM_ACTION_TYPES.CALCULATE_REQUEST, nonBimCalculateFlow);
   yield takeLatest(VC_CALCULATOR_ACTION_TYPES.INIT_REQUEST, calculatorInitFlow);
   yield takeLatest(VC_CALCULATOR_ACTION_TYPES.CALCULATE_REQUEST, vcCalculatorCalculateFlow);
