@@ -22,7 +22,10 @@ npm run dev
 
 ```powershell
 npm run build
+npm run test:vc
 ```
+
+`test:vc`는 Non-BIM fixture의 산출대상/Spec 유지, Calculator의 FAB+Model별 Model Standard 선택, 전체 산출대상 해제 검증을 Vite 모듈 환경에서 확인합니다.
 
 ## 주요 구조
 
@@ -96,9 +99,14 @@ npm run build
 
 - BIM/5D 미적용 Fab 조회조건은 `fab(optional)`, `eqId(required)`, `constructionNo(optional)`입니다.
 - 첫 번째 그리드의 업무 PK는 `constructionNo`입니다.
+- F/E의 `drawing.id`는 React row 렌더링을 위해 `eqId + constructionNo`로 생성하는 화면 전용 key이며 B/E DTO나 DB 컬럼이 아닙니다.
+- B/E 수기 도면 DTO와 DB 조회는 `DRAWING_ID`를 요구하지 않습니다. 상세 조회 안정키는 `eqId + constructionNo`입니다.
 - Foreline 다운로드는 `eqId + constructionNo`를 필수로 사용합니다.
 - `drawingKey`, `fileId`는 다운로드용 보조 식별자입니다.
-- radio 선택 후 Chamber/Spec 조회는 장비 기준 `eqId`를 중심으로 호출합니다.
+- radio 선택 후 Chamber/Spec 조회는 `eqId + constructionNo`로 선택 도면을 특정하여 호출합니다.
+- 상세 Chamber에 정상 Model Standard와 Min/Max가 있으면 후속 옵션 목록이 일부 부족해도 산출대상을 임의 해제하지 않습니다.
+- V/C Calculator의 Model Standard는 선택한 `fab + model` 조합에 해당하는 항목만 표시합니다.
+- 모든 Chamber의 산출대상이 해제된 경우 계산 API를 호출하지 않고 입력 안내를 표시합니다.
 
 ## 결과 규칙
 

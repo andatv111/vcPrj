@@ -39,6 +39,7 @@ export const DrawingResultTable = ({
             </td>
           </tr>
         ) : (
+          // row.id는 API/DB PK가 아니라 eqId+constructionNo로 만든 React 렌더링 key입니다.
           drawings.map((row) => (
             <DrawingResultRow
               key={row.id}

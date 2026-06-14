@@ -21,6 +21,8 @@ Maven 검증:
 mvn clean test
 ```
 
+계산 회귀 테스트는 실제 `data` 디렉터리를 수정하지 않고 임시 mock DB 복사본에서 실행됩니다.
+
 ## 주요 구조
 
 | 계층 | 파일 | 역할 |
@@ -86,11 +88,15 @@ STS 콘솔에서 다음 태그를 기준으로 흐름을 확인할 수 있습니
 - JSON 필드명은 Java record의 camelCase 이름을 F/E 계약명으로 그대로 사용합니다. 레거시 약어 또는 복수 alias를 동시에 지원하지 않습니다.
 - DTO 필드명을 변경할 때는 F/E가 임의 alias로 보완하는 방식 대신 Java DTO, F/E 모델, request/response sample을 같은 작업 단위로 변경합니다.
 - 첫 번째 그리드 업무 PK는 `constructionNo`입니다.
+- 수기 도면 DTO와 Oracle 조회는 `DRAWING_ID`를 전제로 하지 않습니다. 상세 관계는 `eqId + constructionNo`를 기준으로 조회합니다.
+- F/E의 `drawing.id`는 `eqId + constructionNo`로 만드는 React 렌더링용 key이며 B/E 응답 필드가 아닙니다.
 - 기존 Chamber 탭명은 `VC_PORTAL_MANUAL_DRAWING.txt`의 `chambers[].chamberName`을 반환합니다. `M16_VC_REQ_CHAMBER.txt`의 순번명은 초기 탭명 원천이 아닙니다.
 - 다운로드는 `eqId + constructionNo`가 필수이며 `drawingKey`, `fileId`는 보조 키입니다.
 - 설계포탈 실제 쿼리 확정 후 `PortalManualDrawingService`의 TXT 조회를 실제 DB adapter로 교체합니다.
 - F/E 조회조건/콤보/그리드에 표시되는 업무 데이터는 B/E API가 제공합니다. 화면 위치와 레이아웃은 변경하지 않습니다.
 - FAB/MODEL/Model Standard/Pipe Type 같은 선택지는 `{ value, label }` 형식으로 반환합니다.
+- Calculator의 `modelStandards`는 `{ value, label, minSpec, maxSpec, fab, model }` 형식으로 반환하여 F/E가 `fab + model` 조합을 정확히 필터링합니다.
+- Spec Master 완전 일치 행이 없더라도 B/E 조회 DTO에서 전달된 Min/Max가 있으면 계산 요청 snapshot으로 판정합니다. `isSpecSkipped=true` 또는 Min/Max 모두 없음만 `NA`입니다.
 
 ## 현재 DTO 명명 기준
 
@@ -112,6 +118,8 @@ STS 콘솔에서 다음 태그를 기준으로 흐름을 확인할 수 있습니
 
 - 실제 운영 DB의 스키마명, 테이블명, 컬럼명은 DBA 및 B/E 담당자와 확정한 뒤 치환합니다.
 - `:eqId`, `:fabId` 등은 설명용 bind 변수입니다. MyBatis에서는 `#{eqId}`처럼 값 바인딩을 사용합니다.
+- 수기 도면 관계의 기준은 `CONSTRUCTION_NO`, 상세 조회 안정키는 `EQ_ID + CONSTRUCTION_NO`입니다. `DRAWING_ID` surrogate key는 가정하지 않습니다.
+- `DRAWING_KEY`와 `FILE_ID`는 Foreline 파일 조회를 위한 보조 식별자이며 Chamber/Pipe JOIN key가 아닙니다.
 - `<FAB>_VC_REQ_*`의 `<FAB>`는 SQL 입력값으로 직접 조합하지 않습니다. Java의 FAB 허용 목록(`M14`, `M15`, `M16`)으로 검증한 뒤 Mapper statement를 선택해야 합니다.
 - 조회 결과가 Chamber와 Pipe처럼 1:N:N 구조이면 한 번의 큰 JOIN보다 Header, Chamber, Pipe를 분리 조회하여 Java에서 DTO로 조립하는 방식을 권장합니다. 중복 row와 페이징 오류를 줄일 수 있습니다.
 - Conductance 계산식과 판정 변환은 현재 `VcCalculationService`의 Java 업무 로직입니다. SQL로 임의 이전하지 않고 DB에는 계산 결과와 판정 결과를 저장합니다.
@@ -121,10 +129,9 @@ STS 콘솔에서 다음 태그를 기준으로 흐름을 확인할 수 있습니
 
 | 구분 | 논리 테이블 | 용도 | 비고 |
 | --- | --- | --- | --- |
-| 수기 도면 Header | `VC_PORTAL_MANUAL_DRAWING` | 장비, 공사번호, 상태, 모델, Foreline 파일 정보 | 현재 `VC_PORTAL_MANUAL_DRAWING.txt` 대체 |
-| 수기 도면 Chamber | `VC_PORTAL_MANUAL_CHAMBER` | 도면별 Chamber와 공정/Spec 정보 | 운영 DB에서는 Header와 분리 권장 |
-| 수기 도면 Pipe | `VC_PORTAL_MANUAL_PIPE` | Chamber별 Pipe 구성 | `pipeRows` 원천 |
-| 도면별 Spec 선택지 | `VC_PORTAL_DRAWING_SPEC` | 선택한 도면에서 허용할 Model Standard | 없으면 Spec Master 조회로 대체 가능 |
+| 수기 도면 Header | `VC_PORTAL_MANUAL_DRAWING` | 장비, 공사번호, 상태, 모델, Foreline 파일 정보 | 업무키 `CONSTRUCTION_NO`, 안정키 `EQ_ID + CONSTRUCTION_NO` |
+| 수기 도면 Chamber | `VC_PORTAL_MANUAL_CHAMBER` | 장비/공사번호별 Chamber와 공정/Spec 정보 | 관계키 `EQ_ID + CONSTRUCTION_NO` |
+| 수기 도면 Pipe | `VC_PORTAL_MANUAL_PIPE` | 장비/공사번호/Chamber별 Pipe 구성 | 관계키 `EQ_ID + CONSTRUCTION_NO + CHAMBER_ID` |
 | Spec Master | `VCW_VC_SPEC_MST` | FAB/장비 모델/Chamber 모델별 관리 Spec | 현재 Java 서비스의 기준 테이블명 |
 | 계산 요청 Header | `<FAB>_VC_REQ_EQUIPMENT` | 계산 요청 장비 및 진행 상태 | 현재 FAB별 라우팅 구조 유지 |
 | 계산 요청 Object | `<FAB>_VC_REQ_OBJECT` | 계산에 사용한 Pipe/Object 입력값 | 요청 재현 및 이력 확인용 |
@@ -222,8 +229,7 @@ SELECT D.EQ_ID,
  *   - constructionNo: 입력값이 있으면 부분 일치
  * 정렬: 공사번호 오름차순
  */
-SELECT D.DRAWING_ID              AS ID,
-       D.DRAWING_KEY,
+SELECT D.DRAWING_KEY,
        D.CONSTRUCTION_NO,
        D.EQ_ID,
        D.SITE,
@@ -239,7 +245,8 @@ SELECT D.DRAWING_ID              AS ID,
        D.PROCESS_MIDDLE,
        (SELECT COUNT(*)
           FROM VC_PORTAL_MANUAL_CHAMBER C
-         WHERE C.DRAWING_ID = D.DRAWING_ID
+         WHERE UPPER(C.EQ_ID) = UPPER(D.EQ_ID)
+           AND UPPER(C.CONSTRUCTION_NO) = UPPER(D.CONSTRUCTION_NO)
            AND C.USE_YN = 'Y') AS CHAMBER_COUNT,
        D.FORELINE_CATEGORY_NAME,
        D.FORELINE_REGISTERED_AT,
@@ -269,7 +276,8 @@ SELECT D.DRAWING_ID              AS ID,
  * 업무 PK: EQ_ID + CONSTRUCTION_NO
  * 주의: 기존 탭 이름은 CHAMBER_NAME을 그대로 사용하며 F/E에서 재번호를 부여하지 않는다.
  */
-SELECT C.DRAWING_ID,
+SELECT C.CONSTRUCTION_NO,
+       C.EQ_ID,
        C.CHAMBER_ID,
        C.CHAMBER_NAME,
        C.MODEL_STANDARD,
@@ -278,18 +286,15 @@ SELECT C.DRAWING_ID,
        C.PROCESS_LARGE,
        C.PROCESS_MIDDLE,
        C.CHAMBER_SEQ
-  FROM VC_PORTAL_MANUAL_DRAWING D
-  JOIN VC_PORTAL_MANUAL_CHAMBER C
-    ON C.DRAWING_ID = D.DRAWING_ID
-   AND C.USE_YN = 'Y'
- WHERE D.USE_YN = 'Y'
-   AND UPPER(D.EQ_ID) = UPPER(TRIM(:eqId))
-   AND UPPER(D.CONSTRUCTION_NO) = UPPER(TRIM(:constructionNo))
+  FROM VC_PORTAL_MANUAL_CHAMBER C
+ WHERE C.USE_YN = 'Y'
+   AND UPPER(C.EQ_ID) = UPPER(TRIM(:eqId))
+   AND UPPER(C.CONSTRUCTION_NO) = UPPER(TRIM(:constructionNo))
  ORDER BY C.CHAMBER_SEQ, C.CHAMBER_ID;
 
 /*
  * 업무: 위에서 조회한 Chamber의 Pipe row를 조회하여 pipeRows로 조립한다.
- * 조건: DRAWING_ID와 CHAMBER_ID를 모두 사용하여 다른 도면의 동일 Chamber ID와 섞이지 않게 한다.
+ * 조건: EQ_ID + CONSTRUCTION_NO + CHAMBER_ID를 사용하여 다른 장비/공사의 Pipe와 섞이지 않게 한다.
  */
 SELECT P.PIPE_SEQ,
        P.PIPE_TYPE,
@@ -299,9 +304,10 @@ SELECT P.PIPE_SEQ,
        P.OUTLET_DIA,
        P.QTY
   FROM VC_PORTAL_MANUAL_PIPE P
- WHERE P.DRAWING_ID = :drawingId
+ WHERE P.USE_YN = 'Y'
+   AND UPPER(P.EQ_ID) = UPPER(TRIM(:eqId))
+   AND UPPER(P.CONSTRUCTION_NO) = UPPER(TRIM(:constructionNo))
    AND P.CHAMBER_ID = :chamberId
-   AND P.USE_YN = 'Y'
  ORDER BY P.PIPE_SEQ;
 ```
 
@@ -309,40 +315,29 @@ SELECT P.PIPE_SEQ,
 
 대상 API: `GET /api/vc/sim/non-bim/equipment-spec-options`
 
-현재 Java 로직은 선택 도면에 정의된 Spec 선택지를 먼저 찾고, 없으면 `VCW_VC_SPEC_MST`를 조회합니다. 이 우선순위를 유지하려면 두 단계 조회가 가장 명확합니다.
+현재 TXT mock은 도면 JSON의 `specOptions`를 우선 사용하여 화면 fixture별 선택지를 재현합니다. Oracle 전환 시 실제 도면별 Spec 매핑 테이블이 확정되지 않은 상태에서 별도 테이블을 가정하지 않으며, `VCW_VC_SPEC_MST`를 FAB와 장비 Model 조건으로 조회합니다.
 
 ```sql
-/* 1단계: 선택한 도면에 명시적으로 연결된 Model Standard 조회 */
-SELECT S.MODEL_STANDARD AS VALUE,
-       S.MODEL_STANDARD AS LABEL
-  FROM VC_PORTAL_MANUAL_DRAWING D
-  JOIN VC_PORTAL_DRAWING_SPEC S
-    ON S.DRAWING_ID = D.DRAWING_ID
-   AND S.USE_YN = 'Y'
- WHERE D.USE_YN = 'Y'
-   AND (TRIM(:eqId) IS NULL OR UPPER(D.EQ_ID) = UPPER(TRIM(:eqId)))
-   AND (
-        TRIM(:constructionNo) IS NULL
-        OR UPPER(D.CONSTRUCTION_NO) = UPPER(TRIM(:constructionNo))
-       )
- ORDER BY S.SORT_SEQ, S.MODEL_STANDARD;
-
 /*
- * 2단계: 1단계 결과가 없을 때 Spec Master에서 조회한다.
+ * 업무: 선택 장비에 적용 가능한 Model Standard와 Spec 범위를 조회한다.
+ * EQ_ID와 CONSTRUCTION_NO는 먼저 Header 조회에 사용하여 FAB/MODEL을 확인하고,
+ * 이 SQL에는 확인된 FAB/MODEL 값을 bind한다.
  * MODEL_SPEC_USE_YN = '0'은 현재 Java의 사용 가능 Spec 조건을 따른다.
  */
 SELECT DISTINCT
        M.CHAMB_MODEL_NM AS VALUE,
-       M.CHAMB_MODEL_NM AS LABEL
+       M.CHAMB_MODEL_NM AS LABEL,
+       M.SPEC_MIN_VAL   AS MIN_SPEC,
+       M.SPEC_MAX_VAL   AS MAX_SPEC
   FROM VCW_VC_SPEC_MST M
  WHERE M.MODEL_SPEC_USE_YN = '0'
-   AND (TRIM(:fab) IS NULL OR UPPER(M.FAB_ID) = UPPER(TRIM(:fab)))
+   AND UPPER(M.FAB_ID) = UPPER(TRIM(:fab))
    AND (TRIM(:model) IS NULL OR UPPER(M.SET_MODEL_NM) = UPPER(TRIM(:model)))
    AND M.CHAMB_MODEL_NM IS NOT NULL
- ORDER BY M.CHAMB_MODEL_NM;
+ ORDER BY M.CHAMB_MODEL_NM, M.SPEC_MIN_VAL, M.SPEC_MAX_VAL;
 ```
 
-한 SQL의 복잡한 `UNION ALL / NOT EXISTS`로 합치기보다 Service에서 1단계 결과 존재 여부를 판단하는 편이 도면 우선 규칙을 읽고 변경하기 쉽습니다.
+향후 실제 도면별 Spec 매핑 테이블이 확인되면 그 테이블의 실재 업무키를 기준으로 별도 조회를 추가합니다. 테이블과 관계키가 확정되기 전에는 `DRAWING_ID`나 가상 매핑 테이블을 먼저 만들지 않습니다.
 
 ### 6. Foreline 도면 다운로드 정보 조회
 
@@ -390,16 +385,17 @@ SELECT DISTINCT D.MODEL AS VALUE, D.MODEL AS LABEL
 
 /*
  * Calculator의 Model Standard.
- * 현재 Java preview는 M16을 기본 FAB로 사용한다.
- * 운영 전환 시에는 화면에서 선택한 FAB/Model을 조건으로 받도록 API 계약 확장을 권장한다.
+ * 초기 옵션은 사용 가능한 전체 기준을 반환하고 F/E가 FAB/Model 메타데이터로 필터링한다.
  */
 SELECT DISTINCT M.CHAMB_MODEL_NM AS VALUE,
-                M.CHAMB_MODEL_NM AS LABEL
+                M.CHAMB_MODEL_NM || ' / ' || M.SPEC_NM AS LABEL,
+                M.SPEC_MIN_VAL AS MIN_SPEC,
+                M.SPEC_MAX_VAL AS MAX_SPEC,
+                M.FAB_ID AS FAB,
+                M.SET_MODEL_NM AS MODEL
   FROM VCW_VC_SPEC_MST M
  WHERE M.MODEL_SPEC_USE_YN = '0'
-   AND M.FAB_ID = NVL(TRIM(:fabId), 'M16')
-   AND (TRIM(:setModelNm) IS NULL OR M.SET_MODEL_NM = TRIM(:setModelNm))
- ORDER BY M.CHAMB_MODEL_NM;
+ ORDER BY M.FAB_ID, M.SET_MODEL_NM, M.CHAMB_MODEL_NM;
 
 /* Pipe Type은 1번 API와 동일한 공통코드 SQL을 재사용한다. */
 SELECT C.CODE AS VALUE, C.CODE_NAME AS LABEL
@@ -563,10 +559,12 @@ SELECT *
 
 현재 판정 규칙은 Java에서 다음 순서로 적용합니다.
 
-1. Spec이 없거나 관리 대상이 아니면 `NA`
-2. 계산값이 최소값보다 작으면 `NG_L`
-3. 계산값이 최대값보다 크면 `NG_H`
-4. 범위 안이면 `OK`
+1. Spec Master 완전 일치 행을 우선 사용
+2. Master 행이 없고 요청 Min/Max가 있으면 해당 계산 건의 Spec snapshot 사용
+3. `isSpecSkipped=true`, Min/Max 모두 없음 또는 관리 대상이 아니면 `NA`
+4. 계산값이 최소값보다 작으면 `NG_L`
+5. 계산값이 최대값보다 크면 `NG_H`
+6. 범위 안이면 `OK`
 
 화면용 결과에서는 `OK -> IN`, `NG_L -> LOW_OUT`, `NG_H -> HIGH_OUT`, `NA -> NA`로 변환합니다.
 
@@ -706,10 +704,14 @@ CREATE INDEX IX_VC_MANUAL_DRAWING_01
 
 /* 도면 상세 조회 */
 CREATE INDEX IX_VC_MANUAL_CHAMBER_01
-    ON VC_PORTAL_MANUAL_CHAMBER (DRAWING_ID, CHAMBER_SEQ, USE_YN);
+    ON VC_PORTAL_MANUAL_CHAMBER (
+       EQ_ID, CONSTRUCTION_NO, CHAMBER_SEQ, USE_YN
+    );
 
 CREATE INDEX IX_VC_MANUAL_PIPE_01
-    ON VC_PORTAL_MANUAL_PIPE (DRAWING_ID, CHAMBER_ID, PIPE_SEQ, USE_YN);
+    ON VC_PORTAL_MANUAL_PIPE (
+       EQ_ID, CONSTRUCTION_NO, CHAMBER_ID, PIPE_SEQ, USE_YN
+    );
 
 /* 계산 Spec 조회 */
 CREATE INDEX IX_VCW_VC_SPEC_MST_01

@@ -3,6 +3,7 @@ package com.example.vcbeprj.service;
 import com.example.vcbeprj.domain.JudgeResult;
 import com.example.vcbeprj.domain.ObjectType;
 import com.example.vcbeprj.domain.PortalManualDrawing;
+import com.example.vcbeprj.domain.SpecMaster;
 import com.example.vcbeprj.dto.CalculateRequest;
 import com.example.vcbeprj.dto.CalculateResponse;
 import com.example.vcbeprj.dto.ChamberInput;
@@ -48,8 +49,8 @@ public class VcSimFacadeService {
         return Map.of(
                 "fabs", portalService.fabs().stream().map(this::option).toList(),
                 "models", portalService.models().stream().map(this::option).toList(),
-                "modelStandards", portalService.getEquipmentSpecOptions("", "M16", "", "").stream()
-                        .map(this::specOption)
+                "modelStandards", portalService.getAllUsableSpecs().stream()
+                        .map(this::calculatorSpecOption)
                         .toList(),
                 "pipeTypes", pipeTypeOptions()
         );
@@ -135,6 +136,9 @@ public class VcSimFacadeService {
                         firstNotBlank(chamber.chamberId(), "CH-" + blankToDefault(chamber.seq(), 1)),
                         blankToDefault(chamber.chamberName(), "CHAMBER" + blankToDefault(chamber.seq(), 1)),
                         chamber.modelStandard(),
+                        decimalOrNull(chamber.minSpec()),
+                        decimalOrNull(chamber.maxSpec()),
+                        Boolean.TRUE.equals(chamber.isSpecSkipped()),
                         firstNotBlank(chamber.processLarge(), equipment == null ? "" : equipment.processLarge()),
                         firstNotBlank(chamber.processMiddle(), equipment == null ? "" : equipment.processMiddle()),
                         chamber.calculationTarget() == null || chamber.calculationTarget(),
@@ -210,6 +214,16 @@ public class VcSimFacadeService {
         }
     }
 
+    private BigDecimal decimalOrNull(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return new BigDecimal(value);
+        } catch (NumberFormatException e) {
+            log.warn("[SERVICE][SIM][SPEC_NUMBER][IGNORE] value={}", value);
+            return null;
+        }
+    }
+
     private Map<String, String> option(String value) {
         return Map.of("value", value, "label", value);
     }
@@ -220,6 +234,17 @@ public class VcSimFacadeService {
                 "label", blankToDefault(option.label(), option.value()),
                 "minSpec", blankToDefault(option.minSpec(), ""),
                 "maxSpec", blankToDefault(option.maxSpec(), "")
+        );
+    }
+
+    private Map<String, String> calculatorSpecOption(SpecMaster spec) {
+        return Map.of(
+                "value", blankToDefault(spec.chambModelNm(), ""),
+                "label", blankToDefault(spec.chambModelNm(), "") + " / " + blankToDefault(spec.specNm(), ""),
+                "minSpec", spec.specMinVal() == null ? "" : spec.specMinVal().stripTrailingZeros().toPlainString(),
+                "maxSpec", spec.specMaxVal() == null ? "" : spec.specMaxVal().stripTrailingZeros().toPlainString(),
+                "fab", blankToDefault(spec.fabId(), ""),
+                "model", blankToDefault(spec.setModelNm(), "")
         );
     }
 

@@ -1,7 +1,7 @@
 /**
  * BIM/5D 미적용 Fab 화면 action 정의입니다.
  * 화면은 action creator만 호출하고, 실제 상태 변경은 reducer, API 흐름은 saga가 담당합니다.
- * 첫 번째 그리드 선택 키는 drawingId가 아니라 constructionNo입니다.
+ * 첫 번째 그리드 선택 키는 DB surrogate key가 아니라 constructionNo입니다.
  */
 
 

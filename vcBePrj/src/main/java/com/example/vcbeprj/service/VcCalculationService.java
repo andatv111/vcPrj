@@ -77,7 +77,7 @@ public class VcCalculationService {
                     guid, chamber.chamberName(), chamber.objects() == null ? 0 : chamber.objects().size(), measVal);
             SpecMaster spec = specMasterService
                     .getSpecForJudge(request.fabId(), request.setModelNm(), chamber.chamberModelName())
-                    .orElse(null);
+                    .orElseGet(() -> requestSpecSnapshot(request, chamber));
             JudgeResult judge = chamber.calculationTarget() ? judgeService.judgeChamberSpec(measVal, spec) : JudgeResult.NA;
             log.info("[FLOW][CALCULATE][JUDGE] guid={} chamber={} chamberModel={} specId={} judge={}",
                     guid, chamber.chamberName(), chamber.chamberModelName(), spec == null ? "" : spec.specId(), judge);
@@ -137,6 +137,17 @@ public class VcCalculationService {
                 chamber.operLargeCatgVal(), chamber.operMidCatgVal(), chamber.chamberModelName(), measVal, judge,
                 spec == null ? "" : spec.specId(), "", spec == null ? null : spec.specMinVal(),
                 spec == null ? null : spec.specMaxVal(), spec == null ? "N" : spec.mgmtTgtYn(), request.workerEmpNo(), now
+        );
+    }
+
+    private SpecMaster requestSpecSnapshot(CalculateRequest request, ChamberInput chamber) {
+        // 화면 Spec은 B/E 조회 DTO에서 전달된 값입니다. Master 행이 아직 없을 때도 해당 snapshot으로 정상 판정합니다.
+        if (chamber.specSkipped() || (chamber.specMinVal() == null && chamber.specMaxVal() == null)) return null;
+
+        return new SpecMaster(
+                "", "Request Spec Snapshot", request.fabId(), request.setModelNm(),
+                chamber.operLargeCatgVal(), chamber.operMidCatgVal(), chamber.chamberModelName(),
+                "0", "Y", chamber.specMinVal(), chamber.specMaxVal(), "", ""
         );
     }
 

@@ -69,6 +69,14 @@ const updateChamber = (state, chamberId, updater) => ({
 const getSelectedSpec = (modelStandards, value) =>
   modelStandards.find((item) => item.value === value || item.label === value) || null;
 
+// Calculator 공통 옵션 중 현재 FAB/Model 조합에 해당하는 기준만 Chamber에 노출합니다.
+const getApplicableSpecs = (modelStandards, equipment) =>
+  modelStandards.filter(
+    (item) =>
+      (!item.fab || item.fab === equipment.fab) &&
+      (!item.model || item.model === equipment.model)
+  );
+
 const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
   switch (action.type) {
     case VC_CALCULATOR_ACTION_TYPES.INIT_REQUEST:
@@ -112,7 +120,11 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
         minSpec: "",
         maxSpec: "",
       };
-      const defaultSpec = equipment.fab && equipment.model ? state.options.modelStandards[0] : null;
+      const applicableSpecs =
+        equipment.fab && equipment.model
+          ? getApplicableSpecs(state.options.modelStandards, equipment)
+          : [];
+      const defaultSpec = applicableSpecs[0] || null;
 
       if (defaultSpec) {
         equipment.modelStandard = defaultSpec.value;
@@ -125,13 +137,13 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
         equipment,
         chambers: state.chambers.map((chamber) =>
           defaultSpec
-            ? applySpecToChamber({ ...chamber, specOptions: state.options.modelStandards }, defaultSpec.value)
+            ? applySpecToChamber({ ...chamber, specOptions: applicableSpecs }, defaultSpec.value)
             : {
                 ...chamber,
                 modelStandard: "",
                 minSpec: "",
                 maxSpec: "",
-                specOptions: state.options.modelStandards,
+                specOptions: applicableSpecs,
                 calculationTarget: false,
               }
         ),
@@ -140,7 +152,8 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
 
     case VC_CALCULATOR_ACTION_TYPES.SET_MODEL_STANDARD: {
       // Model Standard를 고르면 연결된 Min/Max Spec을 장비 정보와 모든 Chamber에 반영합니다.
-      const spec = getSelectedSpec(state.options.modelStandards, action.payload.value);
+      const applicableSpecs = getApplicableSpecs(state.options.modelStandards, state.equipment);
+      const spec = getSelectedSpec(applicableSpecs, action.payload.value);
 
       return {
         ...state,
@@ -151,7 +164,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
           maxSpec: spec?.maxSpec || "",
         },
         chambers: state.chambers.map((chamber) =>
-          applySpecToChamber({ ...chamber, specOptions: state.options.modelStandards }, action.payload.value)
+          applySpecToChamber({ ...chamber, specOptions: applicableSpecs }, action.payload.value)
         ),
       };
     }
@@ -159,7 +172,11 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
     case VC_CALCULATOR_ACTION_TYPES.ADD_CHAMBER: {
       // Chamber는 업무 상한(MAX_CHAMBER_COUNT)을 넘지 않게 제한합니다.
       if (state.chambers.length >= MAX_CHAMBER_COUNT) return state;
-      const chamber = createCalculatorChamber(state.chambers, state.equipment, state.options.modelStandards);
+      const chamber = createCalculatorChamber(
+        state.chambers,
+        state.equipment,
+        getApplicableSpecs(state.options.modelStandards, state.equipment)
+      );
       const chambers = resequenceChambers([...state.chambers, chamber]);
 
       return {
@@ -196,7 +213,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       // 산출대상 checkbox는 Model Standard와 Spec이 있을 때만 true가 되도록 reducer에서 한 번 더 막습니다.
       return updateChamber(state, action.payload.chamberId, (chamber) => {
         if (action.payload.name === "modelStandard") {
-          return applySpecToChamber({ ...chamber, specOptions: state.options.modelStandards }, action.payload.value);
+          return applySpecToChamber(chamber, action.payload.value);
         }
 
         return {

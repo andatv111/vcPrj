@@ -1,7 +1,8 @@
 /**
  * BIM/5D 미적용 Fab 화면 state reducer입니다.
  * 이 화면은 계산용 화면이므로 저장/기안 상태를 상단 그리드에 영구 반영하지 않습니다.
- * 선택 row의 업무 PK는 selectedConstructionNo이며 Chamber 탭은 chamberCount/chambers 기준으로 구성합니다.
+ * 선택 row의 업무 PK는 selectedConstructionNo이며 DB 도면 ID를 상태에 별도로 보관하지 않습니다.
+ * Chamber 탭은 chamberCount/chambers 기준으로 구성합니다.
  */
 
 
@@ -212,14 +213,17 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
         chambers: state.chambers.map((chamber) => {
           const nextModelStandard = chamber.modelStandard || options[0]?.value || "";
           const spec = getSpecByValue(options, nextModelStandard);
+          const minSpec = spec ? spec.minSpec : chamber.minSpec;
+          const maxSpec = spec ? spec.maxSpec : chamber.maxSpec;
 
           return {
             ...chamber,
             specOptions: options,
             modelStandard: nextModelStandard,
-            minSpec: spec ? spec.minSpec : chamber.minSpec,
-            maxSpec: spec ? spec.maxSpec : chamber.maxSpec,
-            calculationTarget: Boolean(spec && nextModelStandard && (spec.minSpec || spec.maxSpec)),
+            minSpec,
+            maxSpec,
+            // 상세 Chamber에 이미 정상 Spec이 있으면 옵션 목록의 일부 누락 때문에 산출대상을 해제하지 않습니다.
+            calculationTarget: Boolean(nextModelStandard && (minSpec || maxSpec)),
           };
         }),
       };

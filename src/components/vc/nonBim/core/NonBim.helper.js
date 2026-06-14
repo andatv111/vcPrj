@@ -103,15 +103,18 @@ export const createEmptyPipeRow = (type = PIPE_TYPE.PIPE) =>
     quantity: getPipePolicy(type).fixedQuantity || "",
   });
 
-// Java PortalManualDrawing 필드를 같은 camelCase 이름으로 유지합니다. 화면 선택 키는 constructionNo입니다.
+// Java PortalManualDrawing 필드를 같은 camelCase 이름으로 유지합니다.
+// id는 DB/API 필드가 아니라 React row 렌더링에만 사용하는 eqId+constructionNo 복합 key입니다.
 export const normalizeDrawing = (raw = {}) => {
   const foreline = raw.foreline || {};
+  const constructionNo = nvl(raw.constructionNo);
+  const eqId = nvl(raw.eqId);
 
   return {
-    id: raw.id || raw.constructionNo || createId("DRAWING"),
+    id: [eqId, constructionNo].filter(Boolean).join("_") || createId("DRAWING"),
     drawingKey: nvl(raw.drawingKey),
-    constructionNo: nvl(raw.constructionNo),
-    eqId: nvl(raw.eqId),
+    constructionNo,
+    eqId,
     site: nvl(raw.site),
     fab: nvl(raw.fab),
     area1: nvl(raw.area1),
@@ -148,6 +151,8 @@ export const normalizeSpecOption = (raw = {}) => ({
   label: nvl(raw.label),
   minSpec: nvl(raw.minSpec),
   maxSpec: nvl(raw.maxSpec),
+  fab: nvl(raw.fab),
+  model: nvl(raw.model),
   raw,
 });
 
@@ -334,6 +339,10 @@ export const validateChambersBeforeCalculate = (chambers) => {
   // 산출대상이 꺼진 Chamber는 의도적으로 계산에서 제외되므로 Spec/배관 필수값 검증을 건너뜁니다.
   if (!toArray(chambers).length) {
     return { valid: false, message: "Chamber 정보가 없습니다." };
+  }
+
+  if (!toArray(chambers).some((chamber) => chamber.calculationTarget !== false)) {
+    return { valid: false, message: "산출대상 Chamber를 한 개 이상 선택해 주세요." };
   }
 
   for (const chamber of chambers) {
