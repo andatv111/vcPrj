@@ -42,6 +42,13 @@ public class VcSpecMasterService {
         return result;
     }
 
+    public List<SpecMaster> getAllUsableSpecs() {
+        log.info("[SERVICE][SPEC_MASTER][SELECT] business=getAllUsableSpecs table={}", SPEC_TABLE);
+        return repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+                .filter(this::validateSpecUsable)
+                .toList();
+    }
+
     public boolean validateSpecUsable(SpecMaster spec) {
         return spec != null && "0".equals(spec.modelSpecUseYn());
     }

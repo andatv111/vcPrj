@@ -3,7 +3,6 @@ package com.example.vcbeprj.domain;
 import java.util.List;
 
 public record PortalManualDrawing(
-        String id,
         String drawingKey,
         String constructionNo,
         String eqId,

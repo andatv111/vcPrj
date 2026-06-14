@@ -29,7 +29,7 @@ git push -u origin main
 git checkout main
 git checkout -b codex-work
 git push -u origin codex-work
-# codex-work 로컬작성 후 원격소스반영
+# codex-work 로컬작성 후 원격소스반영_____________
 git checkout codex-work
 git add .
 git commit -m "codex update"

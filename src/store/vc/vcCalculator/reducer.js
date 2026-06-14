@@ -28,7 +28,7 @@ const createCalculatorChamber = (chambers = [], equipment = {}, modelStandardOpt
     modelStandard: equipment.modelStandard || chamber.modelStandard,
     minSpec: equipment.minSpec || chamber.minSpec,
     maxSpec: equipment.maxSpec || chamber.maxSpec,
-    calculateEnabled: Boolean((equipment.modelStandard || chamber.modelStandard) && (equipment.minSpec || equipment.maxSpec || chamber.minSpec || chamber.maxSpec)),
+    calculationTarget: Boolean((equipment.modelStandard || chamber.modelStandard) && (equipment.minSpec || equipment.maxSpec || chamber.minSpec || chamber.maxSpec)),
   };
 };
 
@@ -68,6 +68,14 @@ const updateChamber = (state, chamberId, updater) => ({
 
 const getSelectedSpec = (modelStandards, value) =>
   modelStandards.find((item) => item.value === value || item.label === value) || null;
+
+// Calculator 공통 옵션 중 현재 FAB/Model 조합에 해당하는 기준만 Chamber에 노출합니다.
+const getApplicableSpecs = (modelStandards, equipment) =>
+  modelStandards.filter(
+    (item) =>
+      (!item.fab || item.fab === equipment.fab) &&
+      (!item.model || item.model === equipment.model)
+  );
 
 const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
   switch (action.type) {
@@ -112,7 +120,11 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
         minSpec: "",
         maxSpec: "",
       };
-      const defaultSpec = equipment.fab && equipment.model ? state.options.modelStandards[0] : null;
+      const applicableSpecs =
+        equipment.fab && equipment.model
+          ? getApplicableSpecs(state.options.modelStandards, equipment)
+          : [];
+      const defaultSpec = applicableSpecs[0] || null;
 
       if (defaultSpec) {
         equipment.modelStandard = defaultSpec.value;
@@ -125,14 +137,14 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
         equipment,
         chambers: state.chambers.map((chamber) =>
           defaultSpec
-            ? applySpecToChamber({ ...chamber, specOptions: state.options.modelStandards }, defaultSpec.value)
+            ? applySpecToChamber({ ...chamber, specOptions: applicableSpecs }, defaultSpec.value)
             : {
                 ...chamber,
                 modelStandard: "",
                 minSpec: "",
                 maxSpec: "",
-                specOptions: state.options.modelStandards,
-                calculateEnabled: false,
+                specOptions: applicableSpecs,
+                calculationTarget: false,
               }
         ),
       };
@@ -140,7 +152,8 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
 
     case VC_CALCULATOR_ACTION_TYPES.SET_MODEL_STANDARD: {
       // Model Standard를 고르면 연결된 Min/Max Spec을 장비 정보와 모든 Chamber에 반영합니다.
-      const spec = getSelectedSpec(state.options.modelStandards, action.payload.value);
+      const applicableSpecs = getApplicableSpecs(state.options.modelStandards, state.equipment);
+      const spec = getSelectedSpec(applicableSpecs, action.payload.value);
 
       return {
         ...state,
@@ -151,7 +164,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
           maxSpec: spec?.maxSpec || "",
         },
         chambers: state.chambers.map((chamber) =>
-          applySpecToChamber({ ...chamber, specOptions: state.options.modelStandards }, action.payload.value)
+          applySpecToChamber({ ...chamber, specOptions: applicableSpecs }, action.payload.value)
         ),
       };
     }
@@ -159,7 +172,11 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
     case VC_CALCULATOR_ACTION_TYPES.ADD_CHAMBER: {
       // Chamber는 업무 상한(MAX_CHAMBER_COUNT)을 넘지 않게 제한합니다.
       if (state.chambers.length >= MAX_CHAMBER_COUNT) return state;
-      const chamber = createCalculatorChamber(state.chambers, state.equipment, state.options.modelStandards);
+      const chamber = createCalculatorChamber(
+        state.chambers,
+        state.equipment,
+        getApplicableSpecs(state.options.modelStandards, state.equipment)
+      );
       const chambers = resequenceChambers([...state.chambers, chamber]);
 
       return {
@@ -196,13 +213,13 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       // 산출대상 checkbox는 Model Standard와 Spec이 있을 때만 true가 되도록 reducer에서 한 번 더 막습니다.
       return updateChamber(state, action.payload.chamberId, (chamber) => {
         if (action.payload.name === "modelStandard") {
-          return applySpecToChamber({ ...chamber, specOptions: state.options.modelStandards }, action.payload.value);
+          return applySpecToChamber(chamber, action.payload.value);
         }
 
         return {
           ...chamber,
           [action.payload.name]:
-            action.payload.name === "calculateEnabled"
+            action.payload.name === "calculationTarget"
               ? Boolean(action.payload.value) && Boolean(chamber.modelStandard) && Boolean(chamber.minSpec || chamber.maxSpec)
               : action.payload.value,
         };
@@ -212,24 +229,24 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       // 현재 활성 Chamber 또는 명시된 Chamber에 기본 PIPE row를 추가합니다.
       return updateChamber(state, action.payload.chamberId || state.activeChamberId, (chamber) => ({
         ...chamber,
-        pipeRows: [...chamber.pipeRows, createEmptyPipeRow(PIPE_TYPE.PIPE)],
+        pipeList: [...chamber.pipeList, createEmptyPipeRow(PIPE_TYPE.PIPE)],
       }));
 
     case VC_CALCULATOR_ACTION_TYPES.REMOVE_SELECTED_PIPE_ROW:
       return updateChamber(state, action.payload.chamberId || state.activeChamberId, (chamber) => {
         // 마지막 row를 삭제할 때는 완전히 비우지 않고 새 빈 row 하나를 남겨 입력 흐름을 유지합니다.
         if (!chamber.selectedPipeRowId) return chamber;
-        if (chamber.pipeRows.length <= 1) {
+        if (chamber.pipeList.length <= 1) {
           return {
             ...chamber,
-            pipeRows: [createEmptyPipeRow(PIPE_TYPE.PIPE)],
+            pipeList: [createEmptyPipeRow(PIPE_TYPE.PIPE)],
             selectedPipeRowId: "",
           };
         }
 
         return {
           ...chamber,
-          pipeRows: chamber.pipeRows.filter((row) => row.id !== chamber.selectedPipeRowId),
+          pipeList: chamber.pipeList.filter((row) => row.id !== chamber.selectedPipeRowId),
           selectedPipeRowId: "",
         };
       });
@@ -244,7 +261,7 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
     case VC_CALCULATOR_ACTION_TYPES.UPDATE_PIPE_ROW:
       return updateChamber(state, action.payload.chamberId, (chamber) => ({
         ...chamber,
-        pipeRows: chamber.pipeRows.map((row) => {
+        pipeList: chamber.pipeList.map((row) => {
           if (row.id !== action.payload.rowId) return row;
 
           // 유형별로 쓰지 않는 필드는 normalizePipeRowByType에서 즉시 정리됩니다.

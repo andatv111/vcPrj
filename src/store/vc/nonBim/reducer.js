@@ -1,7 +1,8 @@
 /**
  * BIM/5D 미적용 Fab 화면 state reducer입니다.
  * 이 화면은 계산용 화면이므로 저장/기안 상태를 상단 그리드에 영구 반영하지 않습니다.
- * 선택 row의 업무 PK는 selectedConstructionNo이며 Chamber 탭은 chamberCount/chambers 기준으로 구성합니다.
+ * 선택 row의 업무 PK는 selectedConstructionNo이며 DB 도면 ID를 상태에 별도로 보관하지 않습니다.
+ * Chamber 탭은 chamberCount/chambers 기준으로 구성합니다.
  */
 
 
@@ -212,14 +213,17 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
         chambers: state.chambers.map((chamber) => {
           const nextModelStandard = chamber.modelStandard || options[0]?.value || "";
           const spec = getSpecByValue(options, nextModelStandard);
+          const minSpec = spec ? spec.minSpec : chamber.minSpec;
+          const maxSpec = spec ? spec.maxSpec : chamber.maxSpec;
 
           return {
             ...chamber,
             specOptions: options,
             modelStandard: nextModelStandard,
-            minSpec: spec ? spec.minSpec : chamber.minSpec,
-            maxSpec: spec ? spec.maxSpec : chamber.maxSpec,
-            calculateEnabled: Boolean(spec && nextModelStandard && (spec.minSpec || spec.maxSpec)),
+            minSpec,
+            maxSpec,
+            // 상세 Chamber에 이미 정상 Spec이 있으면 옵션 목록의 일부 누락 때문에 산출대상을 해제하지 않습니다.
+            calculationTarget: Boolean(nextModelStandard && (minSpec || maxSpec)),
           };
         }),
       };
@@ -303,11 +307,11 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
           };
         }
 
-        if (name === "calculateEnabled") {
+        if (name === "calculationTarget") {
           // Spec이 없는 기준은 산출대상이 될 수 없으므로 스위치를 켜도 자동으로 false가 됩니다.
           return {
             ...chamber,
-            calculateEnabled: Boolean(value) && Boolean(chamber.modelStandard) && Boolean(chamber.minSpec || chamber.maxSpec),
+            calculationTarget: Boolean(value) && Boolean(chamber.modelStandard) && Boolean(chamber.minSpec || chamber.maxSpec),
           };
         }
 
@@ -324,7 +328,7 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
 
       return updateChamber(state, chamberId, (chamber) => ({
         ...chamber,
-        pipeRows: [...chamber.pipeRows, createEmptyPipeRow(PIPE_TYPE.PIPE)],
+        pipeList: [...chamber.pipeList, createEmptyPipeRow(PIPE_TYPE.PIPE)],
       }));
     }
 
@@ -334,18 +338,18 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
 
       return updateChamber(state, chamberId, (chamber) => {
         if (!chamber.selectedPipeRowId) return chamber;
-        if (chamber.pipeRows.length <= 1) {
+        if (chamber.pipeList.length <= 1) {
           // 마지막 row를 지울 때 표를 비우면 입력 UI가 사라지므로 빈 PIPE row 하나를 남깁니다.
           return {
             ...chamber,
-            pipeRows: [createEmptyPipeRow(PIPE_TYPE.PIPE)],
+            pipeList: [createEmptyPipeRow(PIPE_TYPE.PIPE)],
             selectedPipeRowId: "",
           };
         }
 
         return {
           ...chamber,
-          pipeRows: chamber.pipeRows.filter((row) => row.id !== chamber.selectedPipeRowId),
+          pipeList: chamber.pipeList.filter((row) => row.id !== chamber.selectedPipeRowId),
           selectedPipeRowId: "",
         };
       });
@@ -367,7 +371,7 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
 
       return updateChamber(state, chamberId, (chamber) => ({
         ...chamber,
-        pipeRows: chamber.pipeRows.map((row) => {
+        pipeList: chamber.pipeList.map((row) => {
           if (row.id !== rowId) return row;
 
           const nextRow = {

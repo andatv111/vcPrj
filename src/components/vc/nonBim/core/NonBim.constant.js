@@ -3,6 +3,7 @@
  * Status는 공사요청상태이며 계산 저장 상태와 분리해서 해석합니다.
  */
 export const MAX_CHAMBER_COUNT = 10;
+// 사용자가 추가한 Chamber의 기본 탭명에 사용하는 접두어입니다.
 export const CHAMBER_PREFIX = "CHAMBER";
 
 // 화면/계산 payload에서 공유하는 배관 유형 코드입니다. B/E 코드값이 바뀌면 helper normalize도 함께 확인합니다.
@@ -101,7 +102,7 @@ export const RESULT_COLUMNS = [
   { key: "conductance", label: "Conductance" },
   { key: "judge", label: "판정" },
 ];
-// 계산 판정 표준 코드입니다. API 응답의 다양한 문자열은 normalizeJudge에서 이 값으로 보정합니다.
+// Java VcSimResultRow.judge와 F/E 판정값이 동일하게 사용하는 표준 코드입니다.
 export const JUDGE = {
   IN: "IN",
   HIGH_OUT: "HIGH_OUT",
@@ -140,4 +141,5 @@ export const DEFAULT_LOADING = {
   calculate: false,
 };
 
+// null, undefined, 빈 문자열을 화면에서 일관되게 표시하는 대체 문구입니다.
 export const EMPTY_TEXT = "-";

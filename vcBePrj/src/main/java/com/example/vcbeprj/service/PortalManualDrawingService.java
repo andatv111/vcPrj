@@ -61,7 +61,7 @@ public class PortalManualDrawingService {
         log.info("[SERVICE][PORTAL][SELECT] business=getDrawingChambers table={} eqId={} constructionNo={}",
                 PORTAL_TABLE, eqId, constructionNo);
         // 현재 개발 원천은 data/VC_PORTAL_MANUAL_DRAWING.txt의 chambers[].chamberName입니다.
-        // 운영 전환 시 이 메서드의 조회만 설계포탈 Chamber 매핑 쿼리로 교체합니다.
+        // 운영 전환 시에도 DB 도면 ID를 가정하지 않고 EQ ID + 공사번호로 Chamber를 조회합니다.
         PortalManualDrawing drawing = findByBusinessKey(eqId, constructionNo);
         return drawing.chambers() == null ? List.of() : drawing.chambers();
     }
@@ -74,7 +74,7 @@ public class PortalManualDrawingService {
     ) {
         log.info("[SERVICE][PORTAL][SELECT] business=getEquipmentSpecOptions eqId={} fab={} model={} constructionNo={}",
                 eqId, fab, model, constructionNo);
-        // Radio click uses EQ ID + constructionNo first. Add lineId/revision/etc. here when B/E keys expand.
+        // 선택 row는 EQ ID + 공사번호로 찾습니다. revision/lineId가 확정되면 보조 조건으로만 확장합니다.
         PortalManualDrawing drawing = isBlank(eqId) && isBlank(constructionNo)
                 ? null
                 : repository.selectAll(PORTAL_TABLE, PortalManualDrawing.class).stream()
@@ -112,6 +112,10 @@ public class PortalManualDrawingService {
                 .distinct()
                 .sorted()
                 .toList();
+    }
+
+    public List<SpecMaster> getAllUsableSpecs() {
+        return specMasterService.getAllUsableSpecs();
     }
 
     private PortalManualDrawing.SpecOption toSpecOption(SpecMaster spec) {
