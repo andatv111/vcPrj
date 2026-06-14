@@ -1,0 +1,6 @@
+server:
+  port: 8080
+
+vc:
+  mock-db:
+    base-path: data

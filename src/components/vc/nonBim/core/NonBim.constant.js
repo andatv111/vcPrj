@@ -3,7 +3,7 @@
  * Status는 공사요청상태이며 계산 저장 상태와 분리해서 해석합니다.
  */
 export const MAX_CHAMBER_COUNT = 10;
-export const CHAMBER_PREFIX = "Ch";
+export const CHAMBER_PREFIX = "CHAMBER";
 
 // 화면/계산 payload에서 공유하는 배관 유형 코드입니다. B/E 코드값이 바뀌면 helper normalize도 함께 확인합니다.
 export const PIPE_TYPE = {
@@ -11,19 +11,6 @@ export const PIPE_TYPE = {
   ELBOW: "ELBOW",
   REDUCER: "REDUCER",
 };
-
-// select box label은 화면 표시용이고, 계산 payload에는 PIPE_TYPE value가 내려갑니다.
-export const PIPE_TYPE_LABEL = {
-  [PIPE_TYPE.PIPE]: "Pipe",
-  [PIPE_TYPE.ELBOW]: "Elbow",
-  [PIPE_TYPE.REDUCER]: "Reducer",
-};
-
-export const PIPE_TYPE_OPTIONS = [
-  { value: PIPE_TYPE.PIPE, label: PIPE_TYPE_LABEL[PIPE_TYPE.PIPE] },
-  { value: PIPE_TYPE.ELBOW, label: PIPE_TYPE_LABEL[PIPE_TYPE.ELBOW] },
-  { value: PIPE_TYPE.REDUCER, label: PIPE_TYPE_LABEL[PIPE_TYPE.REDUCER] },
-];
 
 // 수기 도면의 업무 진행 상태입니다. 계산 저장 완료 여부가 아니라 도면 요청 상태를 뜻합니다.
 export const DRAWING_STATUS = {
@@ -75,28 +62,31 @@ export const PIPE_TYPE_FIELD_POLICY = {
 
 // Manual Drawing Results 그리드 컬럼입니다. key는 normalizeDrawing 결과 key와 맞춰야 합니다.
 export const DRAWING_COLUMNS = [
-  { key: "select", label: "Select" },
-  { key: "constructionNo", label: "Construction No." },
-  { key: "eqId", label: "EQ ID" },
+  { key: "select", label: "" },
+  { key: "constructionNo", label: "공사번호" },
+  { key: "eqId", label: "장비명(EQ_ID)" },
   { key: "site", label: "Site" },
   { key: "fab", label: "FAB" },
-  { key: "area1", label: "Area 1" },
-  { key: "area2", label: "Area 2" },
-  { key: "changeType", label: "Change Type" },
-  { key: "equipmentType", label: "Equipment Type" },
-  { key: "requestStatus", label: "Status" },
-  { key: "forelineDrawing", label: "Foreline Drawing" },
+  { key: "area1", label: "Area1" },
+  { key: "area2", label: "Area2" },
+  { key: "changeType", label: "변경유형" },
+  { key: "equipmentType", label: "장비구분" },
+  { key: "requestStatus", label: "요청상태" },
+  { key: "forelineCategoryName", label: "카테고리명" },
+  { key: "forelineRegisteredAt", label: "등록일" },
+  { key: "forelineRegisteredBy", label: "등록자" },
+  { key: "forelineDownload", label: "다운로드" },
 ];
 
 // Chamber별 배관 입력 그리드 컬럼입니다. key는 pipe row 모델과 isPipeFieldEditable 정책에 연결됩니다.
 export const PIPE_COLUMNS = [
-  { key: "select", label: "Chk" },
+  { key: "select", label: "" },
   { key: "type", label: "유형" },
-  { key: "inletDiameter", label: "입구구경" },
-  { key: "length", label: "길이" },
-  { key: "angle", label: "각도" },
-  { key: "outletDiameter", label: "출구구경" },
-  { key: "quantity", label: "수량" },
+  { key: "inletDiameter", label: "입구내경(in)" },
+  { key: "length", label: "길이(mm)" },
+  { key: "angle", label: "각도(deg)" },
+  { key: "outletDiameter", label: "출구내경(in)" },
+  { key: "quantity", label: "수량(EA)" },
 ];
 
 // Vacuum Conductance Result 공통 팝업 컬럼입니다.
@@ -135,14 +125,17 @@ export const CALCULATION_NA_TEXT = "N/A";
 
 // Non-BIM 검색 조건 초기값입니다.
 export const DEFAULT_SEARCH = {
+  fab: "",
   eqId: "",
   constructionNo: "",
 };
 
 // Non-BIM 화면의 loading flag 기본값입니다. Calculator와 결과 팝업 loading은 각 slice에서 별도로 관리합니다.
 export const DEFAULT_LOADING = {
+  options: false,
   eqSuggestions: false,
   drawings: false,
+  chambers: false,
   download: false,
   calculate: false,
 };

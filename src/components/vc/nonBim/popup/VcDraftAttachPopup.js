@@ -8,10 +8,6 @@ import {
   selectVcResultLoading,
 } from "../../../../store/vc/vcResult/vcSimSelector";
 
-const h = React.createElement;
-
-// Spec Out이 포함된 Non-BIM 결과를 저장할 때 필요한 표준 기안 첨부 팝업입니다.
-// 이 팝업은 결과 팝업 위에 뜨는 중첩 팝업이며, 저장 완료 처리는 동일한 SAVE_RESULT_REQUEST 흐름을 다시 사용합니다.
 const VcDraftAttachPopup = () => {
   const dispatch = useDispatch();
   const draftPopup = useSelector(selectVcResultDraftPopup);
@@ -21,92 +17,77 @@ const VcDraftAttachPopup = () => {
 
   if (!draftPopup.visible) return null;
 
+  const handleFieldChange = (name) => (event) => {
+    dispatch(vcResultActions.setDraftField({ name, value: event.target.value }));
+  };
+
   const handleAttachmentChange = (event) => {
-    // preview 단계에서는 실제 파일 업로드 대신 파일명을 저장 payload의 첨부 식별값으로 사용합니다.
     const fileName = event.target.files?.[0]?.name || "";
     dispatch(vcResultActions.setDraftField({ name: "attachmentName", value: fileName }));
   };
 
-  return h(
-    "div",
-    { className: "modal-dim nested" },
-    h(
-      "div",
-      { className: "modal draft-modal" },
-      h(
-        "div",
-        { className: "modal-header" },
-        h("h2", null, "표준 기안 첨부"),
-        h(
-          "button",
-          {
-            type: "button",
-            className: "link-button",
-            onClick: () => dispatch(vcResultActions.closeDraftPopup()),
-          },
-          "Close"
-        )
-      ),
-      h(
-        "div",
-        { className: "form-grid" },
-        h(
-          "label",
-          { className: "field" },
-          h("span", null, "기안 제목"),
-          h("input", {
-            value: draftPopup.title,
-            placeholder: "Spec Out 표준 기안",
-            onChange: (event) => dispatch(vcResultActions.setDraftField({ name: "title", value: event.target.value })),
-          })
-        ),
-        h(
-          "div",
-          { className: "field" },
-          h("span", null, "첨부 파일"),
-          h("input", {
-            type: "file",
-            onChange: handleAttachmentChange,
-          }),
-          draftPopup.attachmentName ? h("span", { className: "muted" }, draftPopup.attachmentName) : null
-        )
-      ),
-      h(
-        "label",
-        { className: "field full-field" },
-        h("span", null, "Comment"),
-        h("textarea", {
-          value: draftPopup.comment,
-          placeholder: "Spec Out 사유 및 조치 내용을 입력하세요.",
-          onChange: (event) => dispatch(vcResultActions.setDraftField({ name: "comment", value: event.target.value })),
-        })
-      ),
-      error ? h("div", { className: "error-box" }, error) : null,
-      h(
-        "div",
-        { className: "footer-actions" },
-        h(
-          "button",
-          {
-            type: "button",
-            className: "primary-button",
-            disabled: !canSaveWithDraft || loading.save,
-            onClick: () => dispatch(vcResultActions.saveResultRequest()),
-          },
-          loading.save ? "Saving..." : "기안 첨부 후 저장"
-        ),
-        h(
-          "button",
-          {
-            type: "button",
-            className: "secondary-button",
-            onClick: () => dispatch(vcResultActions.closeDraftPopup()),
-          },
-          "취소"
-        )
-      )
-    )
+  return (
+    <div className="modal-dim nested">
+      <div className="modal draft-modal">
+        <DraftPopupHeader onClose={() => dispatch(vcResultActions.closeDraftPopup())} />
+
+        <div className="form-grid">
+          <label className="field">
+            <span>기안 제목</span>
+            <input
+              value={draftPopup.title}
+              placeholder="Spec Out 표준 기안"
+              onChange={handleFieldChange("title")}
+            />
+          </label>
+
+          <div className="field">
+            <span>첨부 파일</span>
+            <input type="file" onChange={handleAttachmentChange} />
+            {draftPopup.attachmentName ? <span className="muted">{draftPopup.attachmentName}</span> : null}
+          </div>
+        </div>
+
+        <label className="field full-field">
+          <span>Comment</span>
+          <textarea
+            value={draftPopup.comment}
+            placeholder="Spec Out 사유 및 조치 내용을 입력하세요."
+            onChange={handleFieldChange("comment")}
+          />
+        </label>
+
+        {error ? <div className="error-box">{error}</div> : null}
+
+        <div className="footer-actions">
+          <button
+            type="button"
+            className="primary-button"
+            disabled={!canSaveWithDraft || loading.save}
+            onClick={() => dispatch(vcResultActions.saveResultRequest())}
+          >
+            {loading.save ? "Saving..." : "기안 첨부 후 저장"}
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => dispatch(vcResultActions.closeDraftPopup())}
+          >
+            취소
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
+
+const DraftPopupHeader = ({ onClose }) => (
+  <div className="modal-header">
+    <h2>표준 기안 첨부</h2>
+    <button type="button" className="link-button" onClick={onClose}>
+      Close
+    </button>
+  </div>
+);
 
 export default VcDraftAttachPopup;

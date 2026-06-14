@@ -10,6 +10,10 @@ export const NON_BIM_ACTION_PREFIX = "vc/nonBim";
 // 화면 입력, 조회, 도면 선택, Chamber/배관 편집, 계산 요청을 하나의 흐름으로 추적하기 위한 action type입니다.
 // 각 type은 reducer/saga에서 같은 이름으로 분기하므로, 화면 이벤트를 추적할 때 이 목록을 먼저 확인합니다.
 export const NON_BIM_ACTION_TYPES = {
+  INIT_OPTIONS_REQUEST: `${NON_BIM_ACTION_PREFIX}/INIT_OPTIONS_REQUEST`,
+  INIT_OPTIONS_SUCCESS: `${NON_BIM_ACTION_PREFIX}/INIT_OPTIONS_SUCCESS`,
+  INIT_OPTIONS_FAILURE: `${NON_BIM_ACTION_PREFIX}/INIT_OPTIONS_FAILURE`,
+
   SET_SEARCH_FIELD: `${NON_BIM_ACTION_PREFIX}/SET_SEARCH_FIELD`,
   RESET_SEARCH: `${NON_BIM_ACTION_PREFIX}/RESET_SEARCH`,
 
@@ -22,6 +26,9 @@ export const NON_BIM_ACTION_TYPES = {
   FETCH_MANUAL_DRAWINGS_FAILURE: `${NON_BIM_ACTION_PREFIX}/FETCH_MANUAL_DRAWINGS_FAILURE`,
 
   SELECT_DRAWING: `${NON_BIM_ACTION_PREFIX}/SELECT_DRAWING`,
+
+  FETCH_DRAWING_CHAMBERS_SUCCESS: `${NON_BIM_ACTION_PREFIX}/FETCH_DRAWING_CHAMBERS_SUCCESS`,
+  FETCH_DRAWING_CHAMBERS_FAILURE: `${NON_BIM_ACTION_PREFIX}/FETCH_DRAWING_CHAMBERS_FAILURE`,
 
   FETCH_MODEL_STANDARD_OPTIONS_SUCCESS: `${NON_BIM_ACTION_PREFIX}/FETCH_MODEL_STANDARD_OPTIONS_SUCCESS`,
   FETCH_MODEL_STANDARD_OPTIONS_FAILURE: `${NON_BIM_ACTION_PREFIX}/FETCH_MODEL_STANDARD_OPTIONS_FAILURE`,
@@ -47,6 +54,19 @@ export const NON_BIM_ACTION_TYPES = {
 
 // payload 구조를 한 곳에 고정해 컴포넌트, reducer, saga 사이의 계약을 맞춥니다.
 export const nonBimActions = {
+  // 화면 진입 시 FAB/Pipe Type 등 B/E 관리 선택지를 조회합니다.
+  initOptionsRequest: () => ({ type: NON_BIM_ACTION_TYPES.INIT_OPTIONS_REQUEST }),
+
+  initOptionsSuccess: (options) => ({
+    type: NON_BIM_ACTION_TYPES.INIT_OPTIONS_SUCCESS,
+    payload: { options },
+  }),
+
+  initOptionsFailure: (error) => ({
+    type: NON_BIM_ACTION_TYPES.INIT_OPTIONS_FAILURE,
+    payload: { error },
+  }),
+
   // 검색 조건 input 변경 시 호출합니다. name은 DEFAULT_SEARCH의 key와 일치해야 합니다.
   setSearchField: ({ name, value }) => ({
     type: NON_BIM_ACTION_TYPES.SET_SEARCH_FIELD,
@@ -97,6 +117,17 @@ export const nonBimActions = {
   selectDrawing: (constructionNo) => ({
     type: NON_BIM_ACTION_TYPES.SELECT_DRAWING,
     payload: { constructionNo },
+  }),
+
+  // 선택한 도면의 B/E Chamber 조회 결과를 탭 데이터로 반영합니다.
+  fetchDrawingChambersSuccess: ({ constructionNo, chambers }) => ({
+    type: NON_BIM_ACTION_TYPES.FETCH_DRAWING_CHAMBERS_SUCCESS,
+    payload: { constructionNo, chambers },
+  }),
+
+  fetchDrawingChambersFailure: (error) => ({
+    type: NON_BIM_ACTION_TYPES.FETCH_DRAWING_CHAMBERS_FAILURE,
+    payload: { error },
   }),
 
   // 선택 도면의 Model Standard 옵션 조회 성공 시, 해당 도면의 Chamber 옵션을 갱신합니다.

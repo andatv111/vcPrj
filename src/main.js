@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import Bim5DNotApplied from "./components/vc/nonBim/Bim5DNotApplied";
 import VcCalculator from "./components/vc/nonBim/VcCalculator";
 import { store } from "./store";
-import "./styles.css";
+// import "./styles.css";
 
 const h = React.createElement;
 

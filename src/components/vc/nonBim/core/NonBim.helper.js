@@ -50,7 +50,14 @@ export const onlyNumberLike = (value) => {
 export const leftPad2 = (value) => String(value).padStart(2, "0");
 
 // 기본 Chamber명은 Ch01, Ch02처럼 탭에서 짧게 읽히는 형식으로 만듭니다.
-export const createChamberName = (seq) => `${CHAMBER_PREFIX}${leftPad2(seq)}`;
+export const createChamberName = (seq) => `${CHAMBER_PREFIX}${seq}`;
+
+export const resequenceChambers = (chambers = []) =>
+  toArray(chambers).map((chamber, index) => ({
+    ...chamber,
+    // B/E에서 조회한 원본 Chamber명은 유지하고, 사용자가 Add한 탭만 현재 순번 이름을 사용합니다.
+    name: chamber.locked && chamber.name ? chamber.name : createChamberName(index + 1),
+  }));
 
 // 긴 설비/도면 유래 Chamber명은 탭이 깨지지 않도록 앞 10자만 사용합니다.
 export const shortenChamberName = (name, fallback) => {
@@ -156,7 +163,8 @@ export const normalizeChamberFromRaw = (raw = {}, index = 0, parentDrawing = {})
   return {
     id: raw.id || raw.chamberId || createId("CHAMBER"),
     chamberId: nvl(raw.chamberId || raw.chId || raw.id),
-    name: shortenChamberName(raw.name || raw.chamberName || raw.chNm, createChamberName(index + 1)),
+    // 기존 탭의 표시명은 설계포탈/B/E의 chamberName이 원천입니다.
+    name: nvl(raw.chamberName || raw.chambNm || raw.name, createChamberName(index + 1)),
     modelStandard,
     minSpec,
     maxSpec,
@@ -193,13 +201,17 @@ export const normalizeChambersFromDrawing = (drawing) => {
   const chamberCount = Math.max(Number(drawing?.chamberCount || rawChambers.length || 1), 1);
 
   if (rawChambers.length > 0) {
-    return rawChambers.slice(0, MAX_CHAMBER_COUNT).map((raw, index) =>
-      normalizeChamberFromRaw({ ...raw, locked: true }, index, drawing)
+    return resequenceChambers(
+      rawChambers.slice(0, MAX_CHAMBER_COUNT).map((raw, index) =>
+        normalizeChamberFromRaw({ ...raw, locked: true }, index, drawing)
+      )
     );
   }
 
-  return Array.from({ length: Math.min(chamberCount, MAX_CHAMBER_COUNT) }).map((_, index) =>
-    normalizeChamberFromRaw({ name: createChamberName(index + 1), locked: true }, index, drawing)
+  return resequenceChambers(
+    Array.from({ length: Math.min(chamberCount, MAX_CHAMBER_COUNT) }).map((_, index) =>
+      normalizeChamberFromRaw({ name: createChamberName(index + 1), locked: true }, index, drawing)
+    )
   );
 };
 
@@ -248,6 +260,22 @@ export const buildFileDownloadName = (drawing = {}) => {
   if (drawing.foreline?.fileName) return drawing.foreline.fileName;
   return `${drawing.eqId || "EQ"}_${drawing.constructionNo || "DRAWING"}_Foreline`;
 };
+
+export const buildEquipmentContextParams = (drawing = {}, extraParams = {}) => ({
+  // EQ ID가 Chamber 수와 Spec 조회의 장비 기준 키입니다. lineId/revision 같은 키가 늘면 이 함수만 확장합니다.
+  eqId: drawing.eqId,
+  constructionNo: drawing.constructionNo,
+  fab: drawing.fab,
+  model: drawing.model,
+  drawingKey: drawing.drawingKey,
+  fileId: drawing.foreline?.fileId,
+  ...extraParams,
+});
+
+export const buildForelineDownloadParams = (drawing = {}, extraParams = {}) => ({
+  // 다운로드 API는 EQ ID와 공사번호가 필수입니다. 파일 키는 보조값으로 같이 넘겨 B/E 파라미터 변경에 대응합니다.
+  ...buildEquipmentContextParams(drawing, extraParams),
+});
 
 export const downloadBlob = (blob, fileName) => {
   // 브라우저 환경에서만 임시 anchor를 만들어 파일 다운로드를 트리거합니다.
@@ -338,6 +366,7 @@ export const buildNonBimCalculatePayload = (state) => {
     sourceType: "NON_BIM",
     constructionNo: selectedDrawing?.constructionNo,
     search: {
+      fab: state.search?.fab,
       eqId: state.search?.eqId,
       constructionNo: state.search?.constructionNo,
     },
@@ -389,9 +418,6 @@ export const buildCalculatorCalculatePayload = (state) => {
       eqId: "",
       fab: equipment.fab,
       model: equipment.model,
-      modelStandard: equipment.modelStandard,
-      minSpec: equipment.minSpec,
-      maxSpec: equipment.maxSpec,
       processLarge: "Manual",
       processMiddle: "Calculator",
     },
@@ -400,10 +426,10 @@ export const buildCalculatorCalculatePayload = (state) => {
       chamberId: chamber.chamberId,
       chamberName: chamber.name || createChamberName(index + 1),
       calculationTarget: Boolean(chamber.calculateEnabled),
-      modelStandard: equipment.modelStandard,
-      minSpec: equipment.minSpec,
-      maxSpec: equipment.maxSpec,
-      isSpecSkipped: !equipment.modelStandard || !chamber.calculateEnabled,
+      modelStandard: chamber.modelStandard,
+      minSpec: chamber.minSpec,
+      maxSpec: chamber.maxSpec,
+      isSpecSkipped: !chamber.modelStandard || !chamber.calculateEnabled,
       processLarge: chamber.processLarge || "Manual",
       processMiddle: chamber.processMiddle || "Calculator",
       pipeList: toArray(chamber.pipeRows).map((row, rowIndex) => ({
@@ -504,7 +530,7 @@ export const normalizeCalculationResult = (response, payload) => {
     basicInfo: {
       eqId: response?.eqId || response?.data?.eqId || equipment.eqId,
       fab: response?.fab || response?.data?.fab || equipment.fab,
-      model: equipment.modelStandard || response?.model || response?.data?.model || equipment.model,
+      model: response?.model || response?.data?.model || equipment.model,
       constructionNo: equipment.constructionNo,
       site: equipment.site,
       area1: equipment.area1,
