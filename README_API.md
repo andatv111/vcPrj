@@ -1,126 +1,47 @@
-# V/C Simulation F/E -> B/E 공식 API 요청서
+# V/C Simulation API Contract
 
-## 1. 문서 목적
+이 문서는 F/E와 B/E가 함께 보는 공식 API 계약입니다. 화면 배치는 F/E 책임이고, 콤보/그리드/계산에 필요한 업무 데이터는 B/E API에서 제공합니다.
 
-이 문서는 V/C Simulation F/E와 B/E가 함께 사용하는 공식 API 계약입니다. B/E는 아래 endpoint, 필수값, 응답 필드와 업무 규칙을 기준으로 Controller/DTO를 구현하고 F/E는 동일한 필드명으로 연동합니다.
+## 공통 원칙
 
-각 API는 request sample, response sample, 빈 값 정책, 오류 message 정책을 함께 확정합니다. 저장 응답의 `nextStatus`를 도면 재조회 상태로 사용할 경우 `/manual-drawings`의 `requestStatus`와 값과 의미를 동일하게 정의해야 합니다.
+- Local B/E base URL은 `http://localhost:8090`입니다.
+- F/E는 Vite proxy를 통해 `/api/...` 상대 경로로 호출합니다.
+- JSON 필드명은 Java DTO/record의 camelCase 이름을 그대로 사용합니다.
+- 업무 키는 DB/테이블 기준 `WO_ID`, JSON 기준 `woId`입니다.
+- `scripts/verify-vc-calculation.mjs`는 API가 아니라 F/E 업무 규칙 검증 스크립트입니다. 운영 endpoint 계약에는 포함되지 않습니다.
+- 설계포탈은 외부 시스템이므로 preview B/E에서는 `DESIGN_PORTAL_MANUAL_DRAWING.txt` mock table로 query 결과를 모사합니다.
+- 파일 보조키는 `file`, `fileSeq`입니다. 도면/Chamber/Pipe 관계의 업무 key는 `eqId + woId`입니다.
 
-## 2. 공통 환경
+## 공통 에러
 
-| 항목 | 요청 내용 |
-| --- | --- |
-| 로컬 B/E URL | `http://localhost:8090` |
-| F/E 호출 방식 | `/api/...` 상대 경로. Vite가 B/E `8090`으로 proxy |
-| 기본 Content-Type | JSON API는 `application/json` |
-| 파일 다운로드 | 파일 body와 `Content-Disposition` 파일명 반환 |
-| 문자 인코딩 | UTF-8 |
-| 날짜/시간 | ISO-8601 문자열 권장 |
-
-F/E 시작 전에 Eclipse/STS의 B/E가 8090으로 완전히 기동되어야 합니다. B/E가 꺼져 있거나 재시작 중이면 Vite proxy에 `ECONNREFUSED`가 기록되며, F/E 화면에는 B/E 8090 실행 여부를 확인하라는 오류가 표시됩니다.
-
-## 3. 공통 응답/오류 요청
-
-현재 API는 조회 endpoint에서 배열 또는 객체를 직접 반환하고, 계산 및 저장 endpoint에서 `{ success, data }` 구조를 사용합니다. F/E는 `{ result }`, `{ list }` 같은 임의 wrapper를 허용하지 않으므로 endpoint별 응답 구조를 아래 계약과 동일하게 유지합니다.
-
-```json
-{
-  "success": true,
-  "data": {},
-  "message": "",
-  "errorCode": null
-}
-```
-
-오류 예시:
+F/E는 HTTP error body가 문자열이든 객체든 사용자에게 읽히는 메시지로 변환합니다. B/E는 가능한 한 `message`를 사람이 읽을 수 있는 문장으로 내려줍니다.
 
 ```json
 {
   "success": false,
-  "data": null,
-  "message": "해당 공사번호의 도면을 찾을 수 없습니다.",
+  "message": "Design Portal drawing not found.",
   "errorCode": "VC_DRAWING_NOT_FOUND"
 }
 ```
 
-| 규칙 | 요청 내용 |
-| --- | --- |
-| HTTP Status | 오류 유형에 맞는 4xx/5xx 사용 |
-| message | F/E가 사용자에게 노출할 수 있는 한국어 문장 |
-| 빈 목록 | `[]` 반환 |
-| 빈 문자열 | `""` 또는 팀 표준에 맞춘 `null`, 단 API별 일관성 유지 |
-| 필드 누락 | 화면 필수 필드는 임의로 생략하지 않음 |
+## API 목록
 
-### 3.1 DTO 필드명 원칙
-
-- JSON 필드명은 현재 Java DTO/record의 camelCase 이름을 그대로 사용합니다.
-- `chamberId`와 `chId`, `chamberName`과 `chambNm`처럼 동일 의미의 alias를 복수로 제공하지 않습니다.
-- DTO 이름 변경이 필요하면 Java DTO, F/E 모델, 이 문서의 sample을 같은 작업 단위로 변경합니다.
-- 조회 DTO와 계산 DTO가 실제로 다른 경우에만 명시적으로 변환합니다. 현재 대표 사례는 조회 Chamber의 `pipeRows`를 계산 요청 Chamber의 `pipeList`로 변환하는 부분입니다.
-
-| API 유형 | 현재 응답 형태 |
-| --- | --- |
-| options, equipments, manual-drawings, chambers, equipment-spec-options | 배열 또는 객체 직접 응답 |
-| calculate, result/save | `{ "success": true, "data": ... }` |
-
-## 4. 전체 API 목록
-
-| 화면/기능 | Method | URL | 필수 요청 | 응답 핵심 |
-| --- | --- | --- | --- | --- |
-| Non-BIM 화면 옵션 | GET | `/api/vc/sim/non-bim/options` | 없음 | FAB, Pipe Type 콤보 |
-| EQ 자동완성 | GET | `/api/vc/sim/non-bim/equipments` | `keyword` | EQ 후보 목록 |
-| 수기 도면 조회 | GET | `/api/vc/sim/non-bim/manual-drawings` | `eqId` | 도면 목록, `constructionNo` 필수 |
-| 선택 도면 Chamber 조회 | GET | `/api/vc/sim/non-bim/chambers` | `eqId`, `constructionNo` | 실제 Chamber명과 탭 상세 |
-| 장비 Spec 조회 | GET | `/api/vc/sim/non-bim/equipment-spec-options` | 장비 식별 조건 | Model Standard, Min/Max |
-| Foreline 다운로드 | GET | `/api/vc/sim/non-bim/foreline-drawing/download` | `eqId`, `constructionNo` | 파일 body |
-| Non-BIM 계산 | POST | `/api/vc/sim/non-bim/calculate` | equipment, chambers | 결과 rows |
-| Calculator 옵션 | GET | `/api/vc/sim/calculator/options` | 없음 | FAB/MODEL/Spec 옵션 |
-| Calculator 계산 | POST | `/api/vc/sim/calculator/calculate` | equipment, chambers | 결과 rows |
-| 결과 저장 | POST | `/api/vc/sim/result/save` | sourceType, basicInfo, rows | 저장 결과 |
-
-## 4.1 화면 데이터 연동 원칙
-
-조회조건, 콤보, 그리드처럼 업무 데이터가 필요한 UI는 F/E에 목록을 하드코딩하지 않고 B/E API에서 조회합니다. 단, 화면의 배치와 콤보 위치, 그리드 컬럼 순서는 퍼블리싱/F/E 영역이므로 API 연동 작업에서 임의로 이동하지 않습니다.
-
-| UI 항목 | 데이터 원천/API | F/E 개발 책임 | B/E 개발 책임 |
+| 기능 | Method | URL | 핵심 key |
 | --- | --- | --- | --- |
-| Non-BIM 조회조건 FAB 콤보 | `GET /non-bim/options`의 `fabs` | 현재 위치의 select에 options 주입 | 사용 가능한 FAB 코드/표시명 반환 |
-| Non-BIM 조회조건 EQ ID | `GET /non-bim/equipments` | 입력/자동완성과 선택값 관리 | keyword 기준 장비 후보 조회 |
-| Non-BIM 조회조건 공사번호 | 사용자 입력 후 `/manual-drawings` query | 입력값과 검색 validation 관리 | fab/eqId/constructionNo 조건 조회 |
-| Manual Drawing Results 그리드 | `GET /non-bim/manual-drawings` | 기존 컬럼 위치에 row 렌더링, radio 이벤트 연결 | 도면 row와 상태/Foreline/Chamber 데이터 반환 |
-| 선택 도면 Chamber 탭 | `GET /non-bim/chambers` | 기존 탭은 응답 `chamberName` 유지, Add 탭만 `CHAMBER{순번}` 사용 | `eqId`+`constructionNo` 기준 실제 Chamber 상세 반환 |
-| Model Standard 콤보 | `GET /non-bim/equipment-spec-options` | 선택된 Chamber 콤보에 options 주입 | 장비/FAB/모델/공사번호 기준 Spec 조회 |
-| Min/Max Spec | Model Standard 응답 | read-only 표시 | 선택 option에 minSpec/maxSpec 포함 |
-| Pipe 유형 콤보 | 화면 options API의 `pipeTypes` | 기존 Pipe Grid 유형 컬럼에 options 주입 | PIPE/ELBOW/REDUCER 코드와 표시명 반환 |
-| Calculator FAB/MODEL 콤보 | `GET /calculator/options` | 기존 조회조건 위치에 options 주입 | FAB/MODEL 목록 반환 |
-| Calculator Model Standard | `/calculator/options`의 `modelStandards` | Chamber Spec 콤보에 options 주입 | value/label/minSpec/maxSpec 반환 |
-| 계산 결과 그리드 | POST calculate 응답의 `rows` | 결과 팝업 기존 컬럼에 row 렌더링 | conductance/judge 포함 결과 반환 |
+| Non-BIM 옵션 | GET | `/api/vc/sim/non-bim/options` | `fabs`, `pipeTypes` |
+| EQ ID 자동완성 | GET | `/api/vc/sim/non-bim/equipments` | `keyword` |
+| 수기도면 조회 | GET | `/api/vc/sim/non-bim/manual-drawings` | `fabCd`, `eqId`, `woId` |
+| 선택 도면 Chamber 조회 | GET | `/api/vc/sim/non-bim/chambers` | `eqId`, `woId` |
+| 장비 Spec 옵션 | GET | `/api/vc/sim/non-bim/equipment-spec-options` | `eqId`, `fabCd`, `setModelNm`, `woId` |
+| Foreline 다운로드 | GET | `/api/vc/sim/non-bim/foreline-drawing/download` | `eqId`, `woId`, `file`, `fileSeq` |
+| Non-BIM 계산 | POST | `/api/vc/sim/non-bim/calculate` | `equipment`, `chambers` |
+| Calculator 옵션 | GET | `/api/vc/sim/calculator/options` | `fabs`, `models`, `modelStandards`, `pipeTypes` |
+| Calculator 계산 | POST | `/api/vc/sim/calculator/calculate` | `equipment`, `chambers` |
+| 결과 저장 | POST | `/api/vc/sim/result/save` | `sourceType`, `basicInfo`, `rows`, `draft` |
 
-### F/E에서 하드코딩하지 않는 데이터
-
-- FAB 목록
-- MODEL 목록
-- Model Standard와 Min/Max Spec
-- Pipe Type 표시 옵션
-- EQ ID 후보
-- 수기 도면 그리드 row
-- Foreline 파일 정보
-- 계산 결과와 판정
-- 저장 결과와 다음 상태
-
-### F/E에 유지하는 UI/업무 정책
-
-- 화면, 조회조건, 콤보, 버튼, 그리드의 배치와 순서
-- 그리드 컬럼 제목과 단위
-- Pipe Type별 입력 가능 필드 및 필수값 검증
-- Redux 상태와 사용자 이벤트 연결
-- Java DTO와 동일한 camelCase 필드 유지 및 조회 DTO와 계산 DTO 사이의 명시적 변환
-
-## 4.2 Non-BIM 화면 옵션
+## 1. Non-BIM 옵션
 
 `GET /api/vc/sim/non-bim/options`
-
-응답 예시:
 
 ```json
 {
@@ -137,166 +58,158 @@ F/E 시작 전에 Eclipse/STS의 B/E가 8090으로 완전히 기동되어야 합
 }
 ```
 
-B/E는 실제 사용 가능 코드만 반환해 주세요. 정렬 순서가 업무적으로 필요하면 `sortOrder`를 추가하고 B/E에서 정렬된 결과를 반환하는 방식을 권장합니다.
+FAB 콤보는 화면 기능이므로 빈 배열이 내려오면 사용자가 검색을 시작할 수 없습니다. B/E는 설계포탈 mock table에서 우선 조회하고, 비어 있으면 `VCW_VC_SPEC_MST.FAB_ID` 기준으로 fallback 합니다.
 
-## 5. BIM/5D 미적용 Fab
-
-### 5.1 EQ ID 자동완성
+## 2. EQ ID 자동완성
 
 `GET /api/vc/sim/non-bim/equipments?keyword=EQ-VAC`
-
-| Query | 필수 | 설명 |
-| --- | --- | --- |
-| `keyword` | 조건부 | 사용자가 입력한 EQ ID 검색어 |
-
-응답 예시:
 
 ```json
 [
   {
     "eqId": "EQ-VAC-ETCH-1001",
-    "constructionNo": "VC-2026-ETCH-001",
-    "label": "EQ-VAC-ETCH-1001 (M16 / ETCH)"
+    "woId": "VC-2026-ETCH-001",
+    "label": "EQ-VAC-ETCH-1001 (M16 / ETCH)",
+    "raw": {}
   }
 ]
 ```
 
-### 5.2 수기 도면 조회
+`raw`는 디버그와 확장용입니다. 화면 datalist는 `value=eqId`, `label=label`만 사용합니다.
 
-`GET /api/vc/sim/non-bim/manual-drawings?fab=M16&eqId=EQ-VAC-ETCH-1001&constructionNo=VC-2026-ETCH-001`
+## 3. 수기도면 조회
+
+`GET /api/vc/sim/non-bim/manual-drawings?fabCd=M16&eqId=EQ-VAC-ETCH-1001&woId=VC-2026-ETCH-001`
 
 | Query | 필수 | 설명 |
 | --- | --- | --- |
-| `fab` | 선택 | FAB 조건 |
+| `fabCd` | 선택 | FAB 코드 |
 | `eqId` | 필수 | 장비 ID |
-| `constructionNo` | 선택 | 공사번호 |
+| `woId` | 선택 | WO ID |
 
-응답 row 필수/권장 필드:
-
-| 필드 | 중요도 | 설명 |
-| --- | --- | --- |
-| `constructionNo` | 필수 | 첫 번째 그리드 업무 PK |
-| `eqId` | 필수 | 장비 ID |
-| `site`, `fab`, `area1`, `area2` | 필수 | 화면 기본 정보 |
-| `changeType`, `equipmentType` | 필수 | 변경/장비 구분 |
-| `requestStatus` | 필수 | Calculate 가능 여부 판단 상태 |
-| `model` | 권장 | 결과 팝업과 계산 기본 정보 |
-| `chamberCount` | 필수 | Chamber 탭 수 |
-| `chambers` | 권장 | 장비에 매핑된 Chamber 상세 |
-| `foreline` | 권장 | categoryName, registeredAt, registeredBy, fileId, fileName |
-
-`drawingId` 또는 일반 `id`는 B/E 응답 계약에 포함하지 않습니다. F/E가 React 목록 렌더링에 사용하는 `drawing.id`는 응답의 `eqId + constructionNo`로 생성하는 화면 내부 key이며 조회·저장·다운로드 요청에는 사용하지 않습니다.
-
-### 5.2.1 선택 도면 Chamber 조회
-
-`GET /api/vc/sim/non-bim/chambers?eqId=EQ-VAC-ETCH-1001&constructionNo=VC-2026-ETCH-001`
-
-| 항목 | 계약 |
-| --- | --- |
-| 호출 시점 | Manual Drawing Results radio/row 선택 직후 |
-| 필수 Query | `eqId`, `constructionNo` |
-| 현재 개발 원천 | B/E `data/VC_PORTAL_MANUAL_DRAWING.txt`의 선택 도면 `chambers[]` |
-| 업무 조회키 | `eqId + constructionNo`이며 별도 `drawingId`를 가정하지 않음 |
-| 탭 표시 필드 | `chambers[].chamberName` |
-| 기존 조회 탭 | B/E의 `chamberName`을 변경하지 않고 표시 |
-| 사용자 Add 탭 | 현재 탭 위치에 따라 `CHAMBER4`처럼 F/E가 임시명 생성 |
-| 사용하면 안 되는 원천 | `M16_VC_REQ_CHAMBER.txt`의 `chambNmIndexVal`은 계산 요청/결과 저장값이므로 초기 탭명 조회에 사용하지 않음 |
-| 운영 전환 | 설계포탈의 EQ/공사번호별 Chamber 매핑 테이블을 조회해 동일 DTO로 반환 |
-
-응답의 각 항목은 최소 `chamberId`, `chamberName`을 포함하고, 계산 화면 구성을 위해 `modelStandard`, `minSpec`, `maxSpec`, `processLarge`, `processMiddle`, `pipeRows`를 함께 반환합니다.
-
-`pipeRows` 항목은 현재 `PortalManualDrawing.PipeRow` 필드명을 사용합니다.
+응답 row는 설계포탈 query 컬럼명을 camelCase로 변환한 형태입니다.
 
 | 필드 | 설명 |
 | --- | --- |
-| `pipeType` | `PIPE`, `ELBOW`, `REDUCER` |
-| `inletDia` | 조회 도면의 입구 내경 |
-| `pipeLength` | 조회 도면의 배관 길이 |
-| `angle` | Elbow 각도 |
-| `outletDia` | Reducer 출구 내경 |
-| `qty` | 수량 |
+| `woId` | `WO_ID`, 화면 업무 key |
+| `eqId` | 장비 ID |
+| `siteCd`, `siteNm` | Site 코드/명 |
+| `fabCd`, `fabNm` | FAB 코드/명 |
+| `area`, `areaDetail` | Area 정보 |
+| `chgType1`, `chgType1Nm` | 변경 유형 코드/명 |
+| `catNm` | 설비 분류명 |
+| `crteDt`, `crteId`, `crteIdNm` | 생성 일자/사용자 |
+| `file`, `fileSeq`, `fileNm`, `fileOrgNm`, `fileDisSize` | 설계포탈 파일 정보 |
+| `requestStatus` | 화면 계산 잠금 판단 상태 |
+| `setModelNm`, `eqpMakerNm` | 장비 모델/메이커 |
+| `operLargeCatgVal`, `operMidCatgVal` | 공정 대/중분류 |
+| `chamberCount`, `chambers`, `specOptions` | 화면 편집과 spec 선택 보조 데이터 |
 
-F/E는 이 조회 모델을 계산 요청 시 `pipeList[].type`, `inletDiameter`, `length`, `angle`, `outletDiameter`, `quantity`로 명시적으로 변환합니다.
+## 4. 선택 도면 Chamber 조회
 
-### 5.3 장비 Model Standard/Spec 조회
-
-`GET /api/vc/sim/non-bim/equipment-spec-options`
-
-| Query | 필수 | 설명 |
-| --- | --- | --- |
-| `eqId` | 권장 | Chamber/Spec을 조회할 장비 기준 키 |
-| `fab` | 선택 | FAB 필터 |
-| `model` | 선택 | 장비 모델 |
-| `constructionNo` | 권장 | 선택 도면을 특정하는 공사번호. `eqId`와 함께 사용 |
-
-응답 예시:
+`GET /api/vc/sim/non-bim/chambers?eqId=EQ-VAC-ETCH-1001&woId=VC-2026-ETCH-001`
 
 ```json
 [
   {
-    "value": "STD-ETCH-A",
-    "label": "STD-ETCH-A",
-    "minSpec": "10",
-    "maxSpec": "20"
+    "chamberId": "CH-ETCH-A",
+    "chamberName": "Ch01 Main Process",
+    "modelStandard": "ETCH-LINE-A",
+    "minSpec": "35",
+    "maxSpec": "72",
+    "operLargeCatgVal": "ETCH",
+    "operMidCatgVal": "Metal Etch",
+    "pipeRows": [
+      {
+        "pipeType": "PIPE",
+        "inletDia": "4",
+        "pipeLength": "1200",
+        "angle": "",
+        "outletDia": "",
+        "qty": "1"
+      }
+    ]
   }
 ]
 ```
 
-적용 가능한 기준이 없으면 빈 배열을 반환해 주세요. F/E는 해당 Chamber의 산출대상을 off 처리합니다.
+F/E는 조회 DTO의 `pipeRows`를 계산 DTO의 `pipeList`로 명시적으로 변환합니다.
 
-단, 선택 도면 Chamber 응답에 이미 동일 `modelStandard`, `minSpec`, `maxSpec`이 존재하면 F/E는 후속 옵션 응답의 일부 누락만으로 기존 산출대상을 해제하지 않습니다. 운영 B/E는 두 응답의 Spec 계약이 서로 다르지 않게 관리해야 합니다.
+## 5. 장비 Spec 옵션
 
-### 5.4 Foreline 도면 다운로드
+`GET /api/vc/sim/non-bim/equipment-spec-options?eqId=EQ-VAC-ETCH-1001&fabCd=M16&setModelNm=VX-ETCH-300&woId=VC-2026-ETCH-001`
 
-`GET /api/vc/sim/non-bim/foreline-drawing/download`
+```json
+[
+  {
+    "value": "ETCH-LINE-A",
+    "label": "ETCH-LINE-A / General",
+    "minSpec": "35",
+    "maxSpec": "72"
+  }
+]
+```
+
+Non-BIM은 Model Standard와 Min/Max Spec이 있어야 산출대상이 됩니다. 옵션이 없으면 해당 Chamber의 산출대상은 false가 됩니다.
+
+## 6. Foreline 다운로드
+
+`GET /api/vc/sim/non-bim/foreline-drawing/download?eqId=EQ-VAC-ETCH-1001&woId=VC-2026-ETCH-001&file=FILE-ETCH-001&fileSeq=1`
 
 | Query | 필수 | 설명 |
 | --- | --- | --- |
 | `eqId` | 필수 | 장비 ID |
-| `constructionNo` | 필수 | 공사번호 |
-| `drawingKey` | 선택 | 다운로드 보조 키 |
-| `fileId` | 선택 | 파일 저장소 보조 키 |
-| `fab` | 선택 | 추가 조회 조건 |
+| `woId` | 필수 | WO ID |
+| `file` | 선택 | 설계포탈 파일 보조키 |
+| `fileSeq` | 선택 | 설계포탈 파일 순번 |
+| `fabCd` | 선택 | 보조 조회 조건 |
 
-B/E는 파일 body와 `Content-Disposition: attachment; filename=...`을 반환해 주세요. 이후 revision/lineId가 추가되더라도 `eqId + constructionNo` 업무 키는 유지하고 보조 query를 확장합니다.
+응답은 파일 body이며 `Content-Disposition`의 filename을 사용합니다.
 
-`drawingKey`와 `fileId`는 파일 저장소를 찾기 위한 보조값이며 도면/Chamber/Pipe 관계의 DB PK로 사용하지 않습니다.
+## 7. 계산 요청
 
-## 6. 계산 API
+Non-BIM과 Calculator는 같은 계산 endpoint 구조를 공유하지만 검증 규칙이 다릅니다.
 
-Non-BIM과 Calculator는 같은 요청/결과 모델을 사용합니다.
+### Non-BIM 계산
 
-B/E 판정은 `VCW_VC_SPEC_MST`의 완전 일치 행을 우선 사용합니다. 화면에 B/E가 이미 제공한 Min/Max가 있지만 Master 이관이 완료되지 않아 일치 행이 없는 경우에는 요청의 `minSpec`, `maxSpec`을 해당 계산 건의 snapshot으로 사용합니다. `isSpecSkipped=true`이거나 Min/Max가 모두 없을 때만 Spec 미적용 `NA`로 처리합니다.
-
-요청 예시:
+`POST /api/vc/sim/non-bim/calculate`
 
 ```json
 {
   "sourceType": "NON_BIM",
-  "constructionNo": "VC-2026-ETCH-001",
+  "woId": "VC-2026-ETCH-001",
   "search": {
-    "fab": "M16",
+    "fabCd": "M16",
     "eqId": "EQ-VAC-ETCH-1001",
-    "constructionNo": "VC-2026-ETCH-001"
+    "woId": "VC-2026-ETCH-001"
   },
   "equipment": {
     "eqId": "EQ-VAC-ETCH-1001",
-    "constructionNo": "VC-2026-ETCH-001",
-    "site": "Pyeongtaek",
-    "fab": "M16",
-    "area1": "ETCH",
-    "area2": "BAY-12",
-    "model": "MODEL-A"
+    "woId": "VC-2026-ETCH-001",
+    "siteCd": "PTK",
+    "siteNm": "Pyeongtaek",
+    "fabCd": "M16",
+    "fabNm": "M16",
+    "area": "ETCH",
+    "areaDetail": "BAY-12",
+    "chgType1": "New Install",
+    "chgType1Nm": "New Install",
+    "catNm": "Etcher",
+    "setModelNm": "VX-ETCH-300",
+    "modelStandard": "ETCH-LINE-A",
+    "eqpMakerNm": "HanVac Systems",
+    "operLargeCatgVal": "ETCH",
+    "operMidCatgVal": "Metal Etch"
   },
   "chambers": [
     {
       "seq": 1,
-      "chamberId": "CH-01",
+      "chamberId": "CH-ETCH-A",
       "chamberName": "Ch01 Main Process",
       "calculationTarget": true,
-      "modelStandard": "STD-ETCH-A",
-      "minSpec": "10",
-      "maxSpec": "20",
+      "modelStandard": "ETCH-LINE-A",
+      "minSpec": "35",
+      "maxSpec": "72",
       "isSpecSkipped": false,
       "processLarge": "ETCH",
       "processMiddle": "Metal Etch",
@@ -305,9 +218,9 @@ B/E 판정은 `VCW_VC_SPEC_MST`의 완전 일치 행을 우선 사용합니다. 
           "seq": 1,
           "type": "PIPE",
           "inletDiameter": "4",
-          "length": "1000",
-          "angle": "0",
-          "outletDiameter": "4",
+          "length": "1200",
+          "angle": "",
+          "outletDiameter": "",
           "quantity": "1"
         }
       ]
@@ -316,27 +229,68 @@ B/E 판정은 `VCW_VC_SPEC_MST`의 완전 일치 행을 우선 사용합니다. 
 }
 ```
 
-계산 응답 예시:
+### Calculator 계산
+
+`POST /api/vc/sim/calculator/calculate`
+
+Calculator는 `modelStandard`, `minSpec`, `maxSpec`가 비어 있어도 배관 필수값이 있으면 요청할 수 있습니다.
+
+```json
+{
+  "sourceType": "CALCULATOR",
+  "equipment": {
+    "eqId": "",
+    "fab": "M15",
+    "model": "CV-Pro-12",
+    "processLarge": "Manual",
+    "processMiddle": "Calculator"
+  },
+  "chambers": [
+    {
+      "seq": 1,
+      "chamberName": "CHAMBER1",
+      "calculationTarget": true,
+      "modelStandard": "",
+      "minSpec": "",
+      "maxSpec": "",
+      "isSpecSkipped": true,
+      "processLarge": "Manual",
+      "processMiddle": "Calculator",
+      "pipeList": [
+        {
+          "seq": 1,
+          "type": "PIPE",
+          "inletDiameter": "3",
+          "length": "760",
+          "quantity": "1"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 8. 계산 응답
 
 ```json
 {
   "success": true,
   "data": {
     "eqId": "EQ-VAC-ETCH-1001",
-    "fab": "M16",
-    "model": "MODEL-A",
+    "fabCd": "M16",
+    "setModelNm": "VX-ETCH-300",
     "guid": "VC-GUID-001",
     "rows": [
       {
-        "id": "RESULT-CH-01",
-        "chamberId": "CH-01",
+        "id": "RESULT-CH-ETCH-A",
+        "chamberId": "CH-ETCH-A",
         "chamberName": "Ch01 Main Process",
         "confirmFlag": "N",
         "processLarge": "ETCH",
         "processMiddle": "Metal Etch",
-        "modelStandard": "STD-ETCH-A",
-        "minSpec": "10",
-        "maxSpec": "20",
+        "modelStandard": "ETCH-LINE-A",
+        "minSpec": "35",
+        "maxSpec": "72",
         "conductance": "15.4",
         "judge": "IN"
       }
@@ -345,41 +299,31 @@ B/E 판정은 `VCW_VC_SPEC_MST`의 완전 일치 행을 우선 사용합니다. 
 }
 ```
 
-결과 row 요청 필드:
-
-| 필드 | 설명 |
+| judge | 의미 |
 | --- | --- |
-| `chamberId`, `chamberName` | Chamber 식별/표시값 |
-| `processLarge`, `processMiddle` | 공정 정보 |
-| `modelStandard`, `minSpec`, `maxSpec` | 적용 Spec |
-| `conductance` | 계산값 또는 `N/A` |
-| `judge` | `IN`, `HIGH_OUT`, `LOW_OUT`, `NA` |
+| `IN` | Spec 범위 안 |
+| `HIGH_OUT` | 상한 초과 |
+| `LOW_OUT` | 하한 미달 |
+| `NA` | 산출 제외 또는 spec 없음 |
 
-| 조건 | 반환 요청 |
-| --- | --- |
-| Spec 범위 내 | `judge: "IN"` |
-| 상한 초과 | `judge: "HIGH_OUT"` |
-| 하한 미달 | `judge: "LOW_OUT"` |
-| 산출 제외/Spec 없음 | `conductance: "N/A"`, `judge: "NA"` |
+Calculator에서 `calculationTarget: true`인 행은 spec이 없어도 B/E conductance 계산값을 표시하고, 판정만 `judge: "NA"`로 정규화합니다. `calculationTarget: false`인 행은 배관값이 있어도 산출 제외이므로 `conductance: "N/A"`, `judge: "NA"`로 표시합니다.
 
-## 7. Calculator 옵션
+## 9. Calculator 옵션
 
 `GET /api/vc/sim/calculator/options`
 
-응답 예시:
-
 ```json
 {
-  "fabs": [{ "value": "M16", "label": "M16" }],
-  "models": [{ "value": "MODEL-A", "label": "MODEL-A" }],
+  "fabs": [{ "value": "M15", "label": "M15" }],
+  "models": [{ "value": "CV-Pro-12", "label": "CV-Pro-12" }],
   "modelStandards": [
     {
-      "value": "STD-ETCH-A",
-      "label": "STD-ETCH-A",
-      "minSpec": "10",
-      "maxSpec": "20",
-      "fab": "M16",
-      "model": "MODEL-A"
+      "value": "CVD-STD-MID",
+      "label": "CVD-STD-MID / Normal",
+      "minSpec": "40",
+      "maxSpec": "78",
+      "fab": "M15",
+      "model": "CV-Pro-12"
     }
   ],
   "pipeTypes": [
@@ -390,9 +334,9 @@ B/E 판정은 `VCW_VC_SPEC_MST`의 완전 일치 행을 우선 사용합니다. 
 }
 ```
 
-F/E는 `modelStandards`의 `fab + model`이 현재 선택값과 일치하는 항목만 Chamber에 표시합니다. 일치 기준이 없거나 모든 Chamber가 산출대상에서 제외되면 계산 API를 호출하지 않습니다.
+F/E는 `fab + model` 조합으로 `modelStandards`를 필터링합니다. 각 Chamber 탭의 선택값은 독립 상태입니다.
 
-## 8. 결과 저장
+## 10. 결과 저장
 
 `POST /api/vc/sim/result/save`
 
@@ -400,10 +344,10 @@ F/E는 `modelStandards`의 `fab + model`이 현재 선택값과 일치하는 항
 {
   "sourceType": "NON_BIM",
   "basicInfo": {
-    "fab": "M16",
-    "model": "MODEL-A",
+    "fabCd": "M16",
+    "setModelNm": "VX-ETCH-300",
     "eqId": "EQ-VAC-ETCH-1001",
-    "constructionNo": "VC-2026-ETCH-001"
+    "woId": "VC-2026-ETCH-001"
   },
   "rows": [],
   "draft": {
@@ -414,31 +358,4 @@ F/E는 `modelStandards`의 `fab + model`이 현재 선택값과 일치하는 항
 }
 ```
 
-현재 응답 계약:
-
-```json
-{
-  "success": true,
-  "data": {
-    "savedId": "VC-SAVE-001",
-    "sourceType": "NON_BIM",
-    "savedAt": "2026-06-14T05:00:00Z",
-    "rowCount": 2,
-    "draftAttached": true,
-    "nextStatus": "Draft Attached"
-  }
-}
-```
-
-실제 첨부 방식은 다음 중 하나를 B/E와 확정해야 합니다.
-
-1. 파일 업로드 API 호출 후 `attachmentId`를 저장 API에 전달
-2. 저장 API를 `multipart/form-data`로 변경해 JSON과 파일을 함께 전달
-
-## 9. 변경 관리 요청
-
-- endpoint 또는 DTO 변경 전에 F/E와 sample request/response를 먼저 공유해 주세요.
-- 확정된 Java DTO 필드명만 사용하며 F/E helper에서 과거 이름을 alias로 추가하지 않습니다.
-- `constructionNo`, `judge`, `requestStatus` 같은 업무 의미가 있는 값은 코드 정의를 함께 전달해 주세요.
-- 변경 시 Java Controller/DTO, F/E `vcSimApi.js`, 이 문서를 같은 작업 단위로 갱신합니다.
-- B/E 오류 message는 사용자가 이해할 수 있는 문장으로 작성해 주세요.
+현재 preview B/E는 저장 결과 mock 응답을 반환합니다. 실제 첨부 저장 방식은 별도 파일 업로드 API 후 `attachmentId` 전달 방식 또는 `multipart/form-data` 방식 중 하나로 확정해야 합니다.

@@ -1,7 +1,7 @@
 /**
  * BIM/5D 미적용 Fab 화면 action 정의입니다.
  * 화면은 action creator만 호출하고, 실제 상태 변경은 reducer, API 흐름은 saga가 담당합니다.
- * 첫 번째 그리드 선택 키는 DB surrogate key가 아니라 constructionNo입니다.
+ * 첫 번째 그리드 선택 키는 DB surrogate key가 아니라 woId입니다.
  */
 
 
@@ -113,16 +113,16 @@ export const nonBimActions = {
     payload: { error },
   }),
 
-  // 첫 번째 그리드 row 선택은 공사번호 기준입니다. drawingKey는 다운로드 보조 키로만 사용합니다.
-  selectDrawing: (constructionNo) => ({
+  // 첫 번째 그리드 row 선택은 WO ID 기준입니다. file는 다운로드 보조 키로만 사용합니다.
+  selectDrawing: (woId) => ({
     type: NON_BIM_ACTION_TYPES.SELECT_DRAWING,
-    payload: { constructionNo },
+    payload: { woId },
   }),
 
   // 선택한 도면의 B/E Chamber 조회 결과를 탭 데이터로 반영합니다.
-  fetchDrawingChambersSuccess: ({ constructionNo, chambers }) => ({
+  fetchDrawingChambersSuccess: ({ woId, chambers }) => ({
     type: NON_BIM_ACTION_TYPES.FETCH_DRAWING_CHAMBERS_SUCCESS,
-    payload: { constructionNo, chambers },
+    payload: { woId, chambers },
   }),
 
   fetchDrawingChambersFailure: (error) => ({
@@ -131,9 +131,9 @@ export const nonBimActions = {
   }),
 
   // 선택 도면의 Model Standard 옵션 조회 성공 시, 해당 도면의 Chamber 옵션을 갱신합니다.
-  fetchModelStandardOptionsSuccess: ({ constructionNo, options }) => ({
+  fetchModelStandardOptionsSuccess: ({ woId, options }) => ({
     type: NON_BIM_ACTION_TYPES.FETCH_MODEL_STANDARD_OPTIONS_SUCCESS,
-    payload: { constructionNo, options },
+    payload: { woId, options },
   }),
 
   // Model Standard 옵션 조회 실패를 화면 error 영역에 표시합니다.
@@ -142,10 +142,10 @@ export const nonBimActions = {
     payload: { error },
   }),
 
-  // Foreline 다운로드도 선택된 공사번호 row를 찾은 뒤 row 안의 drawingKey/fileId를 사용합니다.
-  downloadForelineRequest: (constructionNo) => ({
+  // Foreline 다운로드도 선택된 WO ID row를 찾은 뒤 row 안의 file/fileSeq를 사용합니다.
+  downloadForelineRequest: (woId) => ({
     type: NON_BIM_ACTION_TYPES.DOWNLOAD_FORELINE_REQUEST,
-    payload: { constructionNo },
+    payload: { woId },
   }),
 
   // Foreline 파일 다운로드가 끝나면 download loading을 종료합니다.

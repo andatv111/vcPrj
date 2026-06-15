@@ -4,8 +4,8 @@ import com.example.vcbeprj.domain.JudgeResult;
 import com.example.vcbeprj.domain.ObjectType;
 import com.example.vcbeprj.domain.SpecMaster;
 import com.example.vcbeprj.domain.VcRequestChamber;
+import com.example.vcbeprj.domain.VcRequestComponent;
 import com.example.vcbeprj.domain.VcRequestEquipment;
-import com.example.vcbeprj.domain.VcRequestObject;
 import com.example.vcbeprj.dto.CalculateRequest;
 import com.example.vcbeprj.dto.CalculateResponse;
 import com.example.vcbeprj.dto.ChamberInput;
@@ -27,20 +27,20 @@ public class VcCalculationService {
     private static final Logger log = LoggerFactory.getLogger(VcCalculationService.class);
 
     private final VcRequestEquipmentService equipmentService;
-    private final VcRequestObjectService objectService;
+    private final VcRequestComponentService componentService;
     private final VcRequestChamberService chamberService;
     private final VcSpecMasterService specMasterService;
     private final VcJudgeService judgeService;
 
     public VcCalculationService(
             VcRequestEquipmentService equipmentService,
-            VcRequestObjectService objectService,
+            VcRequestComponentService componentService,
             VcRequestChamberService chamberService,
             VcSpecMasterService specMasterService,
             VcJudgeService judgeService
     ) {
         this.equipmentService = equipmentService;
-        this.objectService = objectService;
+        this.componentService = componentService;
         this.chamberService = chamberService;
         this.specMasterService = specMasterService;
         this.judgeService = judgeService;
@@ -56,14 +56,14 @@ public class VcCalculationService {
         log.info("[FLOW][CALCULATE][STEP 1] create EQUIPMENT request header");
         equipmentService.createRequestHeader(toEquipment(guid, request, now));
 
-        log.info("[FLOW][CALCULATE][STEP 2] convert chamber objects to OBJECT rows");
-        List<VcRequestObject> objectRows = new ArrayList<>();
+        log.info("[FLOW][CALCULATE][STEP 2] convert chamber objects to COMPONENT rows");
+        List<VcRequestComponent> componentRows = new ArrayList<>();
         for (int chamberIndex = 0; chamberIndex < request.chambers().size(); chamberIndex++) {
             ChamberInput chamber = request.chambers().get(chamberIndex);
-            objectRows.addAll(toObjects(guid, chamberIndex + 1, chamber, request.workerEmpNo(), now));
+            componentRows.addAll(toComponents(guid, chamberIndex + 1, chamber, request.workerEmpNo(), now));
         }
-        log.info("[FLOW][CALCULATE][STEP 3] save OBJECT rows count={}", objectRows.size());
-        objectService.insertObjects(request.fabId(), objectRows);
+        log.info("[FLOW][CALCULATE][STEP 3] save COMPONENT rows count={}", componentRows.size());
+        componentService.insertComponents(request.fabId(), componentRows);
 
         log.info("[FLOW][CALCULATE][STEP 4] calculate conductance, select SPEC, judge each chamber");
         List<VcRequestChamber> chamberRows = new ArrayList<>();
@@ -100,23 +100,35 @@ public class VcCalculationService {
         return new VcRequestEquipment(
                 guid, request.fabId(), request.fabEqpId(), request.woId(), "", "", "", "", request.setModelNm(),
                 "FORELINE", "1", "Y", request.workerEmpNo(), request.workerNm(), now, "1", "", "", "",
-                "NA", "N", "Y", "0", "N", "", request.workerEmpNo(), now, "", null
+                "NA", "N", "Y", "0", "N", "", now, request.workerEmpNo(), null, ""
         );
     }
 
-    private List<VcRequestObject> toObjects(String guid, int chamberSeq, ChamberInput chamber, String regEmpNo, LocalDateTime now) {
-        List<VcRequestObject> rows = new ArrayList<>();
+    private List<VcRequestComponent> toComponents(String guid, int chamberSeq, ChamberInput chamber, String regEmpNo, LocalDateTime now) {
+        List<VcRequestComponent> rows = new ArrayList<>();
         List<ObjectInput> objects = chamber.objects() == null ? List.of() : chamber.objects();
         for (int index = 0; index < objects.size(); index++) {
             ObjectInput object = objects.get(index);
             ObjectType type = object.objectType() == null ? ObjectType.PIPE : object.objectType();
-            log.debug("[FLOW][OBJECT][MAP] guid={} chamber={} objectSeq={} type={} inlet={} length={} angle={} outlet={} qty={}",
+            log.debug("[FLOW][COMPONENT][MAP] guid={} chamber={} sno={} type={} inlet={} length={} angle={} outlet={} qty={}",
                     guid, chamber.chamberName(), index + 1, type, object.inletDiameter(), object.length(),
                     object.angle(), object.outletDiameter(), object.quantity());
-            rows.add(new VcRequestObject(
-                    guid, chamber.chamberName(), index + 1, type, type.name(), "MANUAL", "Manual Input", "",
-                    object.inletDiameter(), "IN", object.length(), "MM", object.angle(), object.outletDiameter(),
-                    "IN", object.quantity(), index + 1, "Y", regEmpNo, now
+            rows.add(new VcRequestComponent(
+                    guid,
+                    String.valueOf(chamberSeq),
+                    index + 1,
+                    type,
+                    object.inletDiameter(),
+                    object.length(),
+                    object.angle(),
+                    object.outletDiameter(),
+                    object.quantity(),
+                    null,
+                    null,
+                    now,
+                    regEmpNo,
+                    null,
+                    ""
             ));
         }
         return rows;
@@ -133,10 +145,9 @@ public class VcCalculationService {
             LocalDateTime now
     ) {
         return new VcRequestChamber(
-                guid, chamber.chamberName(), chamber.chamberId(), request.fabId(), request.setModelNm(),
+                guid, String.valueOf(chamberSeq), chamber.chamberId(), request.fabId(), request.setModelNm(),
                 chamber.operLargeCatgVal(), chamber.operMidCatgVal(), chamber.chamberModelName(), measVal, judge,
-                spec == null ? "" : spec.specId(), "", spec == null ? null : spec.specMinVal(),
-                spec == null ? null : spec.specMaxVal(), spec == null ? "N" : spec.mgmtTgtYn(), request.workerEmpNo(), now
+                spec == null ? "" : spec.specId(), "", now, request.workerEmpNo(), null, ""
         );
     }
 
@@ -147,7 +158,8 @@ public class VcCalculationService {
         return new SpecMaster(
                 "", "Request Spec Snapshot", request.fabId(), request.setModelNm(),
                 chamber.operLargeCatgVal(), chamber.operMidCatgVal(), chamber.chamberModelName(),
-                "0", "Y", chamber.specMinVal(), chamber.specMaxVal(), "", ""
+                "0", "U", "N", "", "Y", chamber.specMinVal(), chamber.specMaxVal(), "", "",
+                "Request snapshot fallback", "", "", "", ""
         );
     }
 

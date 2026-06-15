@@ -31,8 +31,8 @@ export const selectDrawings = (state) => selectNonBimState(state).drawings;
 // 현재 선택된 수기 도면 전체 row입니다. Chamber 탭 구성과 계산 payload의 설비 메타에 사용합니다.
 export const selectSelectedDrawing = (state) => selectNonBimState(state).selectedDrawing;
 
-// 선택 row의 업무 키입니다. DB surrogate key가 아니라 constructionNo 기준입니다.
-export const selectSelectedConstructionNo = (state) => selectNonBimState(state).selectedConstructionNo;
+// 선택 row의 업무 키입니다. DB surrogate key가 아니라 woId 기준입니다.
+export const selectSelectedWoId = (state) => selectNonBimState(state).selectedWoId;
 
 // 선택 도면에서 만들어진 Chamber 탭 목록입니다. 원본 도면 Chamber와 사용자 추가 Chamber가 함께 들어갑니다.
 export const selectChambers = (state) => selectNonBimState(state).chambers;

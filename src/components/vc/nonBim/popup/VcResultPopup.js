@@ -62,8 +62,8 @@ const VcResultPopup = () => {
         <section className="result-section">
           <div className="section-title small">기본정보</div>
           <div className="form-grid">
-            <ReadonlyField label="FAB" value={basicInfo?.fab} />
-            <ReadonlyField label="MODEL" value={basicInfo?.model} />
+            <ReadonlyField label="FAB" value={basicInfo?.fabCd} />
+            <ReadonlyField label="MODEL" value={basicInfo?.setModelNm} />
             <ReadonlyField label="EQ ID" value={basicInfo?.eqId} />
           </div>
         </section>

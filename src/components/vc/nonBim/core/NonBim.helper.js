@@ -1,6 +1,6 @@
 /**
- * Non-BIM과 Calculator의 화면 모델, 검증, API DTO 생성을 담당하는 공통 helper입니다.
- * B/E Java DTO와 동일한 camelCase 필드를 사용하며 조회 DTO와 계산 DTO가 다른 지점만 명시적으로 변환합니다.
+ * Shared helper for Non-BIM and Calculator screen models, validation, and API DTO mapping.
+ * Keep Java DTO field names in camelCase here so screen components do not know table details.
  */
 import {
   CHAMBER_PREFIX,
@@ -103,49 +103,51 @@ export const createEmptyPipeRow = (type = PIPE_TYPE.PIPE) =>
     quantity: getPipePolicy(type).fixedQuantity || "",
   });
 
-// Java PortalManualDrawing 필드를 같은 camelCase 이름으로 유지합니다.
-// id는 DB/API 필드가 아니라 React row 렌더링에만 사용하는 eqId+constructionNo 복합 key입니다.
+// Java DesignPortalDrawing 필드를 같은 camelCase 이름으로 유지합니다.
+// id는 DB/API 필드가 아니라 React row 렌더링에만 사용하는 eqId+woId 복합 key입니다.
 export const normalizeDrawing = (raw = {}) => {
-  const foreline = raw.foreline || {};
-  const constructionNo = nvl(raw.constructionNo);
+  const woId = nvl(raw.woId);
   const eqId = nvl(raw.eqId);
 
   return {
-    id: [eqId, constructionNo].filter(Boolean).join("_") || createId("DRAWING"),
-    drawingKey: nvl(raw.drawingKey),
-    constructionNo,
+    id: [eqId, woId].filter(Boolean).join("_") || createId("DRAWING"),
+    woId,
     eqId,
-    site: nvl(raw.site),
-    fab: nvl(raw.fab),
-    area1: nvl(raw.area1),
-    area2: nvl(raw.area2),
-    changeType: nvl(raw.changeType),
-    equipmentType: nvl(raw.equipmentType),
+    siteCd: nvl(raw.siteCd),
+    siteNm: nvl(raw.siteNm),
+    fabCd: nvl(raw.fabCd),
+    fabNm: nvl(raw.fabNm),
+    area: nvl(raw.area),
+    areaDetail: nvl(raw.areaDetail),
+    chgType1: nvl(raw.chgType1),
+    chgType1Nm: nvl(raw.chgType1Nm),
+    catNm: nvl(raw.catNm),
+    crteDt: nvl(raw.crteDt),
+    crteId: nvl(raw.crteId),
+    crteIdNm: nvl(raw.crteIdNm),
+    file: nvl(raw.file),
+    fileSeq: nvl(raw.fileSeq),
+    fileNm: nvl(raw.fileNm),
+    fileOrgNm: nvl(raw.fileOrgNm),
+    fileDisSize: nvl(raw.fileDisSize),
     requestStatus: nvl(raw.requestStatus),
-    model: nvl(raw.model),
-    mainMaker: nvl(raw.mainMaker),
-    processLarge: nvl(raw.processLarge),
-    processMiddle: nvl(raw.processMiddle),
+    setModelNm: nvl(raw.setModelNm),
+    eqpMakerNm: nvl(raw.eqpMakerNm),
+    operLargeCatgVal: nvl(raw.operLargeCatgVal),
+    operMidCatgVal: nvl(raw.operMidCatgVal),
     chamberCount: Number(raw.chamberCount || 1),
     chambers: toArray(raw.chambers),
     specOptions: toArray(raw.specOptions),
-    foreline: {
-      categoryName: nvl(foreline.categoryName),
-      registeredAt: nvl(foreline.registeredAt),
-      registeredBy: nvl(foreline.registeredBy),
-      fileId: nvl(foreline.fileId),
-      fileName: nvl(foreline.fileName),
-    },
     raw,
   };
 };
 
 export const normalizeDrawingList = (response) => {
-  // VcSimController.manualDrawings는 PortalManualDrawing 배열을 직접 반환합니다.
+  // VcSimController.manualDrawings는 DesignPortalDrawing 배열을 직접 반환합니다.
   return toArray(response).map(normalizeDrawing);
 };
 
-// Java PortalManualDrawing.SpecOption 필드를 그대로 사용합니다.
+// Java DesignPortalDrawing.SpecOption 필드를 그대로 사용합니다.
 export const normalizeSpecOption = (raw = {}) => ({
   value: nvl(raw.value),
   label: nvl(raw.label),
@@ -179,8 +181,8 @@ export const normalizeChamberFromRaw = (raw = {}, index = 0, parentDrawing = {})
     modelStandard,
     minSpec,
     maxSpec,
-    processLarge: nvl(raw.processLarge || parentDrawing.processLarge),
-    processMiddle: nvl(raw.processMiddle || parentDrawing.processMiddle),
+    processLarge: nvl(raw.operLargeCatgVal || parentDrawing.operLargeCatgVal),
+    processMiddle: nvl(raw.operMidCatgVal || parentDrawing.operMidCatgVal),
     isSpecSkipped: false,
     calculationTarget:
       raw.calculationTarget !== undefined
@@ -253,7 +255,8 @@ export const createUserChamber = (chambers = [], selectedDrawing = {}) => {
   };
 };
 
-// Model Standard 선택 시 Min/Max Spec을 옵션 데이터에서 가져오고, Spec이 없으면 산출대상을 자동 off 합니다.
+// Non-BIM uses this strict spec rule: no selected Model Standard/spec means no calculation target.
+// Calculator overrides that behavior in its reducer so specless chambers can still calculate conductance.
 export const applySpecToChamber = (chamber, modelStandardValue) => {
   const spec = toArray(chamber?.specOptions).find(
     (item) => item.value === modelStandardValue || item.label === modelStandardValue
@@ -270,24 +273,22 @@ export const applySpecToChamber = (chamber, modelStandardValue) => {
 };
 
 export const buildFileDownloadName = (drawing = {}) => {
-  // 서버 파일명이 있으면 그대로 쓰고, 없으면 사용자가 알아볼 수 있는 EQ/공사번호 조합으로 보정합니다.
-  if (drawing.foreline?.fileName) return drawing.foreline.fileName;
-  return `${drawing.eqId || "EQ"}_${drawing.constructionNo || "DRAWING"}_Foreline`;
+  if (drawing.fileNm) return drawing.fileNm;
+  return `${drawing.eqId || "EQ"}_${drawing.woId || "DRAWING"}_Foreline`;
 };
 
 export const buildEquipmentContextParams = (drawing = {}, extraParams = {}) => ({
-  // EQ ID가 Chamber 수와 Spec 조회의 장비 기준 키입니다. lineId/revision 같은 키가 늘면 이 함수만 확장합니다.
   eqId: drawing.eqId,
-  constructionNo: drawing.constructionNo,
-  fab: drawing.fab,
-  model: drawing.model,
-  drawingKey: drawing.drawingKey,
-  fileId: drawing.foreline?.fileId,
+  woId: drawing.woId,
+  fabCd: drawing.fabCd,
+  setModelNm: drawing.setModelNm,
+  file: drawing.file,
+  fileSeq: drawing.fileSeq,
   ...extraParams,
 });
 
 export const buildForelineDownloadParams = (drawing = {}, extraParams = {}) => ({
-  // 다운로드 API는 EQ ID와 공사번호가 필수입니다. 파일 키는 보조값으로 같이 넘겨 B/E 파라미터 변경에 대응합니다.
+  // 다운로드 API는 EQ ID와 WO ID가 필수입니다. 파일 키는 보조값으로 같이 넘겨 B/E 파라미터 변경에 대응합니다.
   ...buildEquipmentContextParams(drawing, extraParams),
 });
 
@@ -326,44 +327,44 @@ export const validateRequiredPipeFields = (row) => {
   };
 };
 
-// Non-BIM 계산은 선택 도면이 필요하지만, 상단 그리드 모델 정보가 아니라 Chamber별 Model Standard/Spec으로 산출 가능 여부를 판단합니다.
+// Non-BIM requires a selected design-portal drawing and strict chamber spec validation.
 export const validateNonBimBeforeCalculate = ({ selectedDrawing, chambers }) => {
   if (!selectedDrawing) {
-    return { valid: false, message: "수기 도면 데이터를 먼저 선택해 주세요." };
+    return { valid: false, message: "Select a drawing before calculating." };
   }
 
   return validateChambersBeforeCalculate(chambers);
 };
 
-export const validateChambersBeforeCalculate = (chambers) => {
-  // 산출대상이 꺼진 Chamber는 의도적으로 계산에서 제외되므로 Spec/배관 필수값 검증을 건너뜁니다.
+export const validateChambersBeforeCalculate = (chambers, { allowSpecless = false } = {}) => {
+  // Non-BIM requires Model Standard and Min/Max spec. Calculator can calculate without them and show judge NA.
   if (!toArray(chambers).length) {
-    return { valid: false, message: "Chamber 정보가 없습니다." };
+    return { valid: false, message: "Chamber information is missing." };
   }
 
   if (!toArray(chambers).some((chamber) => chamber.calculationTarget !== false)) {
-    return { valid: false, message: "산출대상 Chamber를 한 개 이상 선택해 주세요." };
+    return { valid: false, message: "Select at least one calculation target chamber." };
   }
 
   for (const chamber of chambers) {
     if (chamber.calculationTarget === false) continue;
 
-    if (!chamber.modelStandard) {
-      return { valid: false, message: `${chamber.chamberName}의 모델관리기준을 선택해 주세요.` };
+    if (!allowSpecless && !chamber.modelStandard) {
+      return { valid: false, message: `${chamber.chamberName} requires a Model Standard.` };
     }
 
-    if (!chamber.minSpec && !chamber.maxSpec) {
-      return { valid: false, message: `${chamber.chamberName}의 Min/Max Spec을 확인해 주세요.` };
+    if (!allowSpecless && !chamber.minSpec && !chamber.maxSpec) {
+      return { valid: false, message: `${chamber.chamberName} requires Min/Max Spec.` };
     }
 
     if (!toArray(chamber.pipeList).length) {
-      return { valid: false, message: `${chamber.chamberName}의 배관 정보를 입력해 주세요.` };
+      return { valid: false, message: `${chamber.chamberName} requires pipe information.` };
     }
 
     for (const row of chamber.pipeList) {
       const rowCheck = validateRequiredPipeFields(row);
       if (!rowCheck.valid) {
-        return { valid: false, message: `${chamber.chamberName}의 ${row.type} 필수값을 입력해 주세요.` };
+        return { valid: false, message: `${chamber.chamberName} has missing required ${row.type} values.` };
       }
     }
   }
@@ -371,9 +372,8 @@ export const validateChambersBeforeCalculate = (chambers) => {
   return { valid: true, message: "" };
 };
 
-// Non-BIM 계산 API payload입니다. V/C Master 저장 상태와 무관한 순수 계산 요청입니다.
-// 상단 도면 row는 설비/공정 메타를 제공하고, 실제 Model Standard/Spec/배관은 Chamber별 입력값을 우선합니다.
 export const buildNonBimCalculatePayload = (state) => {
+  // Non-BIM payload is anchored by WO_ID/woId from the selected design-portal row.
   const selectedDrawing = state.selectedDrawing;
   const activeChamber =
     toArray(state.chambers).find((chamber) => chamber.id === state.activeChamberId) ||
@@ -382,24 +382,29 @@ export const buildNonBimCalculatePayload = (state) => {
 
   return {
     sourceType: "NON_BIM",
-    constructionNo: selectedDrawing?.constructionNo,
+    woId: selectedDrawing?.woId,
     search: {
-      fab: state.search?.fab,
+      fabCd: state.search?.fabCd,
       eqId: state.search?.eqId,
-      constructionNo: state.search?.constructionNo,
+      woId: state.search?.woId,
     },
     equipment: {
       eqId: selectedDrawing?.eqId,
-      constructionNo: selectedDrawing?.constructionNo,
-      site: selectedDrawing?.site,
-      fab: selectedDrawing?.fab,
-      area1: selectedDrawing?.area1,
-      area2: selectedDrawing?.area2,
-      model: selectedDrawing?.model,
+      woId: selectedDrawing?.woId,
+      siteCd: selectedDrawing?.siteCd,
+      siteNm: selectedDrawing?.siteNm,
+      fabCd: selectedDrawing?.fabCd,
+      fabNm: selectedDrawing?.fabNm,
+      area: selectedDrawing?.area,
+      areaDetail: selectedDrawing?.areaDetail,
+      chgType1: selectedDrawing?.chgType1,
+      chgType1Nm: selectedDrawing?.chgType1Nm,
+      catNm: selectedDrawing?.catNm,
+      setModelNm: selectedDrawing?.setModelNm,
       modelStandard: activeChamber.modelStandard,
-      mainMaker: selectedDrawing?.mainMaker,
-      processLarge: selectedDrawing?.processLarge,
-      processMiddle: selectedDrawing?.processMiddle,
+      eqpMakerNm: selectedDrawing?.eqpMakerNm,
+      operLargeCatgVal: selectedDrawing?.operLargeCatgVal,
+      operMidCatgVal: selectedDrawing?.operMidCatgVal,
     },
     chambers: toArray(state.chambers).map((chamber, index) => ({
       seq: index + 1,
@@ -410,8 +415,8 @@ export const buildNonBimCalculatePayload = (state) => {
       minSpec: chamber.minSpec,
       maxSpec: chamber.maxSpec,
       isSpecSkipped: chamber.isSpecSkipped || !chamber.calculationTarget,
-      processLarge: chamber.processLarge || selectedDrawing?.processLarge,
-      processMiddle: chamber.processMiddle || selectedDrawing?.processMiddle,
+      processLarge: chamber.processLarge || selectedDrawing?.operLargeCatgVal,
+      processMiddle: chamber.processMiddle || selectedDrawing?.operMidCatgVal,
       pipeList: toArray(chamber.pipeList).map((row, rowIndex) => ({
         seq: rowIndex + 1,
         type: row.type,
@@ -425,9 +430,8 @@ export const buildNonBimCalculatePayload = (state) => {
   };
 };
 
-// Calculator 계산 API payload입니다. 결과 팝업을 공유하기 위해 Non-BIM과 같은 rows 응답 구조를 기대합니다.
-// 장비 기준 Model Standard가 모든 Chamber에 공통 적용되므로 Chamber별 modelStandard 대신 equipment 값을 내려줍니다.
 export const buildCalculatorCalculatePayload = (state) => {
+  // Calculator has no selected design-portal row; it sends manually entered chamber and pipe data only.
   const equipment = state.equipment || {};
 
   return {
@@ -472,8 +476,8 @@ export const hasSpecBounds = (row = {}) => Boolean(row.minSpec || row.maxSpec);
 // Spec 범위가 없는 row는 Min/Max와 판정 컬럼을 '-' 또는 N/A 성격으로 보여줍니다.
 export const shouldShowSpecColumns = (row = {}) => hasSpecBounds(row);
 
-// Java VcSimResultRow 응답을 공통 팝업 모델로 옮깁니다. 산출대상 제외 row는 N/A로 보정합니다.
-// 응답 wrapper는 현재 VcSimFacadeService의 { success, data } 계약만 허용합니다.
+// Convert Java VcSimResultRow data into the shared result popup model.
+// calculationTarget controls conductance calculation; Model Standard/spec controls judge availability.
 export const normalizeCalculationResult = (response, payload) => {
   const rawRows = response?.data?.rows || [];
 
@@ -481,6 +485,7 @@ export const normalizeCalculationResult = (response, payload) => {
     const payloadChamber = payload?.chambers?.[index] || {};
     const modelStandard = nvl(raw.modelStandard, payloadChamber.modelStandard);
     const calculationTarget = payloadChamber.calculationTarget !== false;
+    const speclessCalculation = calculationTarget && (!modelStandard || (!payloadChamber.minSpec && !payloadChamber.maxSpec));
 
     return {
       id: raw.id || createId("RESULT"),
@@ -493,16 +498,14 @@ export const normalizeCalculationResult = (response, payload) => {
       minSpec: nvl(raw.minSpec, payloadChamber.minSpec),
       maxSpec: nvl(raw.maxSpec, payloadChamber.maxSpec),
       calculationTarget,
-      conductance: calculationTarget
-        ? nvl(raw.conductance)
-        : CALCULATION_NA_TEXT,
-      judge: calculationTarget ? nvl(raw.judge, JUDGE.NONE) : JUDGE.NA,
+      conductance: calculationTarget ? nvl(raw.conductance) : CALCULATION_NA_TEXT,
+      judge: speclessCalculation ? JUDGE.NA : calculationTarget ? nvl(raw.judge, JUDGE.NONE) : JUDGE.NA,
       hasModelStandard: Boolean(modelStandard),
       raw,
     };
   });
 
-  // 응답 row가 없는 개발/예외 상황에도 사용자가 요청한 Chamber 기준으로 결과 표 구조를 유지합니다.
+  // If the backend returns no rows during local/mock development, keep the popup shape stable.
   const fallbackRows = toArray(payload?.chambers).map((chamber) => ({
     id: createId("RESULT"),
     chamberId: chamber.chamberId || createId("CHAMBER_KEY"),
@@ -516,11 +519,9 @@ export const normalizeCalculationResult = (response, payload) => {
     calculationTarget: chamber.calculationTarget !== false,
     conductance: chamber.calculationTarget === false ? CALCULATION_NA_TEXT : "",
     judge:
-      chamber.calculationTarget === false
+      chamber.calculationTarget === false || !chamber.modelStandard || (!chamber.minSpec && !chamber.maxSpec)
         ? JUDGE.NA
-        : chamber.isSpecSkipped || (!chamber.minSpec && !chamber.maxSpec)
-          ? JUDGE.NONE
-          : JUDGE.PENDING,
+        : JUDGE.PENDING,
     hasModelStandard: Boolean(chamber.modelStandard),
     raw: {},
   }));
@@ -531,12 +532,12 @@ export const normalizeCalculationResult = (response, payload) => {
     sourceType: payload?.sourceType,
     basicInfo: {
       eqId: response?.data?.eqId || equipment.eqId,
-      fab: response?.data?.fab || equipment.fab,
-      model: response?.data?.model || equipment.model,
-      constructionNo: equipment.constructionNo,
-      site: equipment.site,
-      area1: equipment.area1,
-      area2: equipment.area2,
+      fabCd: response?.data?.fabCd || equipment.fabCd,
+      setModelNm: response?.data?.setModelNm || equipment.setModelNm,
+      woId: equipment.woId,
+      siteNm: equipment.siteNm,
+      area: equipment.area,
+      areaDetail: equipment.areaDetail,
     },
     rows: rows.length > 0 ? rows : fallbackRows,
     raw: response,

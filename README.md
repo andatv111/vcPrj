@@ -1,129 +1,96 @@
 # V/C Simulation F/E
 
-React 18, Redux, Redux-Saga, Vite 기반 V/C Simulation 화면 프로젝트입니다. 별도 Eclipse/STS에서 실행하는 Spring Boot B/E와 HTTP API로 통신합니다.
+React 18, Redux, Redux-Saga, Vite 기반의 V/C Simulation 화면 프로젝트입니다. Spring Boot B/E(`vcBePrj`)와 `/api` 프록시로 연동하며, 화면의 위치와 사용 흐름은 유지하고 Java DTO와 API 계약에 맞춰 데이터를 주고받습니다.
 
 ## 실행 환경
 
-| 구분 | 값 |
+| 항목 | 값 |
 | --- | --- |
 | F/E 개발 서버 | `http://localhost:5173` |
 | B/E 서버 | `http://localhost:8090` |
-| API 호출 경로 | F/E는 `/api/...` 상대 경로 사용 |
-| 개발 Proxy | Vite가 `/api`를 `http://localhost:8090`으로 전달 |
-
-Vite는 `strictPort: true`로 설정되어 있습니다. 이미 5173이 사용 중이면 5174로 자동 이동하지 않고 실행을 중단합니다. 기존 F/E 터미널을 사용하거나 5173 프로세스를 종료한 후 다시 실행하세요.
+| API 호출 경로 | F/E에서는 `/api/...` 상대 경로 사용 |
+| Vite proxy | `/api` -> `http://localhost:8090` |
 
 ```powershell
 npm install
 npm run dev
 ```
 
-운영 빌드 확인:
+Vite는 `strictPort: true`입니다. 5173 포트가 사용 중이면 다른 포트로 자동 이동하지 않고 실패합니다.
+
+## 검증
 
 ```powershell
 npm run build
 npm run test:vc
 ```
 
-`test:vc`는 Non-BIM fixture의 산출대상/Spec 유지, Calculator의 FAB+Model별 Model Standard 선택, 전체 산출대상 해제 검증을 Vite 모듈 환경에서 확인합니다.
+`npm run test:vc`는 `scripts/verify-vc-calculation.mjs`를 실행합니다. 이 파일은 개발 검증용 Node 스크립트이며 React 화면에서 import하지 않으므로 운영 런타임 번들에는 들어가지 않습니다.
+
+회사 시스템 반입 기준:
+
+- 화면 운영 소스만 반입할 때는 `src/`, `package.json`, 필요한 설정 파일을 기준으로 반영합니다.
+- `scripts/verify-vc-calculation.mjs`는 반입해도 무방한 개발 검증 도구입니다. 다만 운영 서버에서 실행되는 파일은 아닙니다.
+- 회사 배포 정책상 검증 스크립트를 제외해야 하면 `npm run test:vc`를 실행할 수 없다는 점만 감수하면 됩니다.
+- 앞으로 새 `.mjs` 파일이 생기면 반드시 `scripts/` 아래 개발 검증 목적이어야 하며, 화면 코드에서 import하지 않는 것을 원칙으로 합니다.
+
+`npm run test:vc`는 화면 검증의 핵심입니다. 다음 의도가 깨지면 실패합니다.
+
+- Non-BIM FAB 콤보가 B/E 옵션 응답에서 유지됩니다.
+- Non-BIM은 `modelStandard`가 비면 해당 Chamber의 `calculationTarget`이 false가 됩니다.
+- Non-BIM 계산 전 검증은 Model Standard와 Min/Max Spec을 요구합니다.
+- Calculator는 Model Standard와 Min/Max Spec이 없어도 배관 필수값이 있으면 계산 요청을 허용합니다.
+- Calculator의 spec 없는 산출 결과는 conductance 계산값을 유지하고 `judge: "NA"`로 정규화됩니다.
+- Calculator Chamber 탭의 `modelStandard`는 탭별 상태로 유지되며 다른 탭에 전파되지 않습니다.
 
 ## 주요 구조
 
 | 경로 | 역할 |
 | --- | --- |
-| `src/main.js` | React root, Redux Provider, 앱 메뉴와 화면 전환 |
-| `src/components/vc/nonBim/Bim5DNotApplied.js` | BIM/5D 미적용 Fab 화면 업무 연결 |
-| `src/components/vc/nonBim/VcCalculator.js` | V/C Calculator 화면 업무 연결 |
-| `src/components/vc/nonBim/ui` | 퍼블리셔가 교체하기 쉬운 JSX 그리드/폼 컴포넌트 |
-| `src/components/vc/nonBim/popup` | 결과 및 표준 기안 첨부 팝업 |
-| `src/store/vc` | Redux action/reducer/selector. 화면과 saga가 root state 경로를 직접 참조하지 않도록 기능별 selector 제공 |
-| `src/saga/vc/nonBim/vcSimSaga.js` | 화면 비동기 흐름과 API 호출 조정 |
-| `src/service/api/vc/sim/vcSimApi.js` | V/C B/E 호출의 유일한 HTTP adapter |
-| `src/components/vc/nonBim/core/NonBim.helper.js` | Chamber/Pipe 공통 규칙, 입력 검증, 요청 DTO 생성, 결과 변환 |
-| `README_API.md` | B/E 개발팀 전달용 공식 API 요청 문서 |
+| `src/main.js` | React root와 Redux Provider만 담당합니다. 화면별 업무 스타일은 각 화면에서 import합니다. |
+| `src/components/vc/nonBim/Bim5DNotApplied.js` | BIM/5D Not Applied Fab 화면의 container입니다. 검색, 선택, 계산 action을 Redux에 연결합니다. |
+| `src/components/vc/nonBim/VcCalculator.js` | V/C Calculator 화면의 container입니다. Calculator 전용 장비 조건과 Chamber 편집 흐름을 연결합니다. |
+| `src/components/vc/nonBim/ui` | 퍼블리셔가 보기 쉬운 JSX 영역입니다. 테이블, 폼, Chamber/Pipe UI를 이곳에 둡니다. |
+| `src/components/vc/nonBim/core/NonBim.helper.js` | 화면 공통 규칙, DTO 조립, 검증, 결과 정규화를 담당합니다. |
+| `src/store/vc` | Redux action/reducer/selector입니다. 화면은 root state를 직접 읽지 않고 selector를 사용합니다. |
+| `src/saga/vc/nonBim/vcSimSaga.js` | API 호출, 응답 정규화, 비동기 흐름을 담당합니다. |
+| `src/service/api/vc/sim/vcSimApi.js` | V/C B/E API 단일 HTTP adapter입니다. |
 
-## 스타일 관리 규칙
+## 화면 동작 계약
 
-`src/main.js`의 전역 CSS import는 주석 처리했습니다.
+### BIM/5D Not Applied Fab
 
-```js
-// import "./styles.css";
-```
+- Search Conditions의 FAB, EQ ID, WO ID 위치와 사용 방식은 유지합니다.
+- FAB 목록은 `GET /api/vc/sim/non-bim/options`의 `fabs`에서 가져옵니다.
+- EQ ID는 필수 검색 조건입니다.
+- 상단 Manual Drawing Results의 업무 key는 `woId`입니다.
+- F/E 내부 row 렌더링용 `id`는 `eqId + woId`로 만든 화면 key이며, B/E DTO 필드가 아닙니다.
+- 설계포탈 조회 DTO는 `woId`, `eqId`, `siteCd/siteNm`, `fabCd/fabNm`, `area/areaDetail`, `chgType1/chgType1Nm`, `catNm`, `file/fileSeq/fileNm`을 사용합니다.
+- 기존 Chamber 이름은 B/E 응답의 `chamberName`을 유지합니다. 사용자가 추가한 Chamber만 `CHAMBER{n}`으로 번호를 붙입니다.
+- Model Standard가 없거나 Min/Max Spec이 없으면 Non-BIM의 해당 Chamber는 산출대상에서 빠집니다.
 
-현재 공통 스타일은 실제 업무 화면인 `Bim5DNotApplied.js`, `VcCalculator.js`에서 import합니다. 퍼블리셔 산출물이 들어오면 다음 기준으로 점진 분리합니다.
+### V/C Calculator
 
-| 퍼블리셔 산출물 | 적용 위치 |
-| --- | --- |
-| 상단 도면 결과 그리드 | `ui/DrawingResultTable.js`와 같은 위치의 CSS |
-| Chamber 탭/Spec/Pipe Grid | `ui/ChamberWorkspace.js`와 같은 위치의 CSS |
-| 검색조건/화면 레이아웃 | 각 화면 파일과 같은 위치의 CSS |
-| 결과/기안 팝업 | 각 popup 파일과 같은 위치의 CSS |
+- Calculator는 Non-BIM보다 느슨합니다.
+- FAB + MODEL은 Model Standard 옵션 필터에만 사용합니다.
+- 각 Chamber 탭은 자기 `modelStandard`, `minSpec`, `maxSpec`, `calculationTarget`을 독립적으로 가집니다.
+- 한 탭에서 Model Standard를 바꿔도 다른 탭의 Model Standard를 덮어쓰지 않습니다.
+- Model Standard 또는 Min/Max Spec이 없어도 배관 필수값이 있으면 Calculate를 실행할 수 있습니다.
+- spec 없이 산출한 행은 결과 팝업에서 conductance 계산값과 `NA` 판정으로 보입니다.
 
-업무 화면은 Redux와 이벤트 props를 연결하고, 퍼블리셔 마크업은 `ui` 컴포넌트가 담당합니다. 퍼블리셔 소스를 적용할 때 `data`, `loading`, `onChange`, `onClick` props 계약을 유지하면 업무 로직 수정 범위를 줄일 수 있습니다.
+## API 관리 원칙
 
-## API 관리 규칙
-
-- 화면과 Saga는 `vcSimApi.js`만 사용합니다.
-- endpoint, HTTP method, query/body 조립, 공통 오류 처리는 `vcSimApi.js`에서 관리합니다.
-- F/E 필드명은 현재 Java DTO의 camelCase 이름을 기준으로 사용합니다. `chId`, `chambNm`처럼 여러 alias를 동시에 허용하지 않습니다.
-- `NonBim.helper.js`는 임의의 필드명을 살려주는 호환 계층이 아닙니다. 조회 DTO의 `pipeRows`를 계산 DTO의 `pipeList`로 바꾸는 명시적 변환, 공통 입력 규칙, 검증, 계산 요청/결과 처리를 담당합니다.
-- `vcSimBEApi.js`는 사용하지 않으며 삭제했습니다.
-- API 계약 변경 시 `vcSimApi.js`, Java Controller/DTO, `README_API.md`를 함께 수정합니다.
-- 콤보 option, 조회 결과, 그리드 row 등 업무 데이터는 F/E 상수로 만들지 않고 B/E API에서 조회합니다.
-- API 연동을 이유로 조회조건/콤보/그리드 위치를 임의 변경하지 않습니다. 화면 배치는 퍼블리싱/F/E 책임입니다.
-
-## Redux selector 사용 원칙
-
-- 컴포넌트와 saga는 `state.vc.nonBim` 같은 root state 경로를 직접 읽지 않고 기능별 selector를 사용합니다.
-- selector는 root reducer 접근, 활성 Chamber fallback, Spec Out/N/A 여부처럼 여러 사용처가 공유하는 상태 계산을 담당합니다.
-- 현재 파일명은 `vcSimSelector.js`이지만 회사 표준에 맞춰 변경할 경우 `nonBimSelector.js`, `vcCalculatorSelector.js`, `vcResultSelector.js`처럼 기능명이 드러나는 이름을 권장합니다.
-- selector를 제거해 동일한 접근 로직을 컴포넌트와 saga에 중복 작성하지 않습니다.
-
-## 유지보수 주석 원칙
-
-- 화면 컴포넌트에는 컴포넌트 역할과 상태 관리 주체를 설명합니다.
-- `useEffect`에는 실행 시점과 조회 목적을, `dispatch` 주변에는 reducer 또는 saga가 수행하는 후속 업무를 간결하게 설명합니다.
-- 코드 한 줄을 그대로 번역하는 주석보다 업무 규칙, 상태 변경 이유, API 흐름처럼 코드만으로 파악하기 어려운 내용을 우선합니다.
-
-현재 API 데이터 대상:
-
-| 화면 데이터 | API |
-| --- | --- |
-| Non-BIM FAB/Pipe Type | `GET /api/vc/sim/non-bim/options` |
-| EQ ID 후보 | `GET /api/vc/sim/non-bim/equipments` |
-| 수기 도면 그리드 | `GET /api/vc/sim/non-bim/manual-drawings` |
-| Model Standard/Spec | `GET /api/vc/sim/non-bim/equipment-spec-options` |
-| Calculator FAB/MODEL/Spec/Pipe Type | `GET /api/vc/sim/calculator/options` |
-
-## 핵심 업무 키
-
-- BIM/5D 미적용 Fab 조회조건은 `fab(optional)`, `eqId(required)`, `constructionNo(optional)`입니다.
-- 첫 번째 그리드의 업무 PK는 `constructionNo`입니다.
-- F/E의 `drawing.id`는 React row 렌더링을 위해 `eqId + constructionNo`로 생성하는 화면 전용 key이며 B/E DTO나 DB 컬럼이 아닙니다.
-- B/E 수기 도면 DTO와 DB 조회는 `DRAWING_ID`를 요구하지 않습니다. 상세 조회 안정키는 `eqId + constructionNo`입니다.
-- Foreline 다운로드는 `eqId + constructionNo`를 필수로 사용합니다.
-- `drawingKey`, `fileId`는 다운로드용 보조 식별자입니다.
-- radio 선택 후 Chamber/Spec 조회는 `eqId + constructionNo`로 선택 도면을 특정하여 호출합니다.
-- 상세 Chamber에 정상 Model Standard와 Min/Max가 있으면 후속 옵션 목록이 일부 부족해도 산출대상을 임의 해제하지 않습니다.
-- V/C Calculator의 Model Standard는 선택한 `fab + model` 조합에 해당하는 항목만 표시합니다.
-- 모든 Chamber의 산출대상이 해제된 경우 계산 API를 호출하지 않고 입력 안내를 표시합니다.
-
-## 결과 규칙
-
-| judge | 의미 | F/E 처리 |
-| --- | --- | --- |
-| `IN` | Spec 범위 내 | 정상 표시 |
-| `HIGH_OUT` | 상한 초과 | Spec Out 표시 |
-| `LOW_OUT` | 하한 미달 | Spec Out 표시 |
-| `NA` | 산출 제외 또는 Spec 미적용 | Conductance `N/A` 표시 |
-
-Spec Out이 포함된 Non-BIM 결과 저장은 표준 기안 첨부 정보가 필요합니다. 실제 파일 연동 시 별도 업로드 후 `attachmentId` 전달 방식 또는 multipart 저장 방식 중 하나를 B/E와 확정해야 합니다.
+- 화면과 saga는 `vcSimApi.js`만 사용합니다.
+- B/E DTO 필드명은 Java record의 camelCase 이름을 그대로 씁니다.
+- 업무 키는 DB/테이블 기준 `WO_ID`, F/E/B/E JSON 기준 `woId`입니다.
+- `vcSimBEApi.js` 같은 중복 adapter는 두지 않습니다.
+- API 계약 변경 시 Java DTO, `vcSimApi.js`, `README_API.md`, 관련 테스트를 함께 수정합니다.
 
 ## 로컬 연동 순서
 
-1. Eclipse/STS에서 `vcBePrj`를 Spring Boot App으로 실행합니다.
-2. B/E가 `http://localhost:8090`에서 실행되는지 확인합니다.
-3. F/E 루트에서 `npm run dev`를 실행합니다.
-4. 화면의 `/api` 호출은 Vite proxy를 통해 B/E `8090`으로 전달됩니다.
+1. STS/Eclipse에서 `vcBePrj`를 `http://localhost:8090`으로 실행합니다.
+2. F/E 루트에서 `npm run dev`를 실행합니다.
+3. 브라우저에서 `http://localhost:5173`을 엽니다.
+4. 화면 호출은 Vite proxy를 통해 B/E 8090으로 전달됩니다.
 
-자세한 API 요청/응답 계약은 [README_API.md](./README_API.md)를 기준으로 합니다.
+상세 API 계약은 [README_API.md](./README_API.md), B/E 실행과 mock table 설명은 [vcBePrj/README.md](./vcBePrj/README.md)를 기준으로 합니다.

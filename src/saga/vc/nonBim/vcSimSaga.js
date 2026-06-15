@@ -1,6 +1,6 @@
 /**
- * V/C Simulation saga 흐름입니다.
- * 화면 action과 API adapter 사이를 연결하고, 응답은 helper에서 화면 모델로 정규화합니다.
+ * V/C Simulation saga flow.
+ * This layer connects screen actions to vcSimApi and keeps DTO shaping inside helper functions.
  */
 import { all, call, delay, put, select, takeLatest } from "redux-saga/effects";
 
@@ -28,26 +28,47 @@ import {
   validateNonBimBeforeCalculate,
 } from "../../../components/vc/nonBim/core/NonBim.helper";
 
-// 모든 saga catch에서 같은 오류 메시지 형태를 사용합니다.
+// Keep every saga error as readable text so the UI never shows "[object Object]".
 const getErrorMessage = (error) => {
-  if (!error) return "알 수 없는 오류가 발생했습니다.";
+  if (!error) return "An unknown error occurred.";
   if (typeof error === "string") return error;
-  return error.message || error.errorMessage || "알 수 없는 오류가 발생했습니다.";
+  if (error.message && error.message !== "[object Object]") return error.message;
+  if (error.errorMessage) return error.errorMessage;
+  if (error.payload && typeof error.payload === "object") return JSON.stringify(error.payload);
+  return "An unknown error occurred.";
+};
+
+const normalizeOptionItem = (item) => {
+  if (typeof item === "string") return { value: item, label: item };
+  const value = item?.value ?? item?.fabCd ?? item?.code ?? "";
+  const label = item?.label ?? item?.name ?? value;
+  return {
+    value: String(value),
+    label: String(label),
+  };
+};
+
+const normalizeScreenOptions = (response = {}) => {
+  const payload = response?.data || response || {};
+  return {
+    fabs: toArray(payload.fabs).map(normalizeOptionItem).filter((item) => item.value),
+    pipeTypes: toArray(payload.pipeTypes).map(normalizeOptionItem).filter((item) => item.value),
+  };
 };
 
 function* nonBimOptionsInitFlow() {
   try {
     const response = yield call(vcSimApi.getNonBimOptions);
-    yield put(nonBimActions.initOptionsSuccess(response));
+    yield put(nonBimActions.initOptionsSuccess(normalizeScreenOptions(response)));
   } catch (error) {
     yield put(nonBimActions.initOptionsFailure(getErrorMessage(error)));
   }
 }
 
-// EQ ID 자동완성은 마지막 입력값만 화면에 반영합니다.
+// EQ ID autocomplete only reflects the latest keyword typed by the user.
 function* fetchEqSuggestionsFlow(action) {
   try {
-    // 자동완성은 입력 중 자주 호출되므로 takeLatest + delay로 마지막 keyword만 API에 보냅니다.
+    // Debounce here instead of in the component so the screen stays a thin view layer.
     const keyword = action.payload?.keyword || "";
 
     yield delay(250);
@@ -70,10 +91,9 @@ function* fetchEqSuggestionsFlow(action) {
   }
 }
 
-// 수기 도면 조회는 현재 Redux search state를 기준으로 실행합니다.
+// Manual drawing search always uses the current Redux search state.
 function* fetchManualDrawingsFlow() {
   try {
-    // search state는 action payload가 아니라 Redux의 최신 검색 조건을 기준으로 읽습니다.
     const search = yield select(selectSearch);
     const response = yield call(vcSimApi.searchManualDrawings, search);
     yield put(nonBimActions.fetchManualDrawingsSuccess(normalizeDrawingList(response)));
@@ -82,15 +102,14 @@ function* fetchManualDrawingsFlow() {
   }
 }
 
-// 다운로드 요청은 공사번호로 선택 row를 찾은 뒤 drawingKey/fileId를 사용합니다.
+// Download receives woId from the row, then resolves the full drawing context.
 function* downloadForelineFlow(action) {
   try {
-    // 화면에서는 constructionNo만 넘기고, saga가 그리드 row에서 실제 다운로드 키를 찾아 API에 전달합니다.
-    const constructionNo = action.payload?.constructionNo;
+    const woId = action.payload?.woId;
     const drawings = yield select(selectDrawings);
-    const drawing = drawings.find((item) => item.constructionNo === constructionNo);
+    const drawing = drawings.find((item) => item.woId === woId);
 
-    if (!drawing) throw new Error("다운로드할 수기 도면을 찾을 수 없습니다.");
+    if (!drawing) throw new Error("Cannot find the selected drawing for download.");
 
     const blob = yield call(vcSimApi.downloadForelineDrawing, buildForelineDownloadParams(drawing));
 
@@ -101,36 +120,36 @@ function* downloadForelineFlow(action) {
   }
 }
 
-// 도면 선택 직후 실제 Chamber명과 Model Standard 목록을 B/E에서 조회합니다.
+// Selecting a drawing hydrates chamber names and model-standard options from the backend.
 function* fetchSelectedDrawingDetailsFlow(action) {
-  const constructionNo = action.payload?.constructionNo;
+  const woId = action.payload?.woId;
   const drawings = yield select(selectDrawings);
-  const drawing = drawings.find((item) => item.constructionNo === constructionNo);
+  const drawing = drawings.find((item) => item.woId === woId);
 
   if (!drawing) return;
 
   try {
-    // 목록 응답에 Chamber가 포함돼도 radio 선택 시 상세 API를 다시 호출해 최신 설비 구성을 사용합니다.
+    // The detail endpoint remains the source of truth even when the list already has chamber hints.
     const chamberResponse = yield call(vcSimApi.getDrawingChambers, buildEquipmentContextParams(drawing));
     const rawChambers = toArray(chamberResponse);
     const chambers = normalizeChambersFromDrawing({ ...drawing, chambers: rawChambers });
-    yield put(nonBimActions.fetchDrawingChambersSuccess({ constructionNo, chambers }));
+    yield put(nonBimActions.fetchDrawingChambersSuccess({ woId, chambers }));
   } catch (error) {
     yield put(nonBimActions.fetchDrawingChambersFailure(getErrorMessage(error)));
   }
 
   try {
     const options = yield call(vcSimApi.getEquipmentSpecOptions, buildEquipmentContextParams(drawing));
-    yield put(nonBimActions.fetchModelStandardOptionsSuccess({ constructionNo, options }));
+    yield put(nonBimActions.fetchModelStandardOptionsSuccess({ woId, options }));
   } catch (error) {
     yield put(nonBimActions.fetchModelStandardOptionsFailure(getErrorMessage(error)));
   }
 }
 
-// Non-BIM 계산은 저장 상태를 만들지 않고 공통 결과 팝업만 엽니다.
+// Non-BIM calculation opens the shared result popup after backend calculation succeeds.
 function* nonBimCalculateFlow() {
   try {
-    // Non-BIM 계산은 선택 도면이 필수이고, Chamber별 Model Standard/Spec/배관 입력을 검증합니다.
+    // Non-BIM must have a selected WO and complete chamber spec before calculation.
     const state = yield select(selectNonBimState);
 
     const validation = validateNonBimBeforeCalculate({
@@ -140,7 +159,7 @@ function* nonBimCalculateFlow() {
 
     if (!validation.valid) throw new Error(validation.message);
 
-    // payload 생성은 helper에 모아 B/E DTO 변경이 화면/saga로 번지지 않게 합니다.
+    // Payload assembly stays in the helper so future Java DTO changes do not leak into the screen.
     const payload = buildNonBimCalculatePayload(state);
     const response = yield call(vcSimApi.calculateNonBim, payload);
     const result = normalizeCalculationResult(response, payload);
@@ -154,7 +173,7 @@ function* nonBimCalculateFlow() {
 
 function* calculatorInitFlow() {
   try {
-    // Calculator 화면 진입 시 필요한 select box 후보를 한 번에 조회합니다.
+    // Calculator needs only option data; it is not tied to a selected design-portal drawing.
     const response = yield call(vcSimApi.getCalculatorOptions);
     yield put(vcCalculatorActions.initSuccess(response));
   } catch (error) {
@@ -162,13 +181,13 @@ function* calculatorInitFlow() {
   }
 }
 
-// Calculator도 Non-BIM과 같은 결과 팝업 모델을 사용합니다.
+// Calculator uses the same result popup, but accepts specless chambers with conductance and NA judge.
 function* vcCalculatorCalculateFlow() {
   try {
-    // Calculator는 도면 선택이 없으므로 Chamber 입력 검증만 수행합니다.
+    // Unlike Non-BIM, Calculator must not clear/disable the calculation target when Model Standard is empty.
     const state = yield select(selectVcCalculatorState);
 
-    const validation = validateChambersBeforeCalculate(state.chambers);
+    const validation = validateChambersBeforeCalculate(state.chambers, { allowSpecless: true });
 
     if (!validation.valid) throw new Error(validation.message);
 
@@ -183,10 +202,9 @@ function* vcCalculatorCalculateFlow() {
   }
 }
 
-// 저장 API는 향후 V/C Master 조회 대상 데이터를 저장하기 위한 흐름입니다.
+// Save persists the current result popup data for later V/C Master lookup.
 function* saveResultFlow() {
   try {
-    // vcResult slice가 현재 열린 결과 팝업의 sourceType, rows, 기안 첨부 입력을 모두 보유합니다.
     const state = yield select(selectVcResultState);
 
     if (
@@ -194,12 +212,11 @@ function* saveResultFlow() {
       hasSpecOutRows(state.rows) &&
       (!state.draftPopup.title.trim() || !state.draftPopup.attachmentName.trim())
     ) {
-      // reducer가 이미 draft popup을 열었으므로, 필수 기안 정보가 없으면 API 호출 없이 종료합니다.
+      // The reducer already opened the draft popup, so stop before calling the save API.
       return;
     }
 
-    // B/E 저장 API에는 화면 표시용 basicInfo와 결과 rows, Spec Out 기안 정보를 함께 전달합니다.
-    // 저장 성공 후 V/C Master 또는 이력 화면에서 조회할 수 있도록 savedId/nextStatus 등을 응답받는 계약입니다.
+    // The save API receives exactly what the result popup displays plus draft attachment metadata.
     const response = yield call(vcSimApi.saveVcResult, {
       sourceType: state.sourceType,
       basicInfo: state.basicInfo,
@@ -212,9 +229,8 @@ function* saveResultFlow() {
   }
 }
 
-// 빠르게 반복되는 요청은 takeLatest로 마지막 요청만 유효하게 처리합니다.
+// Repeated UI requests use takeLatest so stale responses cannot overwrite the current screen.
 export function* watchNonBimSaga() {
-  // watcher 등록표입니다. 새 action 흐름을 추가할 때 action -> flow -> api/helper 책임이 맞는지 여기서 함께 점검합니다.
   yield takeLatest(NON_BIM_ACTION_TYPES.INIT_OPTIONS_REQUEST, nonBimOptionsInitFlow);
   yield takeLatest(NON_BIM_ACTION_TYPES.FETCH_EQ_SUGGESTIONS_REQUEST, fetchEqSuggestionsFlow);
   yield takeLatest(NON_BIM_ACTION_TYPES.FETCH_MANUAL_DRAWINGS_REQUEST, fetchManualDrawingsFlow);

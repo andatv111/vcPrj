@@ -64,19 +64,19 @@ export const PIPE_TYPE_FIELD_POLICY = {
 // Manual Drawing Results 그리드 컬럼입니다. key는 normalizeDrawing 결과 key와 맞춰야 합니다.
 export const DRAWING_COLUMNS = [
   { key: "select", label: "" },
-  { key: "constructionNo", label: "공사번호" },
-  { key: "eqId", label: "장비명(EQ_ID)" },
-  { key: "site", label: "Site" },
-  { key: "fab", label: "FAB" },
-  { key: "area1", label: "Area1" },
-  { key: "area2", label: "Area2" },
-  { key: "changeType", label: "변경유형" },
-  { key: "equipmentType", label: "장비구분" },
-  { key: "requestStatus", label: "요청상태" },
-  { key: "forelineCategoryName", label: "카테고리명" },
-  { key: "forelineRegisteredAt", label: "등록일" },
-  { key: "forelineRegisteredBy", label: "등록자" },
-  { key: "forelineDownload", label: "다운로드" },
+  { key: "woId", label: "WO ID" },
+  { key: "eqId", label: "EQ ID" },
+  { key: "siteNm", label: "Site" },
+  { key: "fabCd", label: "FAB" },
+  { key: "area", label: "Area" },
+  { key: "areaDetail", label: "Area Detail" },
+  { key: "chgType1Nm", label: "Change Type" },
+  { key: "catNm", label: "Category" },
+  { key: "requestStatus", label: "Status" },
+  { key: "fileNm", label: "File" },
+  { key: "crteDt", label: "Created" },
+  { key: "crteIdNm", label: "Creator" },
+  { key: "forelineDownload", label: "Download" },
 ];
 
 // Chamber별 배관 입력 그리드 컬럼입니다. key는 pipe row 모델과 isPipeFieldEditable 정책에 연결됩니다.
@@ -126,9 +126,9 @@ export const CALCULATION_NA_TEXT = "N/A";
 
 // Non-BIM 검색 조건 초기값입니다.
 export const DEFAULT_SEARCH = {
-  fab: "",
+  fabCd: "",
   eqId: "",
-  constructionNo: "",
+  woId: "",
 };
 
 // Non-BIM 화면의 loading flag 기본값입니다. Calculator와 결과 팝업 loading은 각 slice에서 별도로 관리합니다.

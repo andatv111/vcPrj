@@ -15,7 +15,7 @@ import {
   selectLoading,
   selectNonBimOptions,
   selectSearch,
-  selectSelectedConstructionNo,
+  selectSelectedWoId,
   selectSelectedDrawing,
 } from "../../../store/vc/nonBim/vcSimSelector";
 import { MAX_CHAMBER_COUNT } from "./core/NonBim.constant";
@@ -35,7 +35,7 @@ const Bim5DNotApplied = () => {
   const options = useSelector(selectNonBimOptions);
   const eqSuggestions = useSelector(selectEqSuggestions);
   const drawings = useSelector(selectDrawings);
-  const selectedConstructionNo = useSelector(selectSelectedConstructionNo);
+  const selectedWoId = useSelector(selectSelectedWoId);
   const selectedDrawing = useSelector(selectSelectedDrawing);
   const chambers = useSelector(selectChambers);
   const activeChamber = useSelector(selectActiveChamber);
@@ -108,9 +108,9 @@ const Bim5DNotApplied = () => {
       <DrawingResultsPanel
         drawings={drawings}
         loading={loading}
-        selectedConstructionNo={selectedConstructionNo}
-        onSelectDrawing={(constructionNo) => dispatch(nonBimActions.selectDrawing(constructionNo))}
-        onDownload={(constructionNo) => dispatch(nonBimActions.downloadForelineRequest(constructionNo))}
+        selectedWoId={selectedWoId}
+        onSelectDrawing={(woId) => dispatch(nonBimActions.selectDrawing(woId))}
+        onDownload={(woId) => dispatch(nonBimActions.downloadForelineRequest(woId))}
       />
 
       {/*
@@ -167,7 +167,7 @@ const NonBimSearchPanel = ({
     <div className="search-row">
       <label className="field">
         <span>FAB</span>
-        <select value={search.fab} onChange={onSearchChange("fab")}>
+        <select value={search.fabCd} onChange={onSearchChange("fabCd")}>
           <option value="">전체</option>
           {fabOptions.map((option) => (
             <option key={option.value} value={option.value}>
@@ -195,18 +195,18 @@ const NonBimSearchPanel = ({
       </label>
 
       <label className="field">
-        <span>Construction No.</span>
+        <span>WO ID</span>
         <input
-          placeholder="Construction No."
-          value={search.constructionNo}
-          onChange={onSearchChange("constructionNo")}
+          placeholder="WO ID"
+          value={search.woId}
+          onChange={onSearchChange("woId")}
         />
       </label>
 
       <button
         type="button"
         className="secondary-button"
-        disabled={loading.drawings || (!search.fab && !search.eqId && !search.constructionNo)}
+        disabled={loading.drawings || (!search.fabCd && !search.eqId && !search.woId)}
         onClick={onResetSearch}
       >
         Reset
@@ -222,7 +222,7 @@ const NonBimSearchPanel = ({
 );
 
 /** 조회된 수기 도면 목록과 현재 선택 상태를 테이블 컴포넌트에 전달합니다. */
-const DrawingResultsPanel = ({ drawings, loading, selectedConstructionNo, onSelectDrawing, onDownload }) => (
+const DrawingResultsPanel = ({ drawings, loading, selectedWoId, onSelectDrawing, onDownload }) => (
   <section className="panel">
     <div className="section-header">
       <div className="section-title">Manual Drawing Results</div>
@@ -231,7 +231,7 @@ const DrawingResultsPanel = ({ drawings, loading, selectedConstructionNo, onSele
     <DrawingResultTable
       drawings={drawings}
       loading={loading}
-      selectedConstructionNo={selectedConstructionNo}
+      selectedWoId={selectedWoId}
       onSelectDrawing={onSelectDrawing}
       onDownload={onDownload}
     />

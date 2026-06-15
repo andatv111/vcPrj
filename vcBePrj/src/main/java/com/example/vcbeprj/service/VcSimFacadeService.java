@@ -2,7 +2,7 @@ package com.example.vcbeprj.service;
 
 import com.example.vcbeprj.domain.JudgeResult;
 import com.example.vcbeprj.domain.ObjectType;
-import com.example.vcbeprj.domain.PortalManualDrawing;
+import com.example.vcbeprj.domain.DesignPortalDrawing;
 import com.example.vcbeprj.domain.SpecMaster;
 import com.example.vcbeprj.dto.CalculateRequest;
 import com.example.vcbeprj.dto.CalculateResponse;
@@ -29,9 +29,9 @@ public class VcSimFacadeService {
     private static final Logger log = LoggerFactory.getLogger(VcSimFacadeService.class);
 
     private final VcCalculationService calculationService;
-    private final PortalManualDrawingService portalService;
+    private final DesignPortalDrawingService portalService;
 
-    public VcSimFacadeService(VcCalculationService calculationService, PortalManualDrawingService portalService) {
+    public VcSimFacadeService(VcCalculationService calculationService, DesignPortalDrawingService portalService) {
         this.calculationService = calculationService;
         this.portalService = portalService;
     }
@@ -72,14 +72,14 @@ public class VcSimFacadeService {
     public Map<String, Object> calculate(VcSimCalculateRequest payload) {
         VcSimCalculateRequest.Equipment equipment = payload.equipment();
         String sourceType = blankToDefault(payload.sourceType(), "NON_BIM");
-        String fab = blankToDefault(equipment == null ? "" : equipment.fab(), "M16");
+        String fabCd = blankToDefault(equipment == null ? "" : equipment.fabCd(), "M16");
         String eqId = blankToDefault(equipment == null ? "" : equipment.eqId(), sourceType + "-MANUAL");
-        String constructionNo = firstNotBlank(payload.constructionNo(), equipment == null ? "" : equipment.constructionNo());
+        String woId = firstNotBlank(payload.woId(), equipment == null ? "" : equipment.woId());
 
-        log.info("[SERVICE][SIM][CALCULATE] sourceType={} fab={} eqId={} constructionNo={} chamberCount={}",
-                sourceType, fab, eqId, constructionNo, payload.chambers() == null ? 0 : payload.chambers().size());
+        log.info("[SERVICE][SIM][CALCULATE] sourceType={} fabCd={} eqId={} woId={} chamberCount={}",
+                sourceType, fabCd, eqId, woId, payload.chambers() == null ? 0 : payload.chambers().size());
 
-        CalculateResponse saved = calculationService.calculateVcRequest(toCalculateRequest(payload, fab, eqId, constructionNo));
+        CalculateResponse saved = calculationService.calculateVcRequest(toCalculateRequest(payload, fabCd, eqId, woId));
         List<VcSimCalculateRequest.Chamber> requestChambers = payload.chambers() == null ? List.of() : payload.chambers();
         List<VcSimResultRow> rows = saved.chambers().stream()
                 .map(result -> toResultRow(result, requestChambers))
@@ -87,8 +87,8 @@ public class VcSimFacadeService {
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("eqId", eqId);
-        data.put("fab", fab);
-        data.put("model", equipment == null ? "" : equipment.model());
+        data.put("fabCd", fabCd);
+        data.put("setModelNm", equipment == null ? "" : equipment.setModelNm());
         data.put("guid", saved.guid());
         data.put("rows", rows);
 
@@ -116,21 +116,21 @@ public class VcSimFacadeService {
         return Map.of("success", true, "data", data);
     }
 
-    public String buildForelineDownloadText(PortalManualDrawing drawing) {
-        log.info("[SERVICE][SIM][DOWNLOAD] business=buildForelineDownloadText eqId={} constructionNo={} fileName={}",
-                drawing.eqId(), drawing.constructionNo(), drawing.foreline() == null ? "" : drawing.foreline().fileName());
+    public String buildForelineDownloadText(DesignPortalDrawing drawing) {
+        log.info("[SERVICE][SIM][DOWNLOAD] business=buildForelineDownloadText eqId={} woId={} fileName={}",
+                drawing.eqId(), drawing.woId(), drawing.fileNm());
         return String.join(System.lineSeparator(),
                 "V/C Simulation Foreline Download",
                 "EQ ID: " + drawing.eqId(),
-                "Construction No.: " + drawing.constructionNo(),
-                "FAB: " + drawing.fab(),
-                "File: " + (drawing.foreline() == null ? "" : drawing.foreline().fileName()),
+                "WO ID: " + drawing.woId(),
+                "FAB: " + drawing.fabCd(),
+                "File: " + blankToDefault(drawing.fileNm(), ""),
                 "");
     }
 
-    private CalculateRequest toCalculateRequest(VcSimCalculateRequest payload, String fab, String eqId, String constructionNo) {
+    private CalculateRequest toCalculateRequest(VcSimCalculateRequest payload, String fabCd, String eqId, String woId) {
         VcSimCalculateRequest.Equipment equipment = payload.equipment();
-        String model = equipment == null ? "" : equipment.model();
+        String model = equipment == null ? "" : equipment.setModelNm();
         List<ChamberInput> chambers = (payload.chambers() == null ? List.<VcSimCalculateRequest.Chamber>of() : payload.chambers()).stream()
                 .map(chamber -> new ChamberInput(
                         firstNotBlank(chamber.chamberId(), "CH-" + blankToDefault(chamber.seq(), 1)),
@@ -139,13 +139,13 @@ public class VcSimFacadeService {
                         decimalOrNull(chamber.minSpec()),
                         decimalOrNull(chamber.maxSpec()),
                         Boolean.TRUE.equals(chamber.isSpecSkipped()),
-                        firstNotBlank(chamber.processLarge(), equipment == null ? "" : equipment.processLarge()),
-                        firstNotBlank(chamber.processMiddle(), equipment == null ? "" : equipment.processMiddle()),
+                        firstNotBlank(chamber.processLarge(), equipment == null ? "" : equipment.operLargeCatgVal()),
+                        firstNotBlank(chamber.processMiddle(), equipment == null ? "" : equipment.operMidCatgVal()),
                         chamber.calculationTarget() == null || chamber.calculationTarget(),
                         toObjects(chamber.pipeList())
                 ))
                 .toList();
-        return new CalculateRequest(fab, eqId, constructionNo, model, "preview", "Preview User", chambers);
+        return new CalculateRequest(fabCd, eqId, woId, model, "preview", "Preview User", chambers);
     }
 
     private List<ObjectInput> toObjects(List<VcSimCalculateRequest.Pipe> pipeList) {
@@ -228,7 +228,7 @@ public class VcSimFacadeService {
         return Map.of("value", value, "label", value);
     }
 
-    private Map<String, String> specOption(PortalManualDrawing.SpecOption option) {
+    private Map<String, String> specOption(DesignPortalDrawing.SpecOption option) {
         return Map.of(
                 "value", blankToDefault(option.value(), ""),
                 "label", blankToDefault(option.label(), option.value()),

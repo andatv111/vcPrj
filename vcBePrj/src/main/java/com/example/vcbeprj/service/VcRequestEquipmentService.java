@@ -83,8 +83,8 @@ public class VcRequestEquipmentService {
                 row.guid(), row.fabId(), row.fabEqpId(), row.woId(), row.buildingId(), row.areaId(), row.dareaId(),
                 row.eqpMakerNm(), row.eqpModelNm(), row.dwgGbnNm(), row.verVal(), row.handEntryYn(), row.workEmpno(),
                 row.workNm(), row.workTm(), prgsStatCd, row.downloadUrl(), row.fileNm(), row.folderPathVal(), specYn,
-                row.convYn(), row.inqYn(), workStatCd, procYn, docUrl, row.regEmpno(), row.regTm(), row.chgEmpno(),
-                LocalDateTime.now()
+                row.convYn(), row.inqYn(), workStatCd, procYn, docUrl, row.regTm(), row.regEmpno(),
+                LocalDateTime.now(), row.regEmpno()
         );
     }
 }

@@ -4,26 +4,31 @@ import java.util.List;
 
 public record VcSimCalculateRequest(
         String sourceType,
-        String constructionNo,
+        String woId,
         Search search,
         Equipment equipment,
         List<Chamber> chambers
 ) {
-    public record Search(String fab, String eqId, String constructionNo) {
+    public record Search(String fabCd, String eqId, String woId) {
     }
 
     public record Equipment(
             String eqId,
-            String constructionNo,
-            String site,
-            String fab,
-            String area1,
-            String area2,
-            String model,
+            String woId,
+            String siteCd,
+            String siteNm,
+            String fabCd,
+            String fabNm,
+            String area,
+            String areaDetail,
+            String chgType1,
+            String chgType1Nm,
+            String catNm,
+            String setModelNm,
             String modelStandard,
-            String mainMaker,
-            String processLarge,
-            String processMiddle
+            String eqpMakerNm,
+            String operLargeCatgVal,
+            String operMidCatgVal
     ) {
     }
 
