@@ -1,6 +1,6 @@
 /**
- * Shared helper for Non-BIM and Calculator screen models, validation, and API DTO mapping.
- * Keep Java DTO field names in camelCase here so screen components do not know table details.
+ * Non-BIM과 Calculator가 함께 쓰는 화면 모델, 검증, API DTO 변환 helper입니다.
+ * 화면 컴포넌트는 Java DTO/테이블 세부 구조를 직접 알지 않도록 이 파일에서 파라미터와 payload를 조립합니다.
  */
 import {
   CHAMBER_PREFIX,
@@ -255,8 +255,8 @@ export const createUserChamber = (chambers = [], selectedDrawing = {}) => {
   };
 };
 
-// Non-BIM uses this strict spec rule: no selected Model Standard/spec means no calculation target.
-// Calculator overrides that behavior in its reducer so specless chambers can still calculate conductance.
+// Non-BIM의 엄격한 Spec 규칙입니다. Model Standard/Spec이 없으면 산출대상에서 빠집니다.
+// Calculator는 reducer에서 별도 처리해 Spec이 없어도 conductance 계산은 가능하고 판정만 NA가 됩니다.
 export const applySpecToChamber = (chamber, modelStandardValue) => {
   const spec = toArray(chamber?.specOptions).find(
     (item) => item.value === modelStandardValue || item.label === modelStandardValue
@@ -273,10 +273,14 @@ export const applySpecToChamber = (chamber, modelStandardValue) => {
 };
 
 export const buildFileDownloadName = (drawing = {}) => {
+  // B/E가 파일명을 내려주면 그 값을 우선 사용하고, 없으면 사용자가 어떤 설비/WO의 Foreline인지 알 수 있게 fallback 이름을 만듭니다.
   if (drawing.fileNm) return drawing.fileNm;
   return `${drawing.eqId || "EQ"}_${drawing.woId || "DRAWING"}_Foreline`;
 };
 
+// 선택 도면과 관련된 상세 조회 API들이 공통으로 쓰는 query 파라미터입니다.
+// getDrawingChambers: eqId, woId로 선택 도면의 Chamber/Pipe를 조회합니다.
+// getEquipmentSpecOptions: eqId, fabCd, setModelNm, woId로 장비에 맞는 Model Standard/Spec option을 조회합니다.
 export const buildEquipmentContextParams = (drawing = {}, extraParams = {}) => ({
   eqId: drawing.eqId,
   woId: drawing.woId,
@@ -288,7 +292,9 @@ export const buildEquipmentContextParams = (drawing = {}, extraParams = {}) => (
 });
 
 export const buildForelineDownloadParams = (drawing = {}, extraParams = {}) => ({
-  // 다운로드 API는 EQ ID와 WO ID가 필수입니다. 파일 키는 보조값으로 같이 넘겨 B/E 파라미터 변경에 대응합니다.
+  // Foreline 다운로드 API query를 만듭니다.
+  // 필수 업무키: eqId, woId
+  // 보조 파일키: file, fileSeq, fabCd. B/E가 파일 메타데이터를 더 엄격히 찾을 때 사용합니다.
   ...buildEquipmentContextParams(drawing, extraParams),
 });
 
@@ -327,7 +333,8 @@ export const validateRequiredPipeFields = (row) => {
   };
 };
 
-// Non-BIM requires a selected design-portal drawing and strict chamber spec validation.
+// Non-BIM 계산 전 검증입니다.
+// 선택된 설계포탈 도면이 있어야 하고, 산출대상 Chamber는 Model Standard와 Min/Max Spec을 갖고 있어야 합니다.
 export const validateNonBimBeforeCalculate = ({ selectedDrawing, chambers }) => {
   if (!selectedDrawing) {
     return { valid: false, message: "Select a drawing before calculating." };
@@ -337,7 +344,9 @@ export const validateNonBimBeforeCalculate = ({ selectedDrawing, chambers }) => 
 };
 
 export const validateChambersBeforeCalculate = (chambers, { allowSpecless = false } = {}) => {
-  // Non-BIM requires Model Standard and Min/Max spec. Calculator can calculate without them and show judge NA.
+  // 공통 Chamber 검증입니다.
+  // allowSpecless=false: Non-BIM처럼 Model Standard/Spec을 필수로 봅니다.
+  // allowSpecless=true: Calculator처럼 Spec이 없어도 pipe 필수값이 있으면 계산 요청을 허용합니다.
   if (!toArray(chambers).length) {
     return { valid: false, message: "Chamber information is missing." };
   }
@@ -373,7 +382,12 @@ export const validateChambersBeforeCalculate = (chambers, { allowSpecless = fals
 };
 
 export const buildNonBimCalculatePayload = (state) => {
-  // Non-BIM payload is anchored by WO_ID/woId from the selected design-portal row.
+  // POST /api/vc/sim/non-bim/calculate body를 만듭니다.
+  // 화면에서 보내는 핵심값:
+  // - sourceType: "NON_BIM"
+  // - woId/search/equipment: 선택한 설계포탈 row와 Search Conditions
+  // - chambers[].pipeList: Chamber별 산출대상 여부, Model Standard, Min/Max, Pipe 입력값
+  // B/E는 이 body를 Java VcSimCalculateRequest로 받아 COMPONENT/CHAMBER/EQUIPMENT mock table 저장과 conductance 계산을 수행합니다.
   const selectedDrawing = state.selectedDrawing;
   const activeChamber =
     toArray(state.chambers).find((chamber) => chamber.id === state.activeChamberId) ||
@@ -431,7 +445,10 @@ export const buildNonBimCalculatePayload = (state) => {
 };
 
 export const buildCalculatorCalculatePayload = (state) => {
-  // Calculator has no selected design-portal row; it sends manually entered chamber and pipe data only.
+  // POST /api/vc/sim/calculator/calculate body를 만듭니다.
+  // Calculator는 설계포탈 row 선택이 없으므로 equipment에는 사용자가 고른 fab/model만 담고,
+  // chambers에는 사용자가 직접 편집한 Chamber와 Pipe 입력값을 담습니다.
+  // Model Standard/Min/Max가 비어 있어도 calculationTarget=true이면 conductance 계산 대상입니다.
   const equipment = state.equipment || {};
 
   return {
@@ -476,8 +493,8 @@ export const hasSpecBounds = (row = {}) => Boolean(row.minSpec || row.maxSpec);
 // Spec 범위가 없는 row는 Min/Max와 판정 컬럼을 '-' 또는 N/A 성격으로 보여줍니다.
 export const shouldShowSpecColumns = (row = {}) => hasSpecBounds(row);
 
-// Convert Java VcSimResultRow data into the shared result popup model.
-// calculationTarget controls conductance calculation; Model Standard/spec controls judge availability.
+// Java VcSimResultRow 응답을 Non-BIM/Calculator 공통 결과 팝업 모델로 변환합니다.
+// calculationTarget은 conductance 계산 여부이고, Model Standard/Spec은 judge 가능 여부입니다.
 export const normalizeCalculationResult = (response, payload) => {
   const rawRows = response?.data?.rows || [];
 
@@ -505,7 +522,7 @@ export const normalizeCalculationResult = (response, payload) => {
     };
   });
 
-  // If the backend returns no rows during local/mock development, keep the popup shape stable.
+  // 로컬/mock 개발 중 B/E가 rows를 비워 내려줘도 결과 팝업 구조가 깨지지 않도록 요청 payload 기준으로 fallback row를 만듭니다.
   const fallbackRows = toArray(payload?.chambers).map((chamber) => ({
     id: createId("RESULT"),
     chamberId: chamber.chamberId || createId("CHAMBER_KEY"),
