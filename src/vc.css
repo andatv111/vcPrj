@@ -1,4 +1,4 @@
-:root {
+.vc-app {
   /* 앱 전체 기본 색상과 폰트 기준입니다. 화면별 컴포넌트는 이 기준 위에서 필요한 스타일만 추가합니다. */
   color: #20242a;
   background: #eef1f4;
@@ -8,42 +8,41 @@
   text-rendering: optimizeLegibility;
 }
 
-* {
+.vc-app *,
+.vc-app *::before,
+.vc-app *::after {
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-}
 
-.app-shell {
+.vc-app.app-shell {
   /* 좌측 메뉴와 우측 업무 화면을 고정된 shell 구조로 나눕니다. */
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   min-height: 100vh;
 }
 
-.side-menu {
+.vc-app .side-menu {
   border-right: 1px solid #d6dce3;
   background: #172033;
   color: #fff;
   padding: 18px 14px;
 }
 
-.side-title {
+.vc-app .side-title {
   padding: 4px 8px 18px;
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 0;
 }
 
-.menu-list {
+.vc-app .menu-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.menu-item {
+.vc-app .menu-item {
   width: 100%;
   border: 1px solid transparent;
   border-radius: 7px;
@@ -54,35 +53,35 @@ body {
   text-align: left;
 }
 
-.menu-item.active {
+.vc-app .menu-item.active {
   border-color: #5ea3e8;
   background: #22314e;
   color: #fff;
 }
 
-.menu-label,
-.menu-description {
+.vc-app .menu-label,
+.vc-app .menu-description {
   display: block;
 }
 
-.menu-label {
+.vc-app .menu-label {
   font-size: 14px;
   font-weight: 700;
 }
 
-.menu-description {
+.vc-app .menu-description {
   margin-top: 3px;
   color: #9fb0c6;
   font-size: 12px;
   line-height: 1.35;
 }
 
-.content-shell {
+.vc-app .content-shell {
   min-width: 0;
   background: #eef1f4;
 }
 
-.content-topbar {
+.vc-app .content-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -92,39 +91,39 @@ body {
   padding: 16px 24px;
 }
 
-button,
-input,
-select {
+ .vc-app button,
+.vc-app input,
+.vc-app select {
   font: inherit;
 }
 
-button:disabled,
-input:disabled,
-select:disabled {
+.vc-app button:disabled,
+.vc-app input:disabled,
+.vc-app select:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
 
-.page {
+.vc-app .page {
   min-height: 100vh;
   padding: 24px;
 }
 
-.embedded-page {
+.vc-app .embedded-page {
   min-height: auto;
 }
 
-.compact-page {
+.vc-app .compact-page {
   min-height: auto;
 }
 
-.panel-text {
+.vc-app .panel-text {
   margin: 0;
   color: #475569;
   font-size: 14px;
 }
 
-.page-header {
+.vc-app .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -132,23 +131,23 @@ select:disabled {
   margin-bottom: 18px;
 }
 
-.breadcrumb {
+.vc-app .breadcrumb {
   margin-bottom: 4px;
   color: #667085;
   font-size: 12px;
 }
 
-h1,
-h2 {
+.vc-app h1,
+.vc-app h2 {
   margin: 0;
 }
 
-h1 {
+.vc-app h1 {
   font-size: 24px;
   letter-spacing: 0;
 }
 
-.status-pill {
+.vc-app .status-pill {
   border: 1px solid #cbd5e1;
   border-radius: 999px;
   background: #fff;
@@ -158,7 +157,7 @@ h1 {
   white-space: nowrap;
 }
 
-.panel {
+.vc-app .panel {
   /* 검색, 도면 목록, Chamber 편집처럼 반복되는 업무 영역의 공통 박스 스타일입니다. */
   width: 100%;
   border: 1px solid #d6dce3;
@@ -169,7 +168,7 @@ h1 {
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
-.section-header {
+.vc-app .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -177,26 +176,26 @@ h1 {
   margin-bottom: 12px;
 }
 
-.section-header.compact {
+.vc-app .section-header.compact {
   margin-top: 16px;
 }
 
-.section-title {
+.vc-app .section-title {
   margin-bottom: 12px;
   font-size: 16px;
   font-weight: 700;
 }
 
-.section-header .section-title {
+.vc-app .section-header .section-title {
   margin-bottom: 0;
 }
 
-.section-title.small {
+.vc-app .section-title.small {
   font-size: 14px;
 }
 
-.search-row,
-.form-grid {
+.vc-app .search-row,
+.vc-app .form-grid {
   /* 입력 필드가 많아질 때 줄바꿈되도록 flex-wrap을 사용합니다. */
   display: flex;
   align-items: flex-end;
@@ -204,26 +203,26 @@ h1 {
   gap: 12px;
 }
 
-.field {
+.vc-app .field {
   display: flex;
   flex-direction: column;
   gap: 5px;
   min-width: 180px;
 }
 
-.field.narrow {
+.vc-app .field.narrow {
   min-width: 120px;
 }
 
-.field span {
+.vc-app .field span {
   color: #48515e;
   font-size: 12px;
   font-weight: 600;
 }
 
-input,
-select,
-textarea {
+.vc-app input,
+.vc-app select,
+.vc-app textarea {
   width: 100%;
   border: 1px solid #c9d1dc;
   border-radius: 5px;
@@ -232,18 +231,18 @@ textarea {
   padding: 0 8px;
 }
 
-input,
-select {
+.vc-app input,
+.vc-app select {
   height: 34px;
 }
 
-textarea {
+.vc-app textarea {
   min-height: 96px;
   padding: 8px;
   resize: vertical;
 }
 
-.check-label {
+.vc-app .check-label {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -252,19 +251,19 @@ textarea {
   font-size: 13px;
 }
 
-.check-label input {
+.vc-app .check-label input {
   width: auto;
   height: auto;
 }
 
-.switch-field input {
+.vc-app .switch-field input {
   width: 18px;
   min-width: 18px;
   height: 18px;
 }
 
-.primary-button,
-.secondary-button {
+.vc-app .primary-button,
+.vc-app .secondary-button {
   height: 34px;
   border-radius: 5px;
   padding: 0 13px;
@@ -272,19 +271,19 @@ textarea {
   white-space: nowrap;
 }
 
-.primary-button {
+.vc-app .primary-button {
   border: 1px solid #1f2937;
   background: #1f2937;
   color: #fff;
 }
 
-.secondary-button {
+.vc-app .secondary-button {
   border: 1px solid #aab4c1;
   background: #fff;
   color: #1f2937;
 }
 
-.link-button {
+.vc-app .link-button {
   border: 0;
   background: transparent;
   color: #1768ac;
@@ -293,32 +292,32 @@ textarea {
   text-decoration: underline;
 }
 
-.button-group,
-.inline-actions,
-.footer-actions {
+.vc-app .button-group,
+.vc-app .inline-actions,
+.vc-app .footer-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.footer-actions {
+.vc-app .footer-actions {
   justify-content: flex-end;
   margin-top: 14px;
 }
 
-.table-wrap {
+.vc-app .table-wrap {
   /* 도면/배관/결과 테이블은 컬럼이 많으므로 작은 화면에서 가로 스크롤을 허용합니다. */
   overflow-x: auto;
 }
 
-table {
+.vc-app table {
   width: 100%;
   border-collapse: collapse;
   table-layout: auto;
 }
 
-th,
-td {
+ .vc-app th,
+.vc-app td {
   border: 1px solid #d9dee6;
   padding: 7px 8px;
   font-size: 12px;
@@ -326,49 +325,49 @@ td {
   white-space: nowrap;
 }
 
-th {
+.vc-app th {
   background: #f4f6f8;
   color: #344054;
   font-weight: 700;
   text-align: center;
 }
 
-td input,
-td select {
+.vc-app td input,
+.vc-app td select {
   min-width: 92px;
   height: 30px;
 }
 
-.center {
+.vc-app .center {
   text-align: center;
 }
 
-.center input {
+.vc-app .center input {
   min-width: 0;
   width: auto;
 }
 
-.selected-row {
+.vc-app .selected-row {
   background: #eef6ff;
 }
 
-.empty-cell,
-.empty-box {
+.vc-app .empty-cell,
+.vc-app .empty-box {
   color: #667085;
   text-align: center;
 }
 
-.empty-cell {
+.vc-app .empty-cell {
   padding: 28px;
 }
 
-.empty-box {
+.vc-app .empty-box {
   border: 1px dashed #b9c2cf;
   border-radius: 7px;
   padding: 28px;
 }
 
-.error-box {
+.vc-app .error-box {
   margin-top: 12px;
   border: 1px solid #f2b8b5;
   border-radius: 6px;
@@ -378,12 +377,12 @@ td select {
   font-size: 13px;
 }
 
-.muted {
+.vc-app .muted {
   color: #667085;
   font-size: 12px;
 }
 
-.tab-bar {
+.vc-app .tab-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -391,7 +390,7 @@ td select {
   margin-bottom: 14px;
 }
 
-.tab {
+.vc-app .tab {
   border: 1px solid #d9dee6;
   border-bottom: 0;
   border-radius: 5px 5px 0 0;
@@ -401,14 +400,14 @@ td select {
   padding: 8px 12px;
 }
 
-.tab.active {
+.vc-app .tab.active {
   border-color: #1f2937;
   background: #fff;
   color: #1f2937;
   font-weight: 700;
 }
 
-.modal-dim {
+.vc-app .modal-dim {
   /* 결과 팝업과 기안 첨부 팝업 공통 dim 영역입니다. */
   position: fixed;
   inset: 0;
@@ -420,7 +419,7 @@ td select {
   padding: 20px;
 }
 
-.modal {
+.vc-app .modal {
   width: min(1120px, 100%);
   max-height: 88vh;
   overflow: auto;
@@ -430,48 +429,48 @@ td select {
   box-shadow: 0 18px 60px rgba(15, 23, 42, 0.25);
 }
 
-.result-modal {
+.vc-app .result-modal {
   max-width: 1180px;
 }
 
-.draft-modal {
+.vc-app .draft-modal {
   max-width: 640px;
 }
 
-.modal-dim.nested {
+.vc-app .modal-dim.nested {
   background: rgba(15, 23, 42, 0.28);
 }
 
-.result-section {
+.vc-app .result-section {
   margin-bottom: 16px;
 }
 
-.notice-box {
+.vc-app .notice-box {
   border-radius: 6px;
   margin-top: 12px;
   padding: 10px 12px;
   font-size: 13px;
 }
 
-.notice-box.success {
+.vc-app .notice-box.success {
   border: 1px solid #9bd8b4;
   background: #f0fff5;
   color: #087443;
 }
 
-.notice-box.warning {
+.vc-app .notice-box.warning {
   border: 1px solid #f2c98b;
   background: #fff8eb;
   color: #9a5b00;
 }
 
-.notice-box.info {
+.vc-app .notice-box.info {
   border: 1px solid #9cc3e6;
   background: #eef6ff;
   color: #1768ac;
 }
 
-.judge-badge {
+.vc-app .judge-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -481,27 +480,27 @@ td select {
   font-weight: 700;
 }
 
-.judge-badge.in {
+.vc-app .judge-badge.in {
   background: #e8fff0;
   color: #087443;
 }
 
-.judge-badge.out {
+.vc-app .judge-badge.out {
   background: #fff0f0;
   color: #b42318;
 }
 
-.judge-badge.none {
+.vc-app .judge-badge.none {
   background: #eef1f4;
   color: #667085;
 }
 
-.full-field {
+.vc-app .full-field {
   width: 100%;
   margin-top: 12px;
 }
 
-.modal-header {
+.vc-app .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -509,38 +508,38 @@ td select {
   margin-bottom: 14px;
 }
 
-.modal-header h2 {
+.vc-app .modal-header h2 {
   font-size: 18px;
 }
 
 @media (max-width: 720px) {
   /* 모바일에서는 좌측 메뉴를 상단 영역으로 올리고 입력 필드를 한 줄에 하나씩 배치합니다. */
-  .app-shell {
+  .vc-app.app-shell {
     grid-template-columns: 1fr;
   }
 
-  .side-menu {
+  .vc-app .side-menu {
     border-right: 0;
     border-bottom: 1px solid #d6dce3;
   }
 
-  .content-topbar {
+  .vc-app .content-topbar {
     align-items: flex-start;
     flex-direction: column;
     padding: 14px;
   }
 
-  .page {
+  .vc-app .page {
     padding: 14px;
   }
 
-  .page-header,
-  .section-header {
+  .vc-app .page-header,
+  .vc-app .section-header {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .field {
+  .vc-app .field {
     width: 100%;
   }
 }

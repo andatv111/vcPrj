@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 // 화면 공통 스타일은 실제 업무 화면에서 소유합니다.
 // 퍼블리셔 산출물이 들어오면 ui 컴포넌트별 CSS로 분리해 이 import를 교체합니다.
-import "../../../styles.css";
+import "../../../vc.css";
 
 import nonBimActions from "../../../store/vc/nonBim/action";
 import {
@@ -41,6 +41,8 @@ const Bim5DNotApplied = () => {
   const activeChamber = useSelector(selectActiveChamber);
   const loading = useSelector(selectLoading);
   const error = useSelector(selectError);
+  const user = useSelector((state) => state.userInfo?.user);
+  const sessionPrjtCd = user?.prjtCd || "M16";
   const [searchValidationMessage, setSearchValidationMessage] = useState("");
 
   const canEditPipe = Boolean(selectedDrawing && activeChamber);
@@ -56,6 +58,12 @@ const Bim5DNotApplied = () => {
     // EQ ID 입력값이 바뀔 때마다 자동완성 조회를 요청합니다. saga에서 짧은 지연 후 마지막 입력만 처리합니다.
     dispatch(nonBimActions.fetchEqSuggestionsRequest(search.eqId));
   }, [dispatch, search.eqId]);
+
+  useEffect(() => {
+    if (search.fabCd !== sessionPrjtCd) {
+      dispatch(nonBimActions.setSearchField({ name: "fabCd", value: sessionPrjtCd }));
+    }
+  }, [dispatch, search.fabCd, sessionPrjtCd]);
 
   const handleSearchChange = (name) => (event) => {
     // 검색조건은 Redux에 즉시 반영하며 EQ ID가 입력되면 기존 필수값 오류를 해제합니다.
@@ -94,7 +102,6 @@ const Bim5DNotApplied = () => {
       {/* Reset은 검색조건과 자동완성만 초기화하며 이미 조회된 도면 목록은 유지합니다. */}
       <NonBimSearchPanel
         search={search}
-        fabOptions={options.fabs}
         eqSuggestions={eqSuggestions}
         error={error}
         validationMessage={searchValidationMessage}
@@ -153,7 +160,6 @@ const Bim5DNotApplied = () => {
 /** 검색조건 입력과 조회 실행을 담당하는 표시 컴포넌트입니다. 실제 상태 변경은 상위 callback으로 전달합니다. */
 const NonBimSearchPanel = ({
   search,
-  fabOptions,
   eqSuggestions,
   error,
   validationMessage,
@@ -167,14 +173,7 @@ const NonBimSearchPanel = ({
     <div className="search-row">
       <label className="field">
         <span>FAB</span>
-        <select value={search.fabCd} onChange={onSearchChange("fabCd")}>
-          <option value="">전체</option>
-          {fabOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <input value={search.fabCd} readOnly />
       </label>
 
       <label className="field">

@@ -1,10 +1,10 @@
 import React from "react";
 
 /** 공통 option 모델(value, label)을 사용하는 단일 선택 필드입니다. 변경 시 선택값만 상위로 전달합니다. */
-export const SelectField = ({ label, placeholder = "-", value, options = [], disabled = false, onChange }) => (
+export const SelectField = ({ label, placeholder = "-", value, options = [], disabled = false, readOnly = false, onChange }) => (
   <label className="field">
     <span>{label}</span>
-    <select value={value || ""} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
+    <select value={value || ""} disabled={disabled || readOnly} onChange={(event) => onChange(event.target.value)}>
       <option value="">{placeholder}</option>
       {options.map((option) => (
         <option key={option.value || option.label} value={option.value || option.label}>

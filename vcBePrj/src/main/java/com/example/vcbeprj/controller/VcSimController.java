@@ -1,8 +1,12 @@
 package com.example.vcbeprj.controller;
 
 import com.example.vcbeprj.domain.DesignPortalDrawing;
+import com.example.vcbeprj.dto.NonBimChamberResponse;
+import com.example.vcbeprj.dto.NonBimManualDrawingResponse;
+import com.example.vcbeprj.dto.NonBimSpecOptionResponse;
 import com.example.vcbeprj.dto.VcSimCalculateRequest;
 import com.example.vcbeprj.dto.VcSimSaveRequest;
+import com.example.vcbeprj.service.DesignPortalDrawingResponseMapper;
 import com.example.vcbeprj.service.DesignPortalDrawingService;
 import com.example.vcbeprj.service.VcSimFacadeService;
 import org.slf4j.Logger;
@@ -29,10 +33,16 @@ public class VcSimController {
 
     private final DesignPortalDrawingService portalService;
     private final VcSimFacadeService simFacadeService;
+    private final DesignPortalDrawingResponseMapper responseMapper;
 
-    public VcSimController(DesignPortalDrawingService portalService, VcSimFacadeService simFacadeService) {
+    public VcSimController(
+            DesignPortalDrawingService portalService,
+            VcSimFacadeService simFacadeService,
+            DesignPortalDrawingResponseMapper responseMapper
+    ) {
         this.portalService = portalService;
         this.simFacadeService = simFacadeService;
+        this.responseMapper = responseMapper;
     }
 
     @GetMapping("/non-bim/options")
@@ -49,33 +59,33 @@ public class VcSimController {
                         "eqId", row.eqId(),
                         "woId", row.woId(),
                         "label", row.eqId() + " (" + row.fabCd() + " / " + row.area() + ")",
-                        "raw", row
+                        "raw", responseMapper.toManualDrawingResponse(row)
                 ))
                 .toList();
     }
 
     @GetMapping("/non-bim/manual-drawings")
-    public List<DesignPortalDrawing> manualDrawings(
+    public List<NonBimManualDrawingResponse> manualDrawings(
             @RequestParam(required = false) String fabCd,
             @RequestParam String eqId,
             @RequestParam(required = false) String woId
     ) {
         log.info("[API][GET /api/vc/sim/non-bim/manual-drawings] fabCd={} eqId={} woId={}",
                 fabCd, eqId, woId);
-        return portalService.searchManualDrawings(fabCd, eqId, woId);
+        return responseMapper.toManualDrawingResponses(portalService.searchManualDrawings(fabCd, eqId, woId));
     }
 
     @GetMapping("/non-bim/chambers")
-    public List<DesignPortalDrawing.Chamber> drawingChambers(
+    public List<NonBimChamberResponse> drawingChambers(
             @RequestParam String eqId,
             @RequestParam String woId
     ) {
         log.info("[API][GET /api/vc/sim/non-bim/chambers] eqId={} woId={}", eqId, woId);
-        return portalService.getDrawingChambers(eqId, woId);
+        return responseMapper.toChamberResponses(portalService.getDrawingChambers(eqId, woId));
     }
 
     @GetMapping("/non-bim/equipment-spec-options")
-    public List<DesignPortalDrawing.SpecOption> equipmentSpecOptions(
+    public List<NonBimSpecOptionResponse> equipmentSpecOptions(
             @RequestParam(required = false) String eqId,
             @RequestParam(required = false) String fabCd,
             @RequestParam(required = false) String setModelNm,
@@ -83,7 +93,7 @@ public class VcSimController {
     ) {
         log.info("[API][GET /api/vc/sim/non-bim/equipment-spec-options] eqId={} fabCd={} setModelNm={} woId={}",
                 eqId, fabCd, setModelNm, woId);
-        return portalService.getEquipmentSpecOptions(eqId, fabCd, setModelNm, woId);
+        return responseMapper.toSpecOptionResponses(portalService.getEquipmentSpecOptions(eqId, fabCd, setModelNm, woId));
     }
 
     @GetMapping("/non-bim/foreline-drawing/download")

@@ -1,1463 +1,857 @@
-﻿# BIM/5D Not Applied Fab 전체 코드리뷰 문서
+# BIM/5D Not Applied Fab 코드 이해 문서
 
-> 기준 브랜치: `codex-work`  
 > 대상 화면: `Simulation > V/C Simulation > BIM/5D Not Applied Fab`  
-> 관련 팝업: `Vacuum Conductance Result`, `표준 기안 첨부`  
-> 관련 범위: F/E React + Redux + Saga + API Adapter + Helper + UI + Popup + B/E Spring Controller/Service/DTO/TXT Repository  
-> 목적: 초급 개발자가 이 문서를 보고 다른 사람에게 화면과 코드를 설명할 수 있는 수준으로 이해하도록 정리합니다.
+> 관련 화면: `V/C Calculator`, `Vacuum Conductance Result`, `기안 첨부 팝업`
+> 목적: 초급 개발자가 이 화면의 데이터 흐름, 주요 파일 역할, selector 사용 이유를 코드 기준으로 이해할 수 있게 정리합니다.
 
 ---
 
-## 0. 이 화면을 한 문장으로 설명하면
+## 1. 이 화면이 하는 일
 
-**BIM/5D가 적용되지 않은 Fab의 수기 도면 데이터를 조회하고, 선택한 장비/WO의 Chamber와 Pipe 정보를 기반으로 V/C Conductance를 계산한 뒤 결과를 저장하거나 Spec Out이면 표준 기안 첨부로 넘기는 화면**입니다.
+이 화면은 BIM/5D가 적용되지 않은 Fab 장비를 대상으로 Manual Drawing을 조회하고, 선택한 도면의 Chamber/Pipe 정보를 입력해 V/C Conductance를 계산합니다.
+
+전체 흐름은 아래 순서입니다.
 
 ```txt
-FAB/EQ ID 입력
-→ Search
-→ Manual Drawing Results 조회
-→ Row radio 선택
-→ Chamber 조회 + Model Standard/Min/Max 조회
-→ Chamber/Pipe 편집
-→ Calculate
-→ Vacuum Conductance Result 팝업
-→ Spec IN이면 바로 저장
-→ Spec Out이면 표준 기안 첨부 후 저장
+화면 진입
+-> 세션 user.prjtCd를 FAB 값으로 세팅
+-> EQ ID / WO ID 입력
+-> Search 버튼 클릭
+-> Manual Drawing Results 조회
+-> 도면 row 선택
+-> 선택 도면의 Chamber 목록 조회
+-> Model Standard / Min Spec / Max Spec 확인
+-> Pipe row 입력
+-> Calculate 버튼 클릭
+-> 계산 API 호출
+-> Vacuum Conductance Result 팝업 표시
+-> Spec Out이면 기안 첨부 정보 입력 후 저장
 ```
+
+오늘 기준 변경사항은 아래처럼 이해하면 됩니다.
+
+| 변경 | 내용 |
+| --- | --- |
+| Non-BIM FAB | 콤보가 아니라 세션 `user.prjtCd` 값을 readonly input에 표시합니다. 현재 preview 기본값은 `M16`입니다. |
+| Calculator FAB | 콤보는 유지하되 최초 진입 시 세션 `user.prjtCd`가 선택되도록 했습니다. |
+| Calculator FAB 잠금 준비 | `SelectField`에 `readOnly` prop을 추가했습니다. 나중에 잠그려면 `readOnly={true}`로 바꾸면 됩니다. |
+| Calculator 계산 payload | B/E DTO 기준에 맞게 `fabCd`, `setModelNm`으로 보냅니다. |
+| selector 주석 | 작업 흔적처럼 보이는 표현은 제거하고, 운영 코드에서 자연스럽게 읽히는 설명으로 정리했습니다. |
 
 ---
 
-## 1. 가장 중요한 키 정리
+## 2. 꼭 기억해야 할 업무 key
 
-현재 최신 코드 기준으로 이 화면의 핵심 업무 키는 `woId`입니다.
+| 개념 | 코드 필드 | 설명 |
+| --- | --- | --- |
+| FAB | `fabCd` | 회사 세션의 `user.prjtCd`입니다. Non-BIM에서는 readonly input, Calculator에서는 combo 초기값으로 사용합니다. |
+| 장비 ID | `eqId` | 사용자가 조회 조건에 입력하는 장비 ID입니다. |
+| WO ID | `woId` | Manual Drawing Results row 선택과 상세 조회의 기준입니다. |
+| 모델명 | `setModelNm` | 장비 model입니다. Calculator 계산 payload에서는 `equipment.setModelNm`으로 보냅니다. |
+| 도면 row id | `id` | React 화면 렌더링용 key입니다. 업무 key가 아닙니다. |
+| Chamber ID | `chamberId` | B/E chamber key입니다. |
+| Chamber 표시명 | `chamberName` | tab 이름입니다. B/E가 준 기존 이름은 그대로 유지합니다. |
+| Pipe row id | `rowId` | 화면에서 pipe row를 선택, 수정, 삭제하기 위한 key입니다. |
+| 저장 상태 | `requestStatus` | 저장/기안 상태입니다. 특정 상태에서는 Non-BIM Calculate 버튼을 잠급니다. |
 
-| 개념 | 현재 코드 필드 | 설명 |
-|---|---|---|
-| 공사번호/작업번호 | `woId` | Manual Drawing Results row 선택과 상세 조회의 업무 키 |
-| 장비 ID | `eqId` | 장비 식별값 |
-| FAB | `fabCd` | 예: `M16` |
-| 모델명 | `setModelNm` | 예: `VX-ETCH-300` |
-| 화면 row key | `id` | F/E React rendering용 `eqId + woId`, DB PK 아님 |
-| DRAWING_ID | 현재 핵심 아님 | 현재 구현은 `eqId + woId` 기준 |
-
-설명 문장:
-
-```txt
-이 화면은 DB의 DRAWING_ID를 기준으로 움직이는 게 아니라,
-사용자가 선택한 Manual Drawing Results row의 eqId와 woId를 기준으로 움직입니다.
-```
+정리하면 `eqId`, `woId`, `fabCd`는 B/E 조회와 계산에서 중요하고, `id`, `rowId`는 주로 화면 렌더링과 편집 상태 관리를 위해 필요합니다.
 
 ---
 
-## 2. 전체 소스 파일 지도
+## 3. 파일 역할 한눈에 보기
 
-### 2.1 F/E 핵심 파일
+### 화면 파일
 
 | 파일 | 역할 |
-|---|---|
-| `src/components/vc/nonBim/Bim5DNotApplied.js` | 화면 본체. 검색조건, 도면 그리드, Chamber Workspace, 결과 팝업 조립 |
-| `src/components/vc/nonBim/core/NonBim.constant.js` | Pipe Type, Status, Judge, Column, Loading 상수 |
-| `src/components/vc/nonBim/core/NonBim.helper.js` | 응답 정규화, Chamber/Pipe 생성, validation, calculate payload 생성, 결과 normalize |
-| `src/components/vc/nonBim/ui/DrawingResultTable.js` | Manual Drawing Results 그리드 |
-| `src/components/vc/nonBim/ui/ChamberWorkspace.js` | Chamber 탭, Model Standard, Min/Max, Pipe Rows, Add/Remove/Calculate |
-| `src/components/vc/nonBim/popup/VcResultPopup.js` | Vacuum Conductance Result 팝업 |
-| `src/components/vc/nonBim/popup/VcDraftAttachPopup.js` | Spec Out 시 표준 기안 첨부 팝업 |
-| `src/store/vc/nonBim/action.js` | Non-BIM 화면 action 정의 |
-| `src/store/vc/nonBim/reducer.js` | Non-BIM 화면 state 변경 |
-| `src/store/vc/nonBim/vcSimSelector.js` | Non-BIM 화면 state 읽기 함수 |
-| `src/store/vc/vcResult/action.js` | 결과 팝업/저장/기안 action |
-| `src/store/vc/vcResult/reducer.js` | 결과 팝업 state, 저장 state, 기안 팝업 state |
-| `src/store/vc/vcResult/vcSimSelector.js` | 결과 팝업 selector |
-| `src/saga/vc/nonBim/vcSimSaga.js` | action을 받아 B/E API 호출 |
-| `src/service/api/vc/sim/vcSimApi.js` | 실제 HTTP GET/POST/Blob 호출 |
+| --- | --- |
+| `src/components/vc/nonBim/Bim5DNotApplied.js` | Non-BIM 화면 container입니다. Redux state를 읽고 버튼/입력 이벤트를 action으로 보냅니다. |
+| `src/components/vc/nonBim/VcCalculator.js` | Calculator 화면 container입니다. FAB/MODEL 선택값과 수기 chamber 계산 흐름을 담당합니다. |
+| `src/components/vc/nonBim/ui/DrawingResultTable.js` | Manual Drawing Results grid를 그립니다. |
+| `src/components/vc/nonBim/ui/ChamberWorkspace.js` | Chamber tab, Model Standard, Pipe row, Calculate 버튼 영역을 그립니다. |
+| `src/components/vc/nonBim/ui/FormFields.js` | 공통 input/select 표시 컴포넌트입니다. `SelectField`의 `readOnly` prop도 여기에 있습니다. |
+| `src/components/vc/nonBim/popup/VcResultPopup.js` | 계산 결과 팝업입니다. |
+| `src/components/vc/nonBim/popup/VcDraftAttachPopup.js` | Spec Out 저장 시 기안 첨부 정보를 입력하는 팝업입니다. |
 
-### 2.2 B/E 핵심 파일
+### 상태 관리 파일
 
 | 파일 | 역할 |
-|---|---|
-| `VcSimController.java` | F/E API endpoint 진입점 |
-| `DesignPortalDrawingService.java` | 수기 도면, EQ 후보, Chamber, Spec option 조회 |
-| `VcSimFacadeService.java` | 화면용 API 결과 조립, 계산 요청 변환, 결과 저장 응답 |
-| `VcCalculationService.java` | 실제 계산 흐름: GUID 생성, 요청/부품/결과 저장, 판정 |
-| `VcSpecMasterService.java` | Spec Master 조회와 판정용 Spec 조회 |
-| `TxtTableRepository.java` | 미리보기 TXT DB 읽기/쓰기 |
-| `DesignPortalDrawing.java` | 수기 도면 조회 DTO/Record |
-| `VcSimCalculateRequest.java` | F/E calculate POST request DTO |
-| `VcSimSaveRequest.java` | result/save POST request DTO |
+| --- | --- |
+| `src/store/vc/nonBim/action.js` | Non-BIM 화면에서 발생하는 event 이름과 payload 모양을 정의합니다. |
+| `src/store/vc/nonBim/reducer.js` | Non-BIM 화면 state를 실제로 변경합니다. |
+| `src/store/vc/nonBim/vcSimSelector.js` | Non-BIM state에서 화면이 필요한 값만 꺼내는 함수 모음입니다. |
+| `src/store/vc/vcCalculator/reducer.js` | Calculator 화면 state를 변경합니다. |
+| `src/store/vc/vcCalculator/vcSimSelector.js` | Calculator state에서 화면이 필요한 값만 꺼냅니다. |
+| `src/store/vc/vcResult/reducer.js` | 결과 팝업, 저장, 기안 첨부 state를 변경합니다. |
+| `src/store/vc/vcResult/vcSimSelector.js` | 결과 팝업 state에서 화면이 필요한 값만 꺼냅니다. |
+
+### 공통 로직 파일
+
+| 파일 | 역할 |
+| --- | --- |
+| `src/components/vc/nonBim/core/NonBim.constant.js` | 화면에서 쓰는 고정값, 컬럼, 기본값, pipe type 정책을 관리합니다. |
+| `src/components/vc/nonBim/core/NonBim.helper.js` | B/E 응답 정리, validation, payload 생성, 계산 결과 정리를 담당합니다. |
+| `src/saga/vc/nonBim/vcSimSaga.js` | action을 받아 API를 호출하고 success/failure action으로 결과를 돌려줍니다. |
+| `src/service/api/vc/sim/vcSimApi.js` | 실제 HTTP 요청을 보내는 API adapter입니다. |
 
 ---
 
-## 3. 전체 아키텍처
+## 4. 버튼을 클릭하면 실제로 무슨 일이 생기나
 
-```txt
-Bim5DNotApplied.js
-  ↓ dispatch(action)
-nonBim action.js
-  ↓
-nonBim reducer.js
-  ↓ state 변경
-vcSimSaga.js
-  ↓ call
-vcSimApi.js
-  ↓ fetch
-Spring B/E VcSimController
-  ↓ service
-DesignPortalDrawingService / VcSimFacadeService / VcCalculationService
-  ↓ response
-vcSimSaga.js
-  ↓ helper normalize
-reducer / vcResult reducer
-  ↓
-화면 / 팝업 렌더링
-```
+문서에서 단순히 `버튼 클릭 -> action`이라고만 쓰면 흐름이 잘 안 잡힙니다. 실제 화면에서는 아래처럼 여러 파일이 역할을 나눠서 움직입니다.
 
-핵심 원칙:
+### 4.1 Search 버튼
 
-```txt
-Component는 API를 직접 호출하지 않습니다.
-Component는 action만 dispatch합니다.
-Saga가 API를 호출합니다.
-Reducer는 state만 바꿉니다.
-Helper는 응답/요청 모양을 정리합니다.
-Popup은 vcResult state를 보고 열립니다.
-B/E는 Controller → Service → Repository/Calculation 순서로 처리합니다.
-```
-
----
-
-# 4. 화면 최초 진입: FAB/Pipe 옵션 조회
-
-## 4.1 사용자가 보는 것
-
-```txt
-FAB select
-EQ ID input + datalist
-WO ID input
-Reset
-Search
-```
-
-## 4.2 F/E 시작점
-
-파일: `Bim5DNotApplied.js`
-
-```js
-useEffect(() => {
-  dispatch(nonBimActions.initOptionsRequest());
-}, [dispatch]);
-```
-
-의미:
-
-```txt
-화면이 열리자마자 Non-BIM 화면에 필요한 옵션을 B/E에서 조회합니다.
-주요 옵션은 FAB 목록과 Pipe Type 목록입니다.
-```
-
-## 4.3 Redux Action
-
-파일: `src/store/vc/nonBim/action.js`
-
-```js
-initOptionsRequest: () => ({ type: NON_BIM_ACTION_TYPES.INIT_OPTIONS_REQUEST })
-```
-
-## 4.4 Reducer
-
-파일: `src/store/vc/nonBim/reducer.js`
-
-```js
-case INIT_OPTIONS_REQUEST:
-  return setLoading(state, "options", true);
-```
-
-성공 시:
-
-```js
-options: action.payload.options || initialNonBimState.options
-```
-
-여기에 들어가는 값:
-
-```txt
-options.fabs
-options.pipeTypes
-```
-
-## 4.5 Saga
-
-파일: `src/saga/vc/nonBim/vcSimSaga.js`
-
-```js
-const response = yield call(vcSimApi.getNonBimOptions);
-yield put(nonBimActions.initOptionsSuccess(normalizeScreenOptions(response)));
-```
-
-## 4.6 API Adapter
-
-파일: `src/service/api/vc/sim/vcSimApi.js`
-
-```js
-getNonBimOptions() {
-  return requestCachedOptions("nonBimOptions", () => requestJson(VC_SIM_ENDPOINTS.nonBimOptions));
-}
-```
-
-endpoint:
-
-```txt
-GET /api/vc/sim/non-bim/options
-```
-
-## 4.7 B/E
-
-Controller:
-
-```java
-@GetMapping("/non-bim/options")
-public Map<String, Object> nonBimOptions() {
-    return simFacadeService.nonBimOptions();
-}
-```
-
-Facade:
-
-```java
-return Map.of(
-    "fabs", portalService.fabs().stream().map(this::option).toList(),
-    "pipeTypes", pipeTypeOptions()
-);
-```
-
-즉:
-
-```txt
-FAB 목록은 DesignPortalDrawingService.fabs()에서 가져옵니다.
-Pipe Type은 B/E ObjectType enum에서 PIPE/ELBOW/REDUCER를 만듭니다.
-```
-
----
-
-# 5. EQ ID 입력 시 자동완성
-
-## 5.1 사용자가 하는 일
-
-```txt
-EQ ID input에 EQ-VAC 입력
-```
-
-## 5.2 F/E 화면
-
-파일: `Bim5DNotApplied.js`
-
-```js
-useEffect(() => {
-  dispatch(nonBimActions.fetchEqSuggestionsRequest(search.eqId));
-}, [dispatch, search.eqId]);
-```
-
-## 5.3 Saga
-
-```js
-yield delay(250);
-
-if (!keyword || keyword.length < 2) {
-  yield put(nonBimActions.fetchEqSuggestionsSuccess([]));
-  return;
-}
-
-const response = yield call(vcSimApi.searchEqSuggestions, keyword);
-```
-
-설명:
-
-```txt
-사용자가 타이핑할 때마다 바로 API를 부르면 B/E가 너무 많이 호출됩니다.
-그래서 250ms 기다렸다가 마지막 입력 기준으로 호출합니다.
-1글자 이하면 후보를 비웁니다.
-```
-
-## 5.4 API Adapter
-
-```js
-searchEqSuggestions(keyword) {
-  return requestJson(VC_SIM_ENDPOINTS.searchEqSuggestions, {
-    params: { keyword },
-  });
-}
-```
-
-endpoint:
-
-```txt
-GET /api/vc/sim/non-bim/equipments?keyword=...
-```
-
-## 5.5 B/E Controller
-
-```java
-@GetMapping("/non-bim/equipments")
-public List<Map<String, Object>> equipments(@RequestParam(required = false) String keyword) {
-    return portalService.searchEquipmentSuggestions(keyword).stream()
-        .map(row -> Map.of(
-            "eqId", row.eqId(),
-            "woId", row.woId(),
-            "label", row.eqId() + " (" + row.fabCd() + " / " + row.area() + ")",
-            "raw", row
-        ))
-        .toList();
-}
-```
-
-## 5.6 B/E Service
-
-```java
-repository.selectAll(PORTAL_TABLE, DesignPortalDrawing.class).stream()
-    .filter(row -> isBlank(keyword) || containsIgnoreCase(row.eqId(), keyword))
-```
-
-즉:
-
-```txt
-DESIGN_PORTAL_MANUAL_DRAWING.txt 전체를 읽고,
-eqId에 keyword가 포함된 row를 후보로 반환합니다.
-```
-
----
-
-# 6. M16, EQ_ID 선택 후 Search 버튼 클릭
-
-## 6.1 사용자가 하는 일
-
-```txt
-FAB: M16
-EQ ID: EQ-VAC-ETCH-1001
-Search 클릭
-```
-
-## 6.2 F/E validation
-
-파일: `Bim5DNotApplied.js`
-
-```js
-if (!search.eqId.trim()) {
-  setSearchValidationMessage("EQ ID는 필수 입력조건입니다.");
-  return;
-}
-```
-
-즉:
-
-```txt
-EQ ID가 비어 있으면 B/E API를 호출하지 않고 화면 오류만 보여줍니다.
-```
-
-## 6.3 Search action
+사용자가 Search 버튼을 누르면 `Bim5DNotApplied.js`의 `handleSearch`가 실행됩니다.
 
 ```js
 dispatch(nonBimActions.fetchManualDrawingsRequest());
 ```
 
-## 6.4 Reducer
+이 한 줄은 “도면 목록을 조회해줘”라는 이벤트를 Redux/Saga 쪽으로 보내는 코드입니다.
+
+이후 흐름은 아래와 같습니다.
+
+| 단계 | 파일 | 하는 일 |
+| --- | --- | --- |
+| 1 | `Bim5DNotApplied.js` | EQ ID 필수값을 검사한 뒤 `FETCH_MANUAL_DRAWINGS_REQUEST` action을 dispatch합니다. |
+| 2 | `reducer.js` | 기존 drawings, selectedDrawing, chambers를 비우고 `loading.drawings = true`로 바꿉니다. |
+| 3 | `vcSimSaga.js` | 현재 검색조건을 읽고 Manual Drawing 조회 API를 호출합니다. |
+| 4 | `vcSimApi.js` | `/api/vc/sim/non-bim/manual-drawings`로 HTTP 요청을 보냅니다. |
+| 5 | `NonBim.helper.js` | B/E 응답을 화면 grid에서 쓰기 좋은 row 모양으로 정리합니다. |
+| 6 | `reducer.js` | 조회된 drawings를 state에 저장하고 loading을 끕니다. |
+| 7 | `vcSimSelector.js` | 화면이 `selectDrawings`로 drawings를 읽습니다. |
+| 8 | `DrawingResultTable.js` | 새 drawings로 grid를 다시 그립니다. |
+
+즉 버튼이 API를 직접 호출하는 것이 아닙니다. 버튼은 action을 보내고, API 호출은 saga가 담당합니다.
+
+### 4.2 Manual Drawing row 선택
+
+Manual Drawing Results에서 row를 선택하면 아래 action이 실행됩니다.
 
 ```js
-case FETCH_MANUAL_DRAWINGS_REQUEST:
-  return {
-    ...setLoading(state, "drawings", true),
-    drawings: [],
-    selectedWoId: "",
-    selectedDrawing: null,
-    chambers: [],
-    activeChamberId: "",
-  };
+dispatch(nonBimActions.selectDrawing(woId));
 ```
 
-설명:
+여기서 중요한 값은 `woId`입니다. 이 화면은 선택 도면을 `woId` 기준으로 찾습니다.
+
+| 단계 | 파일 | 하는 일 |
+| --- | --- | --- |
+| 1 | `DrawingResultTable.js` | 사용자가 선택한 row의 `woId`를 상위 컴포넌트로 전달합니다. |
+| 2 | `Bim5DNotApplied.js` | `selectDrawing(woId)` action을 dispatch합니다. |
+| 3 | `reducer.js` | drawings에서 같은 `woId`를 가진 row를 찾아 `selectedDrawing`에 저장합니다. |
+| 4 | `reducer.js` | 기존 chamber를 비우고 `loading.chambers = true`로 바꿉니다. |
+| 5 | `vcSimSaga.js` | 선택된 도면 기준으로 chamber 조회 API와 model standard option 조회 API를 호출합니다. |
+| 6 | `reducer.js` | 응답받은 chamber 목록을 state에 저장하고 첫 chamber를 active로 둡니다. |
+| 7 | `vcSimSelector.js` | `selectChambers`, `selectActiveChamber`로 chamber 정보를 화면에 제공합니다. |
+| 8 | `ChamberWorkspace.js` | chamber tab과 pipe 입력 영역을 다시 그립니다. |
+
+여기서 selector가 없다면 화면이 `state.vc.nonBim.chambers` 같은 긴 경로를 직접 알아야 합니다. selector를 쓰면 화면은 “chambers를 주세요”라고만 말하면 됩니다.
+
+### 4.3 Add Chamber 버튼
+
+Add Chamber 버튼은 사용자가 직접 입력할 새 chamber를 추가합니다.
+
+```js
+dispatch(nonBimActions.addChamber());
+```
+
+| 단계 | 파일 | 하는 일 |
+| --- | --- | --- |
+| 1 | `ChamberWorkspace.js` | Add Chamber 버튼 클릭을 상위로 알립니다. |
+| 2 | `Bim5DNotApplied.js` | `ADD_CHAMBER` action을 dispatch합니다. |
+| 3 | `reducer.js` | `createUserChamber` helper로 새 chamber 객체를 만듭니다. |
+| 4 | `reducer.js` | 새 chamber를 `chambers` 배열에 추가하고 active chamber로 지정합니다. |
+| 5 | `vcSimSelector.js` | `selectActiveChamber`가 방금 추가된 chamber를 찾아 반환합니다. |
+| 6 | `ChamberWorkspace.js` | 새 chamber tab과 입력 영역을 표시합니다. |
+
+기존 B/E chamber는 `locked` 성격이 있을 수 있고, 사용자가 추가한 chamber는 삭제 가능하도록 구분됩니다.
+
+### 4.4 Pipe row 값 변경
+
+Pipe row에서 값을 수정하면 아래 action이 실행됩니다.
+
+```js
+dispatch(
+  nonBimActions.updatePipeRow({
+    chamberId,
+    rowId,
+    name,
+    value,
+  })
+);
+```
+
+이 payload는 “어느 chamber의 어느 row에서 어떤 필드를 어떤 값으로 바꿀지”를 모두 담고 있습니다.
+
+| 값 | 의미 |
+| --- | --- |
+| `chamberId` | 수정 대상 chamber |
+| `rowId` | 수정 대상 pipe row |
+| `name` | 바뀐 field 이름 |
+| `value` | 사용자가 입력한 값 |
+
+`reducer.js`는 이 값을 받아 해당 row만 바꿉니다. Pipe Type이 바뀌면 `NonBim.helper.js`의 `normalizePipeRowByType`을 사용해 해당 type에서 쓰지 않는 필드를 정리합니다.
+
+### 4.5 Calculate 버튼
+
+Calculate 버튼은 현재 선택 도면, chamber, pipe 입력값을 모아서 계산 API로 보냅니다.
+
+```js
+dispatch(nonBimActions.calculateRequest());
+```
+
+| 단계 | 파일 | 하는 일 |
+| --- | --- | --- |
+| 1 | `Bim5DNotApplied.js` | Calculate 버튼 클릭 시 `CALCULATE_REQUEST` action을 dispatch합니다. |
+| 2 | `vcSimSaga.js` | 현재 state에서 검색조건, 선택 도면, chamber 정보를 읽습니다. |
+| 3 | `NonBim.helper.js` | `validateNonBimBeforeCalculate`로 필수 입력값을 검사합니다. |
+| 4 | `NonBim.helper.js` | `buildNonBimCalculatePayload`로 B/E에 보낼 Request Json을 만듭니다. |
+| 5 | `vcSimApi.js` | 계산 API를 호출합니다. |
+| 6 | `NonBim.helper.js` | 계산 결과를 팝업 table row로 정리합니다. |
+| 7 | `vcResult/reducer.js` | 결과 팝업 state를 열고 rows를 저장합니다. |
+| 8 | `vcResult/vcSimSelector.js` | 팝업이 `visible`, `rows`, `basicInfo`를 읽습니다. |
+| 9 | `VcResultPopup.js` | 계산 결과를 사용자에게 보여줍니다. |
+
+---
+
+## 5. `vcSimSelector.js`를 왜 쓰는가
+
+`vcSimSelector.js`는 Redux state를 읽는 전용 함수 파일입니다.
+
+처음에는 아래 코드가 더 쉬워 보일 수 있습니다.
+
+```js
+const drawings = useSelector((state) => state.vc.nonBim.drawings);
+```
+
+하지만 화면마다 이런 코드를 직접 쓰면 문제가 생깁니다.
+
+| 문제 | 설명 |
+| --- | --- |
+| state 구조를 화면이 알아야 함 | 화면 컴포넌트가 `state.vc.nonBim` 같은 내부 경로를 모두 알아야 합니다. |
+| 구조 변경에 약함 | 나중에 store 구조가 바뀌면 화면 파일 여러 개를 고쳐야 합니다. |
+| fallback 처리 반복 | 초기 렌더링이나 테스트에서 state가 비어 있을 때 안전한 기본값을 매번 처리해야 합니다. |
+| 이름만 봐도 의미가 안 보임 | `state.vc.nonBim.drawings`보다 `selectDrawings`가 업무 의미를 더 잘 드러냅니다. |
+
+그래서 이 프로젝트는 아래처럼 씁니다.
+
+```js
+const drawings = useSelector(selectDrawings);
+```
+
+이렇게 하면 화면은 Redux 내부 구조를 몰라도 됩니다. 화면은 selector에게 “도면 목록 주세요”라고 요청하고, selector가 정확한 위치에서 값을 꺼내옵니다.
+
+---
+
+## 6. Non-BIM `vcSimSelector.js` 자세히 보기
+
+파일 위치:
 
 ```txt
-새 검색을 시작하면 이전 검색 결과, 이전 선택 row, 이전 Chamber 탭을 초기화합니다.
-이전 도면의 Chamber가 남아 있으면 사용자가 착각할 수 있기 때문입니다.
+src/store/vc/nonBim/vcSimSelector.js
 ```
 
-## 6.5 Saga
+### 6.1 핵심 입구: `selectNonBimState`
 
 ```js
-const search = yield select(selectSearch);
-const response = yield call(vcSimApi.searchManualDrawings, search);
-yield put(nonBimActions.fetchManualDrawingsSuccess(normalizeDrawingList(response)));
-```
-
-## 6.6 API Adapter
-
-```js
-searchManualDrawings(params = {}) {
-  return requestJson(VC_SIM_ENDPOINTS.searchManualDrawings, {
-    params,
-  });
-}
-```
-
-endpoint:
-
-```txt
-GET /api/vc/sim/non-bim/manual-drawings?fabCd=M16&eqId=EQ-VAC-ETCH-1001&woId=...
-```
-
-## 6.7 B/E Controller
-
-```java
-@GetMapping("/non-bim/manual-drawings")
-public List<DesignPortalDrawing> manualDrawings(
-    @RequestParam(required = false) String fabCd,
-    @RequestParam String eqId,
-    @RequestParam(required = false) String woId
-) {
-    return portalService.searchManualDrawings(fabCd, eqId, woId);
-}
-```
-
-## 6.8 B/E Service
-
-```java
-repository.selectAll(PORTAL_TABLE, DesignPortalDrawing.class).stream()
-    .filter(row -> isBlank(fabCd) || equalsIgnoreCase(row.fabCd(), fabCd))
-    .filter(row -> isBlank(eqId) || containsIgnoreCase(row.eqId(), eqId))
-    .filter(row -> isBlank(woId) || containsIgnoreCase(row.woId(), woId))
-```
-
-## 6.9 F/E normalize
-
-```js
-export const normalizeDrawing = (raw = {}) => {
-  const woId = nvl(raw.woId);
-  const eqId = nvl(raw.eqId);
-
-  return {
-    id: [eqId, woId].filter(Boolean).join("_") || createId("DRAWING"),
-    woId,
-    eqId,
-    siteCd,
-    siteNm,
-    fabCd,
-    area,
-    areaDetail,
-    requestStatus,
-    setModelNm,
-    chamberCount,
-    chambers,
-    specOptions,
-    raw,
-  };
+export const selectNonBimState = (state) => {
+  return (
+    state?.vc?.nonBim ||
+    state?.nonBim ||
+    state?.vcNonBim ||
+    initialNonBimState
+  );
 };
 ```
 
-중요:
+이 함수는 Non-BIM state 전체를 가져오는 입구입니다.
 
-```txt
-id는 React key입니다.
-업무 키는 woId입니다.
-상세 조회 안정키는 eqId + woId입니다.
-```
+왜 여러 경로를 보나요?
 
----
+| 코드 | 의미 |
+| --- | --- |
+| `state?.vc?.nonBim` | 현재 프로젝트에서 정상적으로 쓰는 위치입니다. |
+| `state?.nonBim` | 테스트나 다른 store 결합 방식에서 쓸 수 있는 fallback입니다. |
+| `state?.vcNonBim` | 예전 또는 임시 결합 방식까지 방어하는 fallback입니다. |
+| `initialNonBimState` | 아직 store가 준비되지 않아도 화면이 깨지지 않게 하는 기본값입니다. |
 
-# 7. Manual Drawing Results row 라디오 선택
+이 함수 하나가 있기 때문에 화면 컴포넌트는 store 구조 변경을 직접 신경 쓰지 않아도 됩니다. 구조가 바뀌면 대부분 selector 파일만 고치면 됩니다.
 
-## 7.1 사용자가 하는 일
-
-```txt
-VC-2026-ETCH-001 / EQ-VAC-ETCH-1001 row radio 선택
-```
-
-## 7.2 UI 코드
-
-파일: `DrawingResultTable.js`
+### 6.2 검색조건 읽기: `selectSearch`
 
 ```js
-<input
-  type="radio"
-  name="drawingRadio"
-  checked={selected}
-  onChange={() => onSelectDrawing(row.woId)}
-/>
+export const selectSearch = (state) => selectNonBimState(state).search;
 ```
 
-## 7.3 상위 화면 callback
-
-```js
-onSelectDrawing={(woId) => dispatch(nonBimActions.selectDrawing(woId))}
-```
-
-## 7.4 Reducer
-
-```js
-const drawing = state.drawings.find((item) => item.woId === action.payload.woId) || null;
-
-return {
-  ...setLoading(state, "chambers", Boolean(drawing)),
-  selectedWoId: drawing?.woId || "",
-  selectedDrawing: drawing,
-  chambers: [],
-  activeChamberId: "",
-  error: null,
-};
-```
-
-## 7.5 Saga가 호출하는 두 API
-
-`SELECT_DRAWING` action은 saga에서 아래 두 API를 호출합니다.
-
-```txt
-1. GET /api/vc/sim/non-bim/chambers
-2. GET /api/vc/sim/non-bim/equipment-spec-options
-```
-
-코드:
-
-```js
-const chamberResponse = yield call(vcSimApi.getDrawingChambers, buildEquipmentContextParams(drawing));
-const rawChambers = toArray(chamberResponse);
-const chambers = normalizeChambersFromDrawing({ ...drawing, chambers: rawChambers });
-yield put(nonBimActions.fetchDrawingChambersSuccess({ woId, chambers }));
-
-const options = yield call(vcSimApi.getEquipmentSpecOptions, buildEquipmentContextParams(drawing));
-yield put(nonBimActions.fetchModelStandardOptionsSuccess({ woId, options }));
-```
-
----
-
-# 8. 사용자가 준 Java 로그 해석
-
-```txt
-[API][GET /api/vc/sim/non-bim/chambers] eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001
-[SERVICE][PORTAL][SELECT] business=getDrawingChambers table=DESIGN_PORTAL_MANUAL_DRAWING eqId=... woId=...
-[SERVICE][PORTAL][SELECT] business=findByBusinessKey table=DESIGN_PORTAL_MANUAL_DRAWING eqId=... woId=...
-[TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=... rowType=DesignPortalDrawing rowCount=4
-
-[API][GET /api/vc/sim/non-bim/equipment-spec-options] eqId=... fabCd=M16 setModelNm=VX-ETCH-300 woId=...
-[SERVICE][PORTAL][SELECT] business=getEquipmentSpecOptions eqId=... fabCd=... setModelNm=... woId=...
-[TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=... rowType=DesignPortalDrawing rowCount=4
-[SERVICE][PORTAL][SELECT][DONE] source=designPortal optionCount=3
-```
-
-## 8.1 의미
-
-| 로그 | 의미 |
-|---|---|
-| `GET /non-bim/chambers` | row 선택 후 Chamber 탭 데이터를 조회 |
-| `getDrawingChambers` | Service에서 Chamber 목록 조회 시작 |
-| `findByBusinessKey` | `eqId + woId`로 수기 도면 1건 찾기 |
-| `TXT_DB SELECT rowCount=4` | TXT 파일에서 전체 4건을 읽음 |
-| `GET /equipment-spec-options` | 같은 row 기준으로 Model Standard/Min/Max 옵션 조회 |
-| `source=designPortal optionCount=3` | 선택 도면 row 안의 specOptions에서 3건 반환 |
-
-## 8.2 초급자용 설명
-
-```txt
-라디오 버튼을 누르면 화면은 "이 WO의 Chamber와 Spec 정보를 주세요"라고 B/E에 요청합니다.
-B/E는 TXT DB에서 eqId + woId로 수기 도면 row를 찾습니다.
-그 row 안에 chambers와 specOptions가 있으면 그것을 F/E에 내려줍니다.
-```
-
----
-
-# 9. Chamber 탭명 가져올 때
-
-## 9.1 B/E DTO
-
-파일: `DesignPortalDrawing.java`
-
-```java
-public record Chamber(
-    String chamberId,
-    String chamberName,
-    String modelStandard,
-    String minSpec,
-    String maxSpec,
-    String operLargeCatgVal,
-    String operMidCatgVal,
-    List<PipeRow> pipeRows
-)
-```
-
-탭명은 `chamberName`입니다.
-
-## 9.2 B/E Service
-
-```java
-public List<DesignPortalDrawing.Chamber> getDrawingChambers(String eqId, String woId) {
-    DesignPortalDrawing drawing = findByBusinessKey(eqId, woId);
-    return drawing.chambers() == null ? List.of() : drawing.chambers();
-}
-```
-
-## 9.3 F/E helper
-
-```js
-chamberName: nvl(raw.chamberName, createChamberName(index + 1))
-```
-
-즉:
-
-```txt
-B/E가 chamberName을 주면 그대로 탭명으로 사용합니다.
-없으면 CHAMBER1, CHAMBER2 같은 기본 이름을 만듭니다.
-```
-
-## 9.4 locked 의미
-
-```txt
-B/E에서 조회한 Chamber: locked=true
-사용자가 Add한 Chamber: locked=false
-```
-
-locked Chamber는 삭제할 수 없습니다.
-
----
-
-# 10. Chamber 탭 선택
-
-## 10.1 UI
-
-```js
-<button
-  className={activeChamberId === chamber.id ? "tab active" : "tab"}
-  onClick={() => onSetActiveChamber(chamber.id)}
->
-  {chamber.chamberName}
-</button>
-```
-
-## 10.2 Action/Reducer
-
-```js
-setActiveChamber(chamberId)
-```
-
-reducer:
-
-```js
-activeChamberId: action.payload.chamberId
-```
-
-## 10.3 API 호출 여부
-
-```txt
-Chamber 탭 클릭 자체는 API를 호출하지 않습니다.
-이미 Redux에 조회된 chambers 중 activeChamberId만 바꿉니다.
-```
-
-## 10.4 Selector
-
-```js
-selectActiveChamber
-→ findActiveChamber(current.chambers, current.activeChamberId)
-```
-
-active ID가 잘못되어도 첫 번째 Chamber를 fallback으로 반환해서 화면이 깨지지 않게 합니다.
-
----
-
-# 11. Model Standard 가져올 때
-
-## 11.1 API 호출 시점
-
-Manual Drawing Results row 라디오 선택 직후, saga에서 Chamber 조회 다음에 Spec option 조회를 합니다.
-
-```js
-const options = yield call(vcSimApi.getEquipmentSpecOptions, buildEquipmentContextParams(drawing));
-```
-
-## 11.2 API Adapter
-
-```js
-getEquipmentSpecOptions({ eqId, fabCd, setModelNm, file, fileSeq, woId }) {
-  return requestJson(VC_SIM_ENDPOINTS.equipmentSpecOptions, {
-    params: { eqId, fabCd, setModelNm, file, fileSeq, woId },
-  });
-}
-```
-
-## 11.3 B/E Service 우선순위
-
-```java
-if (drawing != null && drawing.specOptions() != null && !drawing.specOptions().isEmpty()) {
-    return drawing.specOptions();
-}
-
-return specMasterService.getSpecByEquipmentCondition(fabCd, setModelNm)
-    .map(this::toSpecOption)
-```
-
-우선순위:
-
-```txt
-1순위: 선택한 Design Portal drawing row 안의 specOptions
-2순위: VCW_VC_SPEC_MST에서 fabCd + setModelNm 기준 조회
-```
-
-## 11.4 F/E reducer 반영
-
-```js
-const nextModelStandard = chamber.modelStandard || options[0]?.value || "";
-const spec = getSpecByValue(options, nextModelStandard);
-const minSpec = spec ? spec.minSpec : chamber.minSpec;
-const maxSpec = spec ? spec.maxSpec : chamber.maxSpec;
-```
-
-설명:
-
-```txt
-Chamber에 이미 modelStandard가 있으면 그것을 유지합니다.
-없으면 옵션 목록의 첫 번째 값을 기본값으로 사용합니다.
-선택된 modelStandard에 맞는 minSpec/maxSpec을 찾아서 세팅합니다.
-```
-
----
-
-# 12. Min Spec과 Max Spec 세팅
-
-## 12.1 화면
-
-파일: `ChamberWorkspace.js`
-
-```js
-<ReadonlyField label="Min Spec" value={activeChamber.minSpec} />
-<ReadonlyField label="Max Spec" value={activeChamber.maxSpec} />
-```
-
-즉:
-
-```txt
-Min/Max는 사용자가 직접 입력하는 값이 아니라 읽기 전용 표시값입니다.
-```
-
-## 12.2 값이 들어오는 경우
-
-| 경로 | 설명 |
-|---|---|
-| Chamber API 응답 | `chamber.modelStandard`, `chamber.minSpec`, `chamber.maxSpec` |
-| Spec option API 응답 | 선택한 modelStandard에 맞는 option에서 min/max 세팅 |
-| Model Standard 변경 | `applySpecToChamber`가 min/max를 다시 세팅 |
-
----
-
-# 13. N/A가 되는 경우와 경고 표시
-
-## 13.1 Result popup 안내 문구
-
-파일: `VcResultPopup.js`
-
-| 조건 | 문구 |
-|---|---|
-| Spec Out 존재 | `Spec Out Chamber가 있습니다. 최종결과저장 시 표준 기안 첨부가 필요합니다.` |
-| N/A row 존재 | `산출대상 제외 또는 Spec 미적용 Chamber가 있습니다. 해당 row는 Conductance와 판정을 N/A로 표시합니다.` |
-| 그 외 | `모든 Spec 판정이 IN입니다. 최종결과저장이 가능합니다.` |
-
-## 13.2 N/A 판단
-
-```js
-row.judge === JUDGE.NA
-|| row.calculationTarget === false
-|| row.conductance === "N/A"
-```
-
-## 13.3 Non-BIM 계산 전 validation
-
-Non-BIM은 기본적으로 Spec이 있어야 계산 대상이 됩니다.
-
-```js
-if (!chamber.modelStandard) {
-  return { valid: false, message: `${chamber.chamberName} requires a Model Standard.` };
-}
-
-if (!chamber.minSpec && !chamber.maxSpec) {
-  return { valid: false, message: `${chamber.chamberName} requires Min/Max Spec.` };
-}
-```
-
-즉:
-
-```txt
-BIM/5D Not Applied Fab 화면은 Model Standard/Min/Max가 없는 Chamber를 계산 대상으로 켜고 계산할 수 없게 설계되어 있습니다.
-```
-
----
-
-# 14. Add Chamber 클릭
-
-## 14.1 활성 조건
-
-```js
-canAddChamber={
-  Boolean(selectedDrawing) &&
-  !loading.chambers &&
-  chambers.length < MAX_CHAMBER_COUNT
-}
-```
-
-즉:
-
-```txt
-도면 row가 선택되어 있어야 합니다.
-Chamber 조회 중이 아니어야 합니다.
-최대 10개 미만이어야 합니다.
-```
-
-## 14.2 Reducer
-
-```js
-const chamber = createUserChamber(state.chambers, state.selectedDrawing);
-const chambers = resequenceChambers([...state.chambers, chamber]);
-
-return {
-  ...state,
-  chambers,
-  activeChamberId: chamber.id,
-};
-```
-
-## 14.3 Helper
-
-```txt
-createUserChamber는 선택 도면의 공정/Spec option을 상속합니다.
-사용자가 추가한 Chamber이므로 locked=false입니다.
-```
-
----
-
-# 15. Remove 클릭
-
-## 15.1 활성 조건
-
-```js
-canRemoveChamber={Boolean(activeChamber && !activeChamber.locked)}
-```
-
-즉:
-
-```txt
-B/E에서 온 원본 Chamber는 삭제할 수 없습니다.
-사용자가 Add한 Chamber만 삭제할 수 있습니다.
-```
-
-## 15.2 Reducer
-
-```js
-if (!target || target.locked) return state;
-```
-
-삭제 후 현재 탭이 사라졌다면 남은 첫 번째 탭으로 이동합니다.
-
----
-
-# 16. Pipe Row Add/Delete/수정
-
-## 16.1 Add Pipe Row
-
-```js
-pipeList: [...chamber.pipeList, createEmptyPipeRow(PIPE_TYPE.PIPE)]
-```
-
-## 16.2 Delete Pipe Row
-
-마지막 row를 삭제해도 빈 표가 되지 않게 기본 PIPE row 하나를 남깁니다.
-
-```js
-if (chamber.pipeList.length <= 1) {
-  return {
-    pipeList: [createEmptyPipeRow(PIPE_TYPE.PIPE)],
-    selectedPipeRowId: "",
-  };
-}
-```
-
-## 16.3 Pipe Type별 입력 정책
-
-| Type | 입력 가능 | 자동/비활성 |
-|---|---|---|
-| PIPE | 입구내경, 길이 | 수량 1 고정, 각도/출구내경 비활성 |
-| ELBOW | 입구내경, 각도, 수량 | 길이/출구내경 비활성 |
-| REDUCER | 입구내경, 길이, 출구내경 | 수량 1 고정, 각도 비활성 |
-
-Reducer에서 type 변경 시 `normalizePipeRowByType`이 사용하지 않는 값을 비웁니다.
-
----
-
-# 17. Calculate 버튼 클릭
-
-## 17.1 버튼 잠금
-
-특정 도면 상태이면 Calculate 버튼을 숨깁니다.
-
-```txt
-Saved
-Draft Attached
-```
-
-## 17.2 Action
-
-```js
-dispatch(nonBimActions.calculateRequest())
-```
-
-## 17.3 Validation
-
-```txt
-1. selectedDrawing 존재
-2. chambers 존재
-3. 최소 하나 이상의 calculationTarget 존재
-4. 계산 대상 Chamber는 Model Standard 필수
-5. 계산 대상 Chamber는 Min/Max Spec 필수
-6. pipeList 필수
-7. Pipe Type별 필수값 필수
-```
-
-## 17.4 Payload 생성
-
-파일: `NonBim.helper.js`
-
-```js
-buildNonBimCalculatePayload(state)
-```
-
-구조:
+반환값 예시:
 
 ```json
 {
-  "sourceType": "NON_BIM",
-  "woId": "VC-2026-ETCH-001",
-  "search": {
-    "fabCd": "M16",
-    "eqId": "EQ-VAC-ETCH-1001",
-    "woId": "VC-2026-ETCH-001"
-  },
-  "equipment": {
-    "eqId": "EQ-VAC-ETCH-1001",
-    "woId": "VC-2026-ETCH-001",
-    "fabCd": "M16",
-    "setModelNm": "VX-ETCH-300"
-  },
-  "chambers": [
-    {
-      "seq": 1,
-      "chamberId": "CH-01",
-      "chamberName": "CHAMBER1",
-      "calculationTarget": true,
-      "modelStandard": "...",
-      "minSpec": "...",
-      "maxSpec": "...",
-      "isSpecSkipped": false,
-      "pipeList": []
-    }
+  "fabCd": "M16",
+  "eqId": "ANDATV111",
+  "woId": ""
+}
+```
+
+어디서 쓰나요?
+
+```js
+const search = useSelector(selectSearch);
+```
+
+`Bim5DNotApplied.js`는 이 값을 Search Conditions input에 표시합니다. 사용자가 EQ ID나 WO ID를 바꾸면 `SET_SEARCH_FIELD` action으로 reducer가 `search` 값을 갱신하고, selector가 다시 최신 `search`를 화면에 전달합니다.
+
+### 6.3 option 읽기: `selectNonBimOptions`
+
+```js
+export const selectNonBimOptions = (state) => selectNonBimState(state).options;
+```
+
+반환값 예시:
+
+```json
+{
+  "fabs": [
+    { "value": "M16", "label": "M16" }
+  ],
+  "pipeTypes": [
+    { "value": "ROUND", "label": "ROUND" },
+    { "value": "RECT", "label": "RECT" }
   ]
 }
 ```
 
-## 17.5 API 호출
+Non-BIM에서는 FAB 콤보를 제거했지만 pipe type option은 계속 필요합니다. `ChamberWorkspace.js`로 `pipeTypeOptions={options.pipeTypes}`를 넘겨 pipe row의 Pipe Type select를 그립니다.
 
-```txt
-POST /api/vc/sim/non-bim/calculate
-```
-
----
-
-# 18. B/E Calculate 처리
-
-## 18.1 Controller
-
-```java
-@PostMapping("/non-bim/calculate")
-public Map<String, Object> calculateNonBim(@RequestBody VcSimCalculateRequest request) {
-    return simFacadeService.calculate(request);
-}
-```
-
-## 18.2 Facade
-
-```java
-CalculateResponse saved =
-  calculationService.calculateVcRequest(toCalculateRequest(payload, fabCd, eqId, woId));
-```
-
-즉:
-
-```txt
-화면용 VcSimCalculateRequest
-→ 계산 서비스용 CalculateRequest
-→ VcCalculationService
-```
-
-## 18.3 VcCalculationService 흐름
-
-```txt
-STEP 1. GUID 생성
-STEP 2. EQUIPMENT request header 생성
-STEP 3. COMPONENT rows 저장
-STEP 4. conductance 계산, SPEC 선택, chamber별 judge
-STEP 5. CHAMBER result rows 저장
-STEP 6. EQUIPMENT SPEC_YN 업데이트
-```
-
-## 18.4 현재 미리보기 Conductance 계산
-
-```txt
-PIPE    = inlet * 9 - length * 0.012
-ELBOW   = inlet * 6 - angle * 0.06 - qty * 2.2
-REDUCER = outlet * 7 - length * 0.01
-```
-
-최종값은 1 이상으로 보정하고 소수점 2자리로 반올림합니다.
-
-## 18.5 Spec 판정
-
-```txt
-1. VCW_VC_SPEC_MST에서 fabId + setModelNm + chamberModelNm 완전 일치 Spec 조회
-2. 없으면 화면에서 넘어온 Min/Max snapshot 사용
-3. Spec skipped 또는 Min/Max 모두 없으면 NA
-```
-
----
-
-# 19. Vacuum Conductance Result 팝업 오픈
-
-## 19.1 Saga
+### 6.4 EQ 자동완성 읽기: `selectEqSuggestions`
 
 ```js
-const result = normalizeCalculationResult(response, payload);
-
-yield put(nonBimActions.calculateSuccess(result));
-yield put(vcResultActions.openResultPopup(result));
+export const selectEqSuggestions = (state) => selectNonBimState(state).eqSuggestions;
 ```
 
-## 19.2 Result reducer
+EQ ID input은 datalist를 사용합니다. 사용자가 EQ ID를 입력하면 saga가 자동완성 후보를 조회하고 reducer가 `eqSuggestions`에 저장합니다.
+
+이후 화면은 selector로 읽습니다.
 
 ```js
-visible: true,
-sourceType: result.sourceType || "",
-basicInfo: result.basicInfo || null,
-rows: result.rows || [],
-draftPopup: { visible: false, title: "", attachmentName: "", comment: "" }
+const eqSuggestions = useSelector(selectEqSuggestions);
 ```
 
-## 19.3 Popup 표시
-
-파일: `VcResultPopup.js`
-
-```txt
-기본정보: FAB, MODEL, EQ ID
-결과정보: Chamber ID, 공정대분류, 공정중분류, 모델관리기준, Min, Max, Conductance, 판정
-```
-
----
-
-# 20. 최종결과저장: Spec IN이라서 바로 저장되는 경우
-
-## 20.1 사용자 동작
-
-```txt
-Result Popup에서 최종결과저장 클릭
-```
-
-## 20.2 Reducer 분기
+그리고 아래처럼 datalist option으로 렌더링합니다.
 
 ```js
-if (needsDraftAttachment(state)) {
-  draftPopup.visible = true;
-} else {
-  loading.save = true;
-}
+{eqSuggestions.map((item) => (
+  <option key={item.value} value={item.value}>
+    {item.label}
+  </option>
+))}
 ```
 
-Spec IN이면 `needsDraftAttachment=false`입니다.
-
-## 20.3 Save saga
+### 6.5 도면 목록 읽기: `selectDrawings`
 
 ```js
-const response = yield call(vcSimApi.saveVcResult, {
-  sourceType: state.sourceType,
-  basicInfo: state.basicInfo,
-  rows: state.rows,
-  draft: state.draftPopup,
-});
+export const selectDrawings = (state) => selectNonBimState(state).drawings;
 ```
 
-## 20.4 B/E save
+Search 버튼으로 조회된 Manual Drawing Results rows입니다.
 
-```java
-@PostMapping("/result/save")
-public Map<String, Object> saveResult(@RequestBody VcSimSaveRequest request) {
-    return simFacadeService.saveResult(request);
-}
+반환값 예시:
+
+```json
+[
+  {
+    "id": "M16-ANDATV111-001",
+    "woId": "WO-20260618-001",
+    "eqId": "ANDATV111",
+    "fabCd": "M16",
+    "setModelNm": "PUMP-A",
+    "requestStatus": "DRAFT"
+  }
+]
 ```
 
-응답 예:
-
-```txt
-savedId=VC-SAVE-...
-draftAttached=false
-nextStatus=Saved
-```
-
-## 20.5 저장 성공 후
-
-```txt
-결과 팝업 닫힘
-기안 팝업 닫힘
-savedInfo에 저장 응답 보관
-```
-
----
-
-# 21. 저장 시 경고/오류 표현
-
-## 21.1 검색 validation
-
-EQ ID가 없으면:
-
-```txt
-EQ ID는 필수 입력조건입니다.
-```
-
-## 21.2 계산 validation
-
-예:
-
-```txt
-Select a drawing before calculating.
-CHAMBER1 requires a Model Standard.
-CHAMBER1 requires Min/Max Spec.
-CHAMBER1 has missing required PIPE values.
-```
-
-## 21.3 API 연결 실패
-
-`vcSimApi.js`에서 B/E 연결 실패 시:
-
-```txt
-B/E API에 연결할 수 없습니다. Eclipse/STS에서 B/E가 8090 포트로 실행 중인지 확인해 주세요.
-```
-
-## 21.4 Result popup 업무 안내
-
-| 상황 | 문구 |
-|---|---|
-| Spec Out | 표준 기안 첨부 필요 |
-| N/A row | 산출대상 제외 또는 Spec 미적용 안내 |
-| 모두 IN | 최종결과저장 가능 안내 |
-
----
-
-# 22. Spec Out이면 표준 기안 첨부로 빠지는 경우
-
-## 22.1 Spec Out 판단
+`Bim5DNotApplied.js`는 이 값을 `DrawingResultTable`에 넘깁니다.
 
 ```js
-row.judge === "HIGH_OUT" || row.judge === "LOW_OUT"
+<DrawingResultTable drawings={drawings} />
 ```
 
-## 22.2 기안 첨부 필요 조건
+### 6.6 선택 도면 읽기: `selectSelectedDrawing`
 
 ```js
-hasSpecOut(state.rows) &&
-state.sourceType === "NON_BIM" &&
-(!state.draftPopup.title.trim() || !state.draftPopup.attachmentName.trim())
+export const selectSelectedDrawing = (state) => selectNonBimState(state).selectedDrawing;
 ```
 
-## 22.3 저장 버튼 첫 클릭
+Manual Drawing Results에서 row를 선택하면 reducer가 해당 row를 `selectedDrawing`에 저장합니다.
+
+이 값은 아래 용도로 쓰입니다.
+
+| 사용처 | 이유 |
+| --- | --- |
+| `ChamberWorkspace` | 어떤 도면의 chamber를 편집 중인지 알아야 합니다. |
+| Calculate payload | 계산 API에 장비/도면 context를 보내야 합니다. |
+| Calculate 잠금 판단 | `requestStatus`에 따라 버튼을 숨기거나 막아야 합니다. |
+| Result popup 기본정보 | 결과 팝업 상단에 장비/도면 정보를 표시해야 합니다. |
+
+### 6.7 선택 WO ID 읽기: `selectSelectedWoId`
+
+```js
+export const selectSelectedWoId = (state) => selectNonBimState(state).selectedWoId;
+```
+
+`selectedWoId`는 grid에서 현재 선택된 row를 표시하는 데 씁니다.
+
+`selectedDrawing` 전체 객체도 있는데 왜 `selectedWoId`가 따로 있나요?
+
+| 값 | 역할 |
+| --- | --- |
+| `selectedWoId` | grid에서 어떤 row가 선택됐는지 빠르게 비교합니다. |
+| `selectedDrawing` | 계산 payload, chamber 조회, 상태 판단에 필요한 상세 정보를 담습니다. |
+
+row 선택 표시에는 전체 객체보다 `woId` 하나가 더 단순하고 안정적입니다.
+
+### 6.8 Chamber 목록 읽기: `selectChambers`
+
+```js
+export const selectChambers = (state) => selectNonBimState(state).chambers;
+```
+
+선택한 도면의 chamber tab 목록입니다.
+
+반환값 예시:
+
+```json
+[
+  {
+    "id": "CH-001",
+    "chamberId": "CH-001",
+    "chamberName": "MAIN CHAMBER",
+    "modelStandard": "STD-001",
+    "minSpec": "10",
+    "maxSpec": "20",
+    "pipes": []
+  }
+]
+```
+
+`ChamberWorkspace.js`는 이 배열을 기준으로 tab을 그립니다. B/E가 내려준 `chamberName`은 유지하고, 사용자가 새로 추가한 chamber만 `CHAMBER{n}` 형식으로 이름을 붙입니다.
+
+### 6.9 현재 chamber id 읽기: `selectActiveChamberId`
+
+```js
+export const selectActiveChamberId = (state) => selectNonBimState(state).activeChamberId;
+```
+
+현재 사용자가 보고 있거나 편집 중인 chamber id입니다.
+
+tab을 누르면 `SET_ACTIVE_CHAMBER` action이 실행되고 reducer가 `activeChamberId`를 바꿉니다. 그러면 selector가 새 id를 읽고 화면이 해당 chamber 내용을 보여줍니다.
+
+### 6.10 현재 chamber 객체 읽기: `selectActiveChamber`
+
+```js
+export const selectActiveChamber = (state) => {
+  const current = selectNonBimState(state);
+  return findActiveChamber(current.chambers, current.activeChamberId);
+};
+```
+
+이 함수는 `activeChamberId`에 해당하는 chamber 객체를 찾아 반환합니다.
+
+여기서 중요한 helper가 `findActiveChamber`입니다.
 
 ```txt
-저장 API 호출 X
-draftPopup.visible=true
-표준 기안 첨부 팝업 오픈
+chambers 배열에서 activeChamberId와 같은 id를 찾음
+-> 없으면 첫 번째 chamber를 fallback으로 반환
+-> chamber가 하나도 없으면 null 반환
 ```
 
-saga도 같은 조건이면 return해서 저장 API 호출을 막습니다.
+왜 fallback이 필요할까요?
 
----
+예를 들어 사용자가 현재 active chamber를 삭제하면 `activeChamberId`가 더 이상 유효하지 않을 수 있습니다. 이때 화면이 바로 깨지지 않도록 첫 번째 chamber로 보정합니다.
 
-# 23. 표준 기안 첨부 팝업에서 기안첨부 후 저장
-
-## 23.1 팝업 필드
-
-```txt
-기안 제목
-첨부 파일
-Comment
-```
-
-## 23.2 입력값 저장
+### 6.11 loading 읽기: `selectLoading`
 
 ```js
-dispatch(vcResultActions.setDraftField({ name, value }))
+export const selectLoading = (state) => selectNonBimState(state).loading;
 ```
 
-## 23.3 첨부 파일
-
-```js
-const fileName = event.target.files?.[0]?.name || "";
-dispatch(vcResultActions.setDraftField({ name: "attachmentName", value: fileName }));
-```
-
-중요:
-
-```txt
-현재 미리보기는 파일 본문이 아니라 파일명만 payload에 담습니다.
-운영에서는 attachmentId 또는 multipart 업로드 정책이 필요합니다.
-```
-
-## 23.4 버튼 활성 조건
-
-```js
-Boolean(draftPopup.title.trim() && draftPopup.attachmentName.trim())
-```
-
-## 23.5 저장 payload
+반환값 예시:
 
 ```json
 {
-  "sourceType": "NON_BIM",
-  "basicInfo": {},
-  "rows": [],
-  "draft": {
-    "title": "Spec Out 표준 기안",
-    "attachmentName": "review.pdf",
-    "comment": "Spec Out 사유"
+  "options": false,
+  "eqSuggestions": false,
+  "drawings": false,
+  "chambers": false,
+  "download": false,
+  "calculate": false
+}
+```
+
+화면은 loading 값으로 버튼을 disabled 처리하거나 `Searching...` 같은 상태 문구를 표시합니다.
+
+예시:
+
+```js
+<button disabled={loading.drawings}>
+  {loading.drawings ? "Searching..." : "Search"}
+</button>
+```
+
+### 6.12 error 읽기: `selectError`
+
+```js
+export const selectError = (state) => selectNonBimState(state).error;
+```
+
+saga/API에서 실패가 발생하면 reducer가 error 메시지를 저장합니다. 화면은 selector로 error를 읽어 error box를 보여줍니다.
+
+---
+
+## 7. selector를 실제 코드에서 어떻게 쓰는가
+
+`Bim5DNotApplied.js` 상단을 보면 아래처럼 selector를 import합니다.
+
+```js
+import {
+  selectActiveChamber,
+  selectChambers,
+  selectDrawings,
+  selectEqSuggestions,
+  selectError,
+  selectLoading,
+  selectNonBimOptions,
+  selectSearch,
+  selectSelectedWoId,
+  selectSelectedDrawing,
+} from "../../../store/vc/nonBim/vcSimSelector";
+```
+
+그리고 component 안에서 이렇게 씁니다.
+
+```js
+const search = useSelector(selectSearch);
+const options = useSelector(selectNonBimOptions);
+const eqSuggestions = useSelector(selectEqSuggestions);
+const drawings = useSelector(selectDrawings);
+const selectedWoId = useSelector(selectSelectedWoId);
+const selectedDrawing = useSelector(selectSelectedDrawing);
+const chambers = useSelector(selectChambers);
+const activeChamber = useSelector(selectActiveChamber);
+const loading = useSelector(selectLoading);
+const error = useSelector(selectError);
+```
+
+이 코드는 “화면에서 필요한 state 목록”입니다.
+
+| selector | 화면에서 하는 일 |
+| --- | --- |
+| `selectSearch` | FAB/EQ ID/WO ID input 값 표시 |
+| `selectNonBimOptions` | Pipe Type select option 제공 |
+| `selectEqSuggestions` | EQ ID 자동완성 datalist 표시 |
+| `selectDrawings` | Manual Drawing Results grid 표시 |
+| `selectSelectedWoId` | grid에서 선택 row highlight |
+| `selectSelectedDrawing` | chamber 표시 여부, calculate 잠금, payload context 판단 |
+| `selectChambers` | chamber tab 목록 표시 |
+| `selectActiveChamber` | 현재 tab의 Model Standard/Pipe 입력값 표시 |
+| `selectLoading` | 조회중/계산중 버튼 상태 표시 |
+| `selectError` | 오류 메시지 표시 |
+
+여기서 핵심은 화면이 “Redux state의 구조”를 직접 모른다는 점입니다. 화면은 selector 이름만 보고 필요한 값을 가져옵니다.
+
+---
+
+## 8. Calculator selector는 Non-BIM과 무엇이 다른가
+
+파일 위치:
+
+```txt
+src/store/vc/vcCalculator/vcSimSelector.js
+```
+
+Calculator는 B/E 도면 row를 선택하는 화면이 아닙니다. 사용자가 FAB, MODEL, chamber, pipe 정보를 직접 구성해서 계산합니다.
+
+| selector | 반환값 | 어디에 쓰나 |
+| --- | --- | --- |
+| `selectVcCalculatorEquipment` | `{ fab, model }` | Search Conditions의 FAB/MODEL combo |
+| `selectVcCalculatorOptions` | FAB, MODEL, Model Standard, Pipe Type options | combo option |
+| `selectVcCalculatorChambers` | 수기 chamber 목록 | chamber tab |
+| `selectVcCalculatorActiveChamber` | 현재 선택 chamber | 입력 영역 |
+| `selectVcCalculatorLoading` | loading flags | 버튼 disabled |
+| `selectVcCalculatorError` | 오류 메시지 | error box |
+| `selectCanSelectModelStandard` | Model Standard 선택 가능 여부 | FAB/MODEL이 모두 선택된 뒤 활성화 |
+
+이번 변경에서 Calculator FAB는 combo를 유지합니다. 다만 화면 최초 진입 시 세션 `user.prjtCd`를 읽어서 `equipment.fab` 초기값으로 넣습니다.
+
+흐름은 아래와 같습니다.
+
+```txt
+VcCalculator.js에서 user.prjtCd 읽기
+-> equipment.fab이 비어 있으면 SET_EQUIPMENT_FIELD dispatch
+-> reducer가 equipment.fab 저장
+-> selectVcCalculatorEquipment가 equipment 반환
+-> FAB combo가 M16 선택 상태로 표시
+```
+
+---
+
+## 9. Result selector는 왜 따로 있는가
+
+파일 위치:
+
+```txt
+src/store/vc/vcResult/vcSimSelector.js
+```
+
+계산 결과 팝업은 Non-BIM과 Calculator가 같이 씁니다. 그래서 결과 팝업 state는 `nonBim`이나 `vcCalculator` 안에 넣지 않고 `vcResult`로 분리했습니다.
+
+| selector | 반환값 | 어디에 쓰나 |
+| --- | --- | --- |
+| `selectVcResultVisible` | 팝업 표시 여부 | `VcResultPopup` open/close |
+| `selectVcResultBasicInfo` | 결과 상단 기본정보 | FAB, EQ ID, MODEL 등 표시 |
+| `selectVcResultRows` | 결과 table rows | conductance/judge table 표시 |
+| `selectVcResultLoading` | 저장 API 진행 상태 | Save 버튼 disabled |
+| `selectVcResultError` | 오류 메시지 | 팝업 error 표시 |
+| `selectVcResultSavedInfo` | 저장 성공 후 정보 | 저장 후속 처리 |
+| `selectVcResultDraftPopup` | 기안 첨부 팝업 상태 | Spec Out 저장 시 사용 |
+| `selectVcResultHasSpecOut` | Spec Out 여부 | 기안 첨부 필요 여부 판단 |
+| `selectVcResultHasNaRows` | N/A row 존재 여부 | 계산 제외/스펙 미적용 row 판단 |
+
+Result selector를 분리한 이유는 “계산 결과 팝업은 두 화면이 함께 쓰는 공통 결과 모델”이기 때문입니다.
+
+---
+
+## 10. `NonBim.constant.js` 이해하기
+
+파일 위치:
+
+```txt
+src/components/vc/nonBim/core/NonBim.constant.js
+```
+
+constant 파일은 코드 여러 곳에서 같이 쓰는 고정값을 모아둔 곳입니다.
+
+| 항목 | 설명 |
+| --- | --- |
+| `DEFAULT_SEARCH` | Non-BIM 검색조건 기본값입니다. |
+| `DEFAULT_LOADING` | loading flag 기본값입니다. |
+| `PIPE_TYPE` | Pipe Type 코드입니다. |
+| `PIPE_TYPE_FIELD_POLICY` | Pipe Type별로 어떤 입력 필드를 쓰고 지울지 정합니다. |
+| `PIPE_COLUMNS` | Pipe row table column 정의입니다. |
+| `RESULT_COLUMNS` | 결과 팝업 table column 정의입니다. |
+| `JUDGE` | 결과 판정 코드입니다. 예: `OK`, `HIGH_OUT`, `LOW_OUT`, `NA` |
+
+### `PIPE_TYPE_FIELD_POLICY`가 중요한 이유
+
+Pipe Type에 따라 필요한 입력값이 다릅니다.
+
+예를 들어 ROUND pipe는 diameter가 중요하고, RECT pipe는 width/height가 중요할 수 있습니다. 사용자가 Pipe Type을 바꿨는데 이전 type에서 쓰던 값이 그대로 남아 있으면 잘못된 계산 payload가 만들어질 수 있습니다.
+
+그래서 reducer는 pipe type이 바뀔 때 helper를 통해 필요 없는 필드를 정리합니다.
+
+```txt
+Pipe Type 변경
+-> UPDATE_PIPE_ROW action
+-> reducer
+-> normalizePipeRowByType
+-> 해당 type에서 쓰지 않는 값 제거
+-> 화면 state 갱신
+```
+
+---
+
+## 11. `NonBim.helper.js` 이해하기
+
+파일 위치:
+
+```txt
+src/components/vc/nonBim/core/NonBim.helper.js
+```
+
+helper 파일은 화면과 API 사이에서 데이터 모양을 맞추는 곳입니다.
+
+### 11.1 B/E 응답을 화면 row로 정리
+
+B/E 응답 필드명과 화면 table 필드명이 항상 같지는 않습니다. 그래서 helper에서 화면이 쓰기 좋은 형태로 바꿉니다.
+
+```txt
+B/E response
+-> normalizeManualDrawing
+-> DrawingResultTable row
+```
+
+이렇게 해두면 table 컴포넌트는 B/E 원본 필드명을 몰라도 됩니다.
+
+### 11.2 계산 전 validation
+
+계산 API를 호출하기 전에 필수값을 검사합니다.
+
+```txt
+selectedDrawing이 있는가
+chamber가 있는가
+Model Standard가 있는가
+Pipe row 필수값이 있는가
+```
+
+Non-BIM은 도면 기반 계산이므로 필수값 검사가 비교적 엄격합니다. Calculator는 수기 계산 화면이기 때문에 일부 spec이 없어도 `N/A` 결과를 허용하는 흐름이 있습니다.
+
+### 11.3 계산 Request Json 생성
+
+화면 state를 그대로 API에 보내면 안 됩니다. 화면 state에는 UI 편집용 값도 섞여 있습니다.
+
+그래서 helper에서 B/E가 이해하는 Request Json으로 바꿉니다.
+
+```txt
+search + selectedDrawing + chambers
+-> buildNonBimCalculatePayload
+-> B/E calculate request
+```
+
+Calculator는 별도 helper를 씁니다.
+
+```txt
+equipment + chambers
+-> buildCalculatorCalculatePayload
+-> B/E calculator calculate request
+```
+
+이번 변경으로 Calculator payload의 장비 정보는 아래처럼 B/E DTO에 맞춰 보냅니다.
+
+```json
+{
+  "equipment": {
+    "eqId": "",
+    "fabCd": "M16",
+    "fabNm": "M16",
+    "setModelNm": "MODEL-A",
+    "operLargeCatgVal": "Manual",
+    "operMidCatgVal": "Calculator"
   }
 }
 ```
 
-## 23.6 B/E 응답
+### 11.4 계산 결과 정리
+
+B/E 계산 응답도 바로 팝업에 넣지 않고 helper에서 정리합니다.
 
 ```txt
-draftAttached=true
-nextStatus=Draft Attached
+B/E calculate response
+-> normalizeCalculationResult
+-> vcResult rows
+-> VcResultPopup 표시
 ```
+
+이렇게 하면 Non-BIM과 Calculator가 같은 결과 팝업을 공유할 수 있습니다.
 
 ---
 
-# 24. Foreline Download 흐름
+## 12. Redux 흐름을 한 문장으로 잡기
 
-## 24.1 UI
+Redux 흐름은 아래처럼 보면 됩니다.
 
-```js
-<button onClick={() => onDownload(row.woId)}>
-  Download
-</button>
+```txt
+Component는 사용자 이벤트를 action으로 보낸다.
+Reducer는 action을 받아 state를 바꾼다.
+Saga는 API가 필요한 action을 받아 API를 호출한다.
+Selector는 state에서 화면이 필요한 값만 꺼내준다.
+Helper는 화면 데이터와 API 데이터의 모양을 서로 맞춰준다.
 ```
 
-## 24.2 Saga
+각 역할을 코드 기준으로 다시 보면 아래와 같습니다.
 
-```js
-const drawing = drawings.find((item) => item.woId === woId);
-const blob = yield call(vcSimApi.downloadForelineDrawing, buildForelineDownloadParams(drawing));
-yield call(downloadBlob, blob, buildFileDownloadName(drawing));
-```
-
-## 24.3 B/E
-
-```java
-@GetMapping("/non-bim/foreline-drawing/download")
-public ResponseEntity<byte[]> downloadForeline(...)
-```
-
-현재는 실제 파일 대신 미리보기 text를 만들어 내려줍니다.
+| 역할 | 대표 파일 | 이 화면에서 하는 일 |
+| --- | --- | --- |
+| Component | `Bim5DNotApplied.js` | 버튼 클릭, input 변경, child component 연결 |
+| Action | `action.js` | `FETCH_MANUAL_DRAWINGS_REQUEST` 같은 이벤트 이름 정의 |
+| Reducer | `reducer.js` | `search`, `drawings`, `selectedDrawing`, `chambers` 값 변경 |
+| Saga | `vcSimSaga.js` | 조회/다운로드/계산/저장 API 호출 |
+| Selector | `vcSimSelector.js` | 화면이 필요한 state만 읽어 반환 |
+| Helper | `NonBim.helper.js` | validation, payload 생성, response 정리 |
+| API | `vcSimApi.js` | HTTP 요청 실행 |
 
 ---
 
-# 25. TXT DB 구조
+## 13. Non-BIM과 Calculator 차이
 
-현재 B/E는 실제 Oracle DB가 아니라 TXT 파일을 DB처럼 사용합니다.
-
-```java
-Files.readAllLines(path, StandardCharsets.UTF_8)
-objectMapper.readValue(line, rowType)
-```
-
-즉:
-
-```txt
-TXT 파일 한 줄 = JSON row 한 건
-각 줄을 Java record로 변환
-```
-
-운영 전환 시:
-
-```txt
-TxtTableRepository
-→ MyBatis Mapper / JPA Repository
-→ Oracle table
-```
+| 항목 | Non-BIM | Calculator |
+| --- | --- | --- |
+| FAB | 세션 `user.prjtCd`를 readonly input으로 표시 | combo 유지, 세션 `user.prjtCd`를 최초 선택값으로 설정 |
+| 장비/도면 | Manual Drawing Results에서 선택 | 사용자가 FAB/MODEL을 직접 선택 |
+| Chamber | 선택한 도면의 B/E chamber 조회 후 사용 | 사용자가 직접 chamber 구성 |
+| Calculate validation | 도면/Chamber/Pipe 필수값 중심 | 일부 값이 없어도 N/A 결과 허용 가능 |
+| Payload builder | `buildNonBimCalculatePayload` | `buildCalculatorCalculatePayload` |
+| 결과 팝업 | `vcResult` 공통 사용 | `vcResult` 공통 사용 |
 
 ---
 
-# 26. 초급 개발자용 설명 스크립트
+## 14. 자주 헷갈리는 질문
 
-```txt
-BIM/5D Not Applied Fab 화면은 수기 도면 기반 V/C 계산 화면입니다.
+### Q1. selector는 state를 바꾸나요?
 
-화면이 열리면 옵션 API로 FAB와 Pipe Type을 조회합니다.
-사용자가 EQ ID를 입력하면 EQ 자동완성 API를 호출하고,
-Search를 누르면 eqId/fabCd/woId 조건으로 Manual Drawing Results를 조회합니다.
+아니요. selector는 읽기만 합니다.
 
-그리드에서 row를 선택하면 row.woId와 eqId를 기준으로
-Chamber API와 Equipment Spec Options API를 호출합니다.
-Chamber API는 탭명과 Pipe Rows를 내려주고,
-Spec API는 Model Standard와 Min/Max Spec을 내려줍니다.
+state를 바꾸는 것은 reducer입니다. API를 호출하는 것은 saga입니다. selector는 state에서 필요한 값을 꺼내 화면에 전달할 뿐입니다.
 
-하단 ChamberWorkspace는 Chamber 탭, Model Standard, Min/Max, Pipe Rows를 보여줍니다.
-사용자는 Chamber나 Pipe row를 추가/삭제/수정할 수 있지만,
-B/E에서 온 원본 Chamber는 locked 상태라 삭제할 수 없습니다.
+### Q2. `selectActiveChamber`는 왜 단순히 id만 반환하지 않나요?
 
-Calculate 버튼을 누르면 saga가 현재 Redux state를 읽고 validation을 수행합니다.
-검증이 통과하면 helper가 Non-BIM calculate payload를 만들고,
-POST /api/vc/sim/non-bim/calculate로 B/E에 보냅니다.
+화면은 현재 chamber의 `modelStandard`, `minSpec`, `maxSpec`, `pipes` 같은 전체 정보가 필요합니다. 그래서 `activeChamberId`만 읽는 것이 아니라 실제 chamber 객체를 찾아 반환합니다.
 
-B/E는 Controller에서 요청을 받고 VcSimFacadeService를 거쳐 VcCalculationService에서
-GUID 생성, Equipment header 저장, Component 저장, Conductance 계산, Spec 판정,
-Chamber 결과 저장, SPEC_YN 업데이트 순서로 처리합니다.
+### Q3. row 선택에 왜 `woId`를 쓰나요?
 
-응답 rows는 F/E helper에서 결과 팝업 모델로 normalize되고,
-VcResultPopup이 열립니다.
-모든 결과가 IN이면 최종결과저장 버튼으로 바로 저장됩니다.
-Spec Out이 있으면 표준 기안 첨부 팝업을 먼저 열고,
-기안 제목과 첨부 파일을 입력한 뒤 저장 API를 호출합니다.
-```
+이 화면의 첫 번째 grid에서 사용자가 선택하는 업무 기준이 WO ID이기 때문입니다. React 렌더링용 `id`와 업무 선택 기준인 `woId`를 구분해야 합니다.
+
+### Q4. 왜 Component에서 API를 바로 부르지 않나요?
+
+API 호출을 component에 넣으면 화면 코드가 복잡해지고 loading/error 처리도 흩어집니다. 이 프로젝트는 saga가 API 호출을 맡고, component는 action dispatch만 하도록 나눴습니다.
+
+### Q5. helper와 selector는 둘 다 함수인데 뭐가 다른가요?
+
+selector는 Redux state를 읽는 함수입니다.
+
+helper는 데이터 모양 변경, validation, payload 생성처럼 화면/API 사이의 계산과 변환을 담당하는 함수입니다.
+
+### Q6. `initialNonBimState` fallback은 왜 필요한가요?
+
+초기 렌더링, 테스트, store 연결 전 상황에서 state가 아직 없을 수 있습니다. selector가 기본값을 반환하면 화면이 바로 오류로 죽지 않고 빈 상태로 렌더링됩니다.
 
 ---
 
-# 27. 추가 개선/주의 포인트
+## 15. 수정할 때 어디를 봐야 하나
 
-## 27.1 `woId` vs `constructionNo` 용어 정리
-
-현재 구현은 `woId` 중심입니다. 문서/회의에서 `constructionNo`가 남아 있으면 아래처럼 정리하는 것이 좋습니다.
-
-```txt
-현재 구현 기준: woId
-업무상 공사번호 표현: WO ID
-```
-
-## 27.2 `DRAWING_ID` 쓰지 않기
-
-```txt
-F/E row.id는 React key일 뿐입니다.
-B/E query에는 eqId, woId를 사용합니다.
-DRAWING_ID는 현재 계약의 핵심 키가 아닙니다.
-```
-
-## 27.3 Model Standard 자동 기본 선택 정책 검토
-
-현재 Non-BIM은 옵션 조회 성공 시 Chamber에 modelStandard가 없으면 첫 번째 option을 기본값으로 넣습니다.
-
-```js
-const nextModelStandard = chamber.modelStandard || options[0]?.value || "";
-```
-
-업무적으로 자동 선택이 위험하면 사용자가 직접 선택하게 비워두는 방식이 더 안전합니다.
-
-## 27.4 저장 후 Manual Drawing Results 상태 갱신
-
-현재 저장 성공 후 popup은 닫히지만, 상단 그리드 `requestStatus`를 즉시 갱신하는 흐름은 명확하지 않습니다.
-
-개선안:
-
-```txt
-save 성공 후 nextStatus가 Saved/Draft Attached면
-1. selectedDrawing.requestStatus 갱신
-또는
-2. manual-drawings 재조회
-```
-
-## 27.5 표준 기안 첨부 실제 파일 업로드
-
-현재는 파일 본문이 아니라 파일명만 저장합니다.
-
-운영 개선안:
-
-```txt
-파일 업로드 API → attachmentId 받기 → result/save에 attachmentId 전달
-또는 result/save를 multipart/form-data로 변경
-```
-
-## 27.6 Helper 분리
-
-`NonBim.helper.js`는 현재 많은 일을 합니다.
-
-```txt
-정규화
-validation
-payload build
-다운로드
-결과 normalize
-```
-
-운영 규모가 커지면 분리 추천:
-
-```txt
-NonBim.mapper.js
-NonBim.validation.js
-NonBim.payload.js
-download.helper.js
-result.mapper.js
-```
-
-## 27.7 CSS className 충돌
-
-`center` 같은 일반 className은 회사 공통 CSS와 충돌할 수 있습니다.
-
-개선안:
-
-```txt
-center → vc-center
-table-wrap → vc-table-wrap
-```
+| 하고 싶은 일 | 먼저 볼 파일 |
+| --- | --- |
+| Search Conditions 필드 추가/변경 | `Bim5DNotApplied.js`, `action.js`, `reducer.js`, `vcSimSelector.js` |
+| FAB 세션값 처리 변경 | `Bim5DNotApplied.js`, `VcCalculator.js` |
+| Manual Drawing grid 컬럼 변경 | `ui/DrawingResultTable.js`, `NonBim.helper.js`, `README_API.md` |
+| row 선택 후 chamber 조회 흐름 변경 | `reducer.js`, `vcSimSaga.js`, `vcSimSelector.js` |
+| Chamber tab 동작 변경 | `ui/ChamberWorkspace.js`, `reducer.js`, `NonBim.helper.js` |
+| Pipe Type별 입력 필드 변경 | `NonBim.constant.js`, `NonBim.helper.js`, `reducer.js` |
+| Calculate payload 변경 | `NonBim.helper.js`, `vcSimSaga.js`, `README_API.md` |
+| 결과 팝업 표시 변경 | `VcResultPopup.js`, `vcResult/reducer.js`, `vcResult/vcSimSelector.js` |
+| 저장/기안 첨부 흐름 변경 | `vcResult/reducer.js`, `vcSimSaga.js`, `VcDraftAttachPopup.js` |
 
 ---
 
-# 28. 최종 요약
+## 16. 초급 개발자용 읽는 순서
 
-```txt
-화면 진입
-→ 옵션 조회
+처음부터 모든 파일을 동시에 보면 헷갈립니다. 아래 순서로 보면 흐름이 잡힙니다.
 
-EQ 입력
-→ 자동완성 조회
+1. `Bim5DNotApplied.js`
+   화면이 어떤 selector를 읽고 어떤 action을 dispatch하는지 봅니다.
 
-Search
-→ 수기 도면 목록 조회
+2. `src/store/vc/nonBim/action.js`
+   화면에서 보낸 action 이름과 payload를 확인합니다.
 
-Row radio 선택
-→ Chamber 조회
-→ Spec option 조회
+3. `src/store/vc/nonBim/reducer.js`
+   action을 받으면 state가 어떻게 바뀌는지 확인합니다.
 
-Chamber 탭 선택
-→ Redux activeChamberId만 변경
+4. `src/store/vc/nonBim/vcSimSelector.js`
+   바뀐 state를 화면이 어떤 selector로 다시 읽는지 확인합니다.
 
-Model Standard 변경
-→ reducer에서 Min/Max 자동 세팅
+5. `src/saga/vc/nonBim/vcSimSaga.js`
+   API가 필요한 action은 어떤 endpoint로 이어지는지 확인합니다.
 
-Add/Remove
-→ unlocked Chamber만 추가/삭제 가능
+6. `src/components/vc/nonBim/core/NonBim.helper.js`
+   API 요청/응답 모양이 화면용 데이터로 어떻게 바뀌는지 확인합니다.
 
-Calculate
-→ validation
-→ calculate payload 생성
-→ B/E 계산
-→ 결과 popup open
-
-Spec IN 저장
-→ result/save 즉시 호출
-
-Spec Out 저장
-→ 표준 기안 첨부 popup
-→ 기안 정보 입력
-→ result/save 호출
-```
-
-이 화면의 본질:
-
-```txt
-도면 row를 선택해서 Chamber/Pipe 입력값을 만들고,
-그 입력값을 B/E 계산 서비스에 보내 Conductance와 Spec 판정을 받아,
-결과를 저장하거나 Spec Out이면 기안 첨부로 넘기는 화면입니다.
-```
+이 순서로 보면 “버튼 클릭”, “state 변경”, “API 호출”, “화면 재표시”가 한 흐름으로 이어집니다.

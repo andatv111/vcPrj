@@ -217,7 +217,7 @@ function* vcCalculatorCalculateFlow() {
     if (!validation.valid) throw new Error(validation.message);
 
     // API: POST /api/vc/sim/calculator/calculate
-    // 보냄: { sourceType: "CALCULATOR", equipment: { fab, model }, chambers[].pipeList }
+    // 보냄: { sourceType: "CALCULATOR", equipment: { fabCd, setModelNm }, chambers[].pipeList }
     // 받음: Non-BIM과 같은 결과 row 구조. normalizeCalculationResult가 공통 팝업 모델로 맞춥니다.
     const payload = buildCalculatorCalculatePayload(state);
     const response = yield call(vcSimApi.calculateVcCalculator, payload);

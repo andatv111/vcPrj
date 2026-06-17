@@ -455,10 +455,11 @@ export const buildCalculatorCalculatePayload = (state) => {
     sourceType: "CALCULATOR",
     equipment: {
       eqId: "",
-      fab: equipment.fab,
-      model: equipment.model,
-      processLarge: "Manual",
-      processMiddle: "Calculator",
+      fabCd: equipment.fab,
+      fabNm: equipment.fab,
+      setModelNm: equipment.model,
+      operLargeCatgVal: "Manual",
+      operMidCatgVal: "Calculator",
     },
     chambers: toArray(state.chambers).map((chamber, index) => ({
       seq: index + 1,

@@ -1,7 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
-import "../../../styles.css";
+import "../../../vc.css";
 
 import vcCalculatorActions from "../../../store/vc/vcCalculator/action";
 import {
@@ -26,11 +26,21 @@ const VcCalculator = () => {
   const activeChamber = useSelector(selectVcCalculatorActiveChamber);
   const loading = useSelector(selectVcCalculatorLoading);
   const error = useSelector(selectVcCalculatorError);
+  const user = useSelector((state) => state.userInfo?.user);
+  const sessionPrjtCd = user?.prjtCd || "M16";
+  const sessionFabAppliedRef = useRef(false);
 
   useEffect(() => {
     // Calculator options are B/E-owned so FAB/MODEL/Spec lists stay aligned with Java DTOs.
     dispatch(vcCalculatorActions.initRequest());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!sessionFabAppliedRef.current && sessionPrjtCd && !equipment.fab) {
+      sessionFabAppliedRef.current = true;
+      dispatch(vcCalculatorActions.setEquipmentField({ name: "fab", value: sessionPrjtCd }));
+    }
+  }, [dispatch, equipment.fab, sessionPrjtCd]);
 
   const handleChamberChange = (name, value) => {
     if (!activeChamber) return;
@@ -95,6 +105,7 @@ const CalculatorSearchPanel = ({ equipment, options, onFieldChange }) => (
         placeholder="All"
         value={equipment.fab}
         options={options.fabs}
+        readOnly={false}
         onChange={(value) => onFieldChange("fab", value)}
       />
       <SelectField
