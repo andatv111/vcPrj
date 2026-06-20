@@ -1,7 +1,7 @@
 /**
  * BIM/5D 미적용 Fab 화면 state reducer입니다.
  * 이 화면은 계산용 화면이므로 저장/기안 상태를 상단 그리드에 영구 반영하지 않습니다.
- * 선택 row의 업무 PK는 selectedConstructionNo이며 DB 도면 ID를 상태에 별도로 보관하지 않습니다.
+ * 선택 row의 업무 PK는 selectedWoId이며 DB 도면 ID를 상태에 별도로 보관하지 않습니다.
  * Chamber 탭은 chamberCount/chambers 기준으로 구성합니다.
  */
 
@@ -38,8 +38,8 @@ export const initialNonBimState = {
   eqSuggestions: [],
   drawings: [],
 
-  // 첫 번째 그리드 선택 상태는 공사번호 기준으로 관리합니다.
-  selectedConstructionNo: "",
+  // 첫 번째 그리드 선택 상태는 WO ID 기준으로 관리합니다.
+  selectedWoId: "",
   selectedDrawing: null,
 
   chambers: [],
@@ -140,7 +140,7 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
       return {
         ...setLoading(state, "drawings", true),
         drawings: [],
-        selectedConstructionNo: "",
+        selectedWoId: "",
         selectedDrawing: null,
         chambers: [],
         activeChamberId: "",
@@ -162,11 +162,11 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
       };
     case NON_BIM_ACTION_TYPES.SELECT_DRAWING: {
       // row 선택 후 Chamber 탭은 별도 B/E 조회 결과로 구성합니다.
-      const drawing = state.drawings.find((item) => item.constructionNo === action.payload.constructionNo) || null;
+      const drawing = state.drawings.find((item) => item.woId === action.payload.woId) || null;
 
       return {
         ...setLoading(state, "chambers", Boolean(drawing)),
-        selectedConstructionNo: drawing?.constructionNo || "",
+        selectedWoId: drawing?.woId || "",
         selectedDrawing: drawing,
         chambers: [],
         activeChamberId: "",
@@ -175,8 +175,8 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
     }
 
     case NON_BIM_ACTION_TYPES.FETCH_DRAWING_CHAMBERS_SUCCESS: {
-      // 늦게 도착한 이전 row 응답은 현재 선택된 공사번호와 다르면 무시합니다.
-      if (state.selectedConstructionNo !== action.payload.constructionNo) return state;
+      // 늦게 도착한 이전 row 응답은 현재 선택된 WO ID와 다르면 무시합니다.
+      if (state.selectedWoId !== action.payload.woId) return state;
       const chambers = action.payload.chambers || [];
 
       return {
@@ -196,8 +196,8 @@ const nonBimReducer = (state = initialNonBimState, action = {}) => {
       };
 
     case NON_BIM_ACTION_TYPES.FETCH_MODEL_STANDARD_OPTIONS_SUCCESS: {
-      // Model Standard 옵션은 선택된 공사번호와 일치할 때만 반영해 늦게 도착한 응답이 화면을 덮지 않게 합니다.
-      if (state.selectedConstructionNo !== action.payload.constructionNo) return state;
+      // Model Standard 옵션은 선택된 WO ID와 일치할 때만 반영해 늦게 도착한 응답이 화면을 덮지 않게 합니다.
+      if (state.selectedWoId !== action.payload.woId) return state;
 
       const options = action.payload.options || [];
       const selectedDrawing = state.selectedDrawing

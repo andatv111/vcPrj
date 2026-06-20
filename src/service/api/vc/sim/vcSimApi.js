@@ -59,6 +59,21 @@ const unwrapJsonResponse = (payload) => {
   return payload;
 };
 
+const toErrorMessage = (payload, fallback) => {
+  if (!payload) return fallback;
+  if (typeof payload === "string") return payload || fallback;
+  if (typeof payload !== "object") return String(payload);
+  if (payload.message) return String(payload.message);
+  if (payload.errorMessage) return String(payload.errorMessage);
+  if (payload.error) return String(payload.error);
+  if (payload.details) return typeof payload.details === "string" ? payload.details : JSON.stringify(payload.details);
+  try {
+    return JSON.stringify(payload);
+  } catch {
+    return fallback;
+  }
+};
+
 const requestJson = async (url, { method = "GET", params, body, headers } = {}) => {
   // JSON API 공통 요청 함수입니다. 실제 프로젝트의 인증 header, CSRF token, baseUrl은 여기에서 주입하면 됩니다.
   let response;
@@ -82,8 +97,7 @@ const requestJson = async (url, { method = "GET", params, body, headers } = {}) 
   const payload = contentType.includes("application/json") ? await response.json() : await response.text();
 
   if (!response.ok) {
-    const errorMessage =
-      payload?.message || payload?.errorMessage || payload || `B/E API request failed. (${response.status})`;
+    const errorMessage = toErrorMessage(payload, `B/E API request failed. (${response.status})`);
     const error = new Error(errorMessage);
     error.status = response.status;
     error.payload = payload;
@@ -130,30 +144,28 @@ export const vcSimApi = {
   },
 
   searchManualDrawings(params = {}) {
-    // Manual Drawing Results 조회: eqId/constructionNo 조건과 향후 paging 조건을 query로 전달합니다.
+    // Manual Drawing Results 조회: eqId/woId 조건과 향후 paging 조건을 query로 전달합니다.
     return requestJson(VC_SIM_ENDPOINTS.searchManualDrawings, {
       params,
     });
   },
 
-  getDrawingChambers({ eqId, constructionNo }) {
+  getDrawingChambers({ eqId, woId }) {
     // Manual Drawing Results radio 선택 시 실제 설비 Chamber명과 상세를 다시 조회합니다.
     return requestJson(VC_SIM_ENDPOINTS.drawingChambers, {
-      params: { eqId, constructionNo },
+      params: { eqId, woId },
     });
   },
 
-  downloadForelineDrawing({ eqId, constructionNo, drawingKey, fileId, fab, ...extraParams }) {
-    // Foreline 다운로드: eqId+constructionNo는 필수 업무키이고 drawingKey/fileId/fab/추가키는 보조 조회값입니다.
+  downloadForelineDrawing({ eqId, woId, file, fileSeq, fabCd, ...extraParams }) {
     return requestBlob(VC_SIM_ENDPOINTS.downloadForelineDrawing, {
-      params: { eqId, constructionNo, drawingKey, fileId, fab, ...extraParams },
+      params: { eqId, woId, file, fileSeq, fabCd, ...extraParams },
     });
   },
 
-  getEquipmentSpecOptions({ eqId, fab, model, drawingKey, constructionNo, ...extraParams }) {
-    // 장비 기준 Model Standard/Spec 후보 조회입니다. 키가 늘면 helper.buildEquipmentContextParams에서 함께 확장합니다.
+  getEquipmentSpecOptions({ eqId, fabCd, setModelNm, file, fileSeq, woId, ...extraParams }) {
     return requestJson(VC_SIM_ENDPOINTS.equipmentSpecOptions, {
-      params: { eqId, fab, model, drawingKey, constructionNo, ...extraParams },
+      params: { eqId, fabCd, setModelNm, file, fileSeq, woId, ...extraParams },
     });
   },
 

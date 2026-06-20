@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 // 화면 공통 스타일은 실제 업무 화면에서 소유합니다.
 // 퍼블리셔 산출물이 들어오면 ui 컴포넌트별 CSS로 분리해 이 import를 교체합니다.
-import "../../../styles.css";
+import "../../../vc.css";
 
 import nonBimActions from "../../../store/vc/nonBim/action";
 import {
@@ -15,7 +15,7 @@ import {
   selectLoading,
   selectNonBimOptions,
   selectSearch,
-  selectSelectedConstructionNo,
+  selectSelectedWoId,
   selectSelectedDrawing,
 } from "../../../store/vc/nonBim/vcSimSelector";
 import { MAX_CHAMBER_COUNT } from "./core/NonBim.constant";
@@ -35,12 +35,14 @@ const Bim5DNotApplied = () => {
   const options = useSelector(selectNonBimOptions);
   const eqSuggestions = useSelector(selectEqSuggestions);
   const drawings = useSelector(selectDrawings);
-  const selectedConstructionNo = useSelector(selectSelectedConstructionNo);
+  const selectedWoId = useSelector(selectSelectedWoId);
   const selectedDrawing = useSelector(selectSelectedDrawing);
   const chambers = useSelector(selectChambers);
   const activeChamber = useSelector(selectActiveChamber);
   const loading = useSelector(selectLoading);
   const error = useSelector(selectError);
+  const user = useSelector((state) => state.userInfo?.user);
+  const sessionPrjtCd = user?.prjtCd || "M16";
   const [searchValidationMessage, setSearchValidationMessage] = useState("");
 
   const canEditPipe = Boolean(selectedDrawing && activeChamber);
@@ -56,6 +58,12 @@ const Bim5DNotApplied = () => {
     // EQ ID 입력값이 바뀔 때마다 자동완성 조회를 요청합니다. saga에서 짧은 지연 후 마지막 입력만 처리합니다.
     dispatch(nonBimActions.fetchEqSuggestionsRequest(search.eqId));
   }, [dispatch, search.eqId]);
+
+  useEffect(() => {
+    if (search.fabCd !== sessionPrjtCd) {
+      dispatch(nonBimActions.setSearchField({ name: "fabCd", value: sessionPrjtCd }));
+    }
+  }, [dispatch, search.fabCd, sessionPrjtCd]);
 
   const handleSearchChange = (name) => (event) => {
     // 검색조건은 Redux에 즉시 반영하며 EQ ID가 입력되면 기존 필수값 오류를 해제합니다.
@@ -90,11 +98,10 @@ const Bim5DNotApplied = () => {
   };
 
   return (
-    <main className="page embedded-page">
+    <main className="page embedded-page vc-pub-screen vcsnof-m001">
       {/* Reset은 검색조건과 자동완성만 초기화하며 이미 조회된 도면 목록은 유지합니다. */}
       <NonBimSearchPanel
         search={search}
-        fabOptions={options.fabs}
         eqSuggestions={eqSuggestions}
         error={error}
         validationMessage={searchValidationMessage}
@@ -108,9 +115,9 @@ const Bim5DNotApplied = () => {
       <DrawingResultsPanel
         drawings={drawings}
         loading={loading}
-        selectedConstructionNo={selectedConstructionNo}
-        onSelectDrawing={(constructionNo) => dispatch(nonBimActions.selectDrawing(constructionNo))}
-        onDownload={(constructionNo) => dispatch(nonBimActions.downloadForelineRequest(constructionNo))}
+        selectedWoId={selectedWoId}
+        onSelectDrawing={(woId) => dispatch(nonBimActions.selectDrawing(woId))}
+        onDownload={(woId) => dispatch(nonBimActions.downloadForelineRequest(woId))}
       />
 
       {/*
@@ -153,7 +160,6 @@ const Bim5DNotApplied = () => {
 /** 검색조건 입력과 조회 실행을 담당하는 표시 컴포넌트입니다. 실제 상태 변경은 상위 callback으로 전달합니다. */
 const NonBimSearchPanel = ({
   search,
-  fabOptions,
   eqSuggestions,
   error,
   validationMessage,
@@ -162,19 +168,12 @@ const NonBimSearchPanel = ({
   onResetSearch,
   onSearch,
 }) => (
-  <section className="panel">
+  <section className="panel vc-pub-section searchStyle">
     <div className="section-title">Search Conditions</div>
-    <div className="search-row">
+    <div className="search-row vc-pub-search-row">
       <label className="field">
         <span>FAB</span>
-        <select value={search.fab} onChange={onSearchChange("fab")}>
-          <option value="">전체</option>
-          {fabOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <input value={search.fabCd} readOnly />
       </label>
 
       <label className="field">
@@ -195,18 +194,18 @@ const NonBimSearchPanel = ({
       </label>
 
       <label className="field">
-        <span>Construction No.</span>
+        <span>WO ID</span>
         <input
-          placeholder="Construction No."
-          value={search.constructionNo}
-          onChange={onSearchChange("constructionNo")}
+          placeholder="WO ID"
+          value={search.woId}
+          onChange={onSearchChange("woId")}
         />
       </label>
 
       <button
         type="button"
         className="secondary-button"
-        disabled={loading.drawings || (!search.fab && !search.eqId && !search.constructionNo)}
+        disabled={loading.drawings || (!search.fabCd && !search.eqId && !search.woId)}
         onClick={onResetSearch}
       >
         Reset
@@ -222,8 +221,8 @@ const NonBimSearchPanel = ({
 );
 
 /** 조회된 수기 도면 목록과 현재 선택 상태를 테이블 컴포넌트에 전달합니다. */
-const DrawingResultsPanel = ({ drawings, loading, selectedConstructionNo, onSelectDrawing, onDownload }) => (
-  <section className="panel">
+const DrawingResultsPanel = ({ drawings, loading, selectedWoId, onSelectDrawing, onDownload }) => (
+  <section className="panel vc-pub-section vcsnofM001Style">
     <div className="section-header">
       <div className="section-title">Manual Drawing Results</div>
       {loading.drawings ? <span className="muted">Searching...</span> : null}
@@ -231,7 +230,7 @@ const DrawingResultsPanel = ({ drawings, loading, selectedConstructionNo, onSele
     <DrawingResultTable
       drawings={drawings}
       loading={loading}
-      selectedConstructionNo={selectedConstructionNo}
+      selectedWoId={selectedWoId}
       onSelectDrawing={onSelectDrawing}
       onDownload={onDownload}
     />

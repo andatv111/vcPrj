@@ -28,9 +28,9 @@ public record VcRequestEquipment(
         String workStatCd,
         String procYn,
         String docUrl,
-        String regEmpno,
         LocalDateTime regTm,
-        String chgEmpno,
-        LocalDateTime chgTm
+        String regEmpno,
+        LocalDateTime chgDtNm,
+        String chgChgrEmpno
 ) {
 }

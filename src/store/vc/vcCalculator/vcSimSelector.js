@@ -2,39 +2,37 @@ import { findActiveChamber } from "../../../components/vc/nonBim/core/NonBim.hel
 import { initialVcCalculatorState } from "./reducer";
 
 /**
- * 회사 코드 전환 메모
- *
- * Calculator selector도 회사 표준 selector 규칙으로 교체 가능합니다.
- * 화면 컴포넌트가 root reducer 경로를 직접 참조하지 않게 유지하는 것이 목적입니다.
+ * V/C Calculator 화면 selector입니다.
+ * 화면 컴포넌트는 reducer 구조를 직접 알지 않고, 이 파일의 selector를 통해 필요한 상태만 읽습니다.
  */
 
-// 컴포넌트가 root state 구조를 직접 알지 않도록 계산기 state 접근을 selector에 모읍니다.
+// Calculator slice의 기본 진입점입니다. store 연결 전 렌더링에서도 화면이 깨지지 않도록 초기 상태를 fallback으로 둡니다.
 export const selectVcCalculatorState = (state) => state?.vc?.vcCalculator || initialVcCalculatorState;
 
-// 상단 장비 기본정보입니다. Fab/Model/Model Standard/Spec이 계산 payload의 equipment로 내려갑니다.
+// 상단 Search Conditions의 장비 선택값입니다. 계산 요청의 equipment 영역으로 변환됩니다.
 export const selectVcCalculatorEquipment = (state) => selectVcCalculatorState(state).equipment;
 
-// Calculator 초기 select box 선택지입니다. getCalculatorOptions API 응답으로 채워집니다.
+// FAB, MODEL, Model Standard, Pipe Type option 목록입니다.
 export const selectVcCalculatorOptions = (state) => selectVcCalculatorState(state).options;
 
-// 도면 없이 수동으로 구성한 Chamber 탭 목록입니다.
+// Calculator에서 사용자가 직접 구성하는 chamber tab 목록입니다.
 export const selectVcCalculatorChambers = (state) => selectVcCalculatorState(state).chambers;
 
 export const selectVcCalculatorActiveChamber = (state) => {
   const current = selectVcCalculatorState(state);
 
-  // activeChamberId가 비어 있거나 삭제된 경우에도 첫 Chamber를 fallback으로 반환합니다.
+  // 선택 중인 chamber가 삭제되었거나 비어 있으면 첫 chamber로 보정해 편집 화면을 유지합니다.
   return findActiveChamber(current.chambers, current.activeChamberId);
 };
 
 export const selectVcCalculatorLoading = (state) => selectVcCalculatorState(state).loading;
 
-// 초기 옵션 조회 또는 계산 실패 메시지를 화면 error 영역에 표시합니다.
+// 옵션 조회 또는 계산 실패 메시지입니다.
 export const selectVcCalculatorError = (state) => selectVcCalculatorState(state).error;
 
 export const selectCanSelectModelStandard = (state) => {
   const equipment = selectVcCalculatorEquipment(state);
 
-  // Fab와 Model을 모두 선택한 뒤에만 Model Standard 선택을 허용합니다.
+  // Model Standard는 FAB와 MODEL이 모두 선택된 뒤에만 선택할 수 있습니다.
   return Boolean(equipment.fab && equipment.model);
 };

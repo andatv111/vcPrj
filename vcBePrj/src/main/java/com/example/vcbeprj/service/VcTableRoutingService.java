@@ -10,13 +10,13 @@ public class VcTableRoutingService {
 
     public VcTableSet tableSet(String fabId) {
         VcTableSet tableSet = switch (fabId) {
-            case "M16" -> new VcTableSet("M16_VC_REQ_EQUIPMENT", "M16_VC_REQ_CHAMBER", "M16_VC_REQ_OBJECT");
-            case "M15" -> new VcTableSet("M15_VC_REQ_EQUIPMENT", "M15_VC_REQ_CHAMBER", "M15_VC_REQ_OBJECT");
-            case "M14" -> new VcTableSet("M14_VC_REQ_EQUIPMENT", "M14_VC_REQ_CHAMBER", "M14_VC_REQ_OBJECT");
+            case "M16" -> new VcTableSet("M16_VC_REQ_EQUIPMENT", "M16_VC_REQ_CHAMBER", "M16_VC_REQ_COMPONENT");
+            case "M15" -> new VcTableSet("M15_VC_REQ_EQUIPMENT", "M15_VC_REQ_CHAMBER", "M15_VC_REQ_COMPONENT");
+            case "M14" -> new VcTableSet("M14_VC_REQ_EQUIPMENT", "M14_VC_REQ_CHAMBER", "M14_VC_REQ_COMPONENT");
             default -> throw new IllegalArgumentException("Unsupported FAB_ID: " + fabId);
         };
-        log.debug("[TABLE_ROUTING] fabId={} equipmentTable={} chamberTable={} objectTable={}",
-                fabId, tableSet.equipmentTable(), tableSet.chamberTable(), tableSet.objectTable());
+        log.debug("[TABLE_ROUTING] fabId={} equipmentTable={} chamberTable={} componentTable={}",
+                fabId, tableSet.equipmentTable(), tableSet.chamberTable(), tableSet.componentTable());
         return tableSet;
     }
 }

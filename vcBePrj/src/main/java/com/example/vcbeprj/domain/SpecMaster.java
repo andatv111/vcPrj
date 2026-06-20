@@ -11,10 +11,18 @@ public record SpecMaster(
         String operMidCatgVal,
         String chambModelNm,
         String modelSpecUseYn,
+        String srcGbnCd,
+        String detSearYn,
+        String upperCd,
         String mgmtTgtYn,
         BigDecimal specMinVal,
         BigDecimal specMaxVal,
         String chgrEmpno,
-        String chgrNm
+        String chgrNm,
+        String specDesc,
+        String regTm,
+        String regEmpno,
+        String chgDtNm,
+        String chgChgrEmpno
 ) {
 }

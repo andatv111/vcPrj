@@ -16,10 +16,9 @@ public record VcRequestChamber(
         JudgeResult judgeRsltVal,
         String specId,
         String eqpConnPointVal,
-        BigDecimal specMinValSnap,
-        BigDecimal specMaxValSnap,
-        String mgmtTgtYnSnap,
+        LocalDateTime regTm,
         String regEmpno,
-        LocalDateTime regTm
+        LocalDateTime chgDtNm,
+        String chgChgrEmpno
 ) {
 }

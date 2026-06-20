@@ -10,31 +10,92 @@ import {
 } from "../../../components/vc/nonBim/core/NonBim.helper";
 import { VC_CALCULATOR_ACTION_TYPES } from "./action";
 
-const createCalculatorChamber = (chambers = [], equipment = {}, modelStandardOptions = []) => {
-  // Calculator는 도면 원본이 없으므로 Non-BIM helper의 사용자 추가 Chamber 생성 규칙을 재사용합니다.
+const getSelectedSpec = (modelStandards, value) =>
+  modelStandards.find((item) => item.value === value || item.label === value) || null;
+
+// Calculator option lists are filtered by the selected FAB and equipment model only.
+// The selected model standard itself remains chamber-local after the first default sync.
+const getApplicableSpecs = (modelStandards = [], equipment = {}) =>
+  modelStandards.filter(
+    (item) =>
+      (!item.fab || item.fab === equipment.fab) &&
+      (!item.model || item.model === equipment.model)
+  );
+
+const createCalculatorChamber = (chambers = [], equipment = {}, specOptions = []) => {
   const chamber = createUserChamber(chambers, {
     fab: equipment.fab,
     model: equipment.model,
     processLarge: "Manual",
     processMiddle: "Calculator",
-    specOptions: modelStandardOptions,
+    specOptions,
   });
 
   return {
     ...chamber,
     id: createId("CALC_CHAMBER"),
     locked: false,
-    specOptions: modelStandardOptions,
-    modelStandard: equipment.modelStandard || chamber.modelStandard,
-    minSpec: equipment.minSpec || chamber.minSpec,
-    maxSpec: equipment.maxSpec || chamber.maxSpec,
-    calculationTarget: Boolean((equipment.modelStandard || chamber.modelStandard) && (equipment.minSpec || equipment.maxSpec || chamber.minSpec || chamber.maxSpec)),
+    specOptions,
+    modelStandard: "",
+    minSpec: "",
+    maxSpec: "",
+    isSpecSkipped: true,
+    // Calculator allows a target chamber without Model Standard; conductance still calculates, judge becomes NA.
+    calculationTarget: true,
+  };
+};
+
+// When FAB/model changes, refresh each chamber's option list without forcing one tab's
+// selected Model Standard into every other chamber.
+const syncChamberSpecOptions = (chamber, specOptions) => {
+  const spec = getSelectedSpec(specOptions, chamber.modelStandard);
+
+  if (!spec) {
+    return {
+      ...chamber,
+      specOptions,
+      modelStandard: "",
+      minSpec: "",
+      maxSpec: "",
+      isSpecSkipped: true,
+      calculationTarget: chamber.calculationTarget !== false,
+    };
+  }
+
+  return {
+    ...chamber,
+    specOptions,
+    modelStandard: spec.value || spec.label || chamber.modelStandard,
+    minSpec: spec.minSpec || "",
+    maxSpec: spec.maxSpec || "",
+    isSpecSkipped: false,
+    calculationTarget: chamber.calculationTarget !== false,
+  };
+};
+
+const applyCalculatorSpec = (chamber, value) => {
+  if (!value) {
+    return {
+      ...chamber,
+      modelStandard: "",
+      minSpec: "",
+      maxSpec: "",
+      isSpecSkipped: true,
+      // Keep the checkbox state. Calculator intentionally supports specless conductance with NA judge.
+      calculationTarget: chamber.calculationTarget !== false,
+    };
+  }
+
+  const next = applySpecToChamber(chamber, value);
+  return {
+    ...next,
+    calculationTarget: true,
+    isSpecSkipped: !next.minSpec && !next.maxSpec,
   };
 };
 
 const firstChamber = createCalculatorChamber([], {}, []);
 
-// 단독 계산기 화면의 초기 state입니다. 최소 1개 Chamber를 항상 유지해 바로 배관 입력이 가능합니다.
 export const initialVcCalculatorState = {
   equipment: {
     fab: "",
@@ -59,28 +120,15 @@ export const initialVcCalculatorState = {
 };
 
 const updateChamber = (state, chamberId, updater) => ({
-  // Redux 불변성을 지키기 위해 대상 Chamber만 새 객체로 교체합니다.
   ...state,
   chambers: state.chambers.map((chamber) =>
     chamber.id === chamberId ? updater(chamber) : chamber
   ),
 });
 
-const getSelectedSpec = (modelStandards, value) =>
-  modelStandards.find((item) => item.value === value || item.label === value) || null;
-
-// Calculator 공통 옵션 중 현재 FAB/Model 조합에 해당하는 기준만 Chamber에 노출합니다.
-const getApplicableSpecs = (modelStandards, equipment) =>
-  modelStandards.filter(
-    (item) =>
-      (!item.fab || item.fab === equipment.fab) &&
-      (!item.model || item.model === equipment.model)
-  );
-
 const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
   switch (action.type) {
     case VC_CALCULATOR_ACTION_TYPES.INIT_REQUEST:
-      // 화면 최초 진입 시 Fab/Model/Model Standard 선택지를 조회하는 동안 init loading을 켭니다.
       return {
         ...state,
         loading: {
@@ -90,7 +138,6 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       };
 
     case VC_CALCULATOR_ACTION_TYPES.INIT_SUCCESS:
-      // saga가 내려준 선택지 목록을 그대로 options에 저장해 상단 select box와 연결합니다.
       return {
         ...state,
         loading: {
@@ -101,7 +148,6 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       };
 
     case VC_CALCULATOR_ACTION_TYPES.INIT_FAILURE:
-      // 초기 선택지 조회 실패 시 기존 입력값은 유지하고 error만 표시합니다.
       return {
         ...state,
         loading: {
@@ -112,48 +158,46 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       };
 
     case VC_CALCULATOR_ACTION_TYPES.SET_EQUIPMENT_FIELD: {
-      // Fab/Model 중 하나라도 비어 있으면 Model Standard와 Spec을 초기화해 잘못된 조합을 막습니다.
-      const equipment = {
+      // FAB/model reset the equipment-level default and then only seed chambers that had no choice yet.
+      const baseEquipment = {
         ...state.equipment,
         [action.payload.name]: action.payload.value,
         modelStandard: "",
         minSpec: "",
         maxSpec: "",
       };
-      const applicableSpecs =
-        equipment.fab && equipment.model
-          ? getApplicableSpecs(state.options.modelStandards, equipment)
+      const specOptions =
+        baseEquipment.fab && baseEquipment.model
+          ? getApplicableSpecs(state.options.modelStandards, baseEquipment)
           : [];
-      const defaultSpec = applicableSpecs[0] || null;
-
-      if (defaultSpec) {
-        equipment.modelStandard = defaultSpec.value;
-        equipment.minSpec = defaultSpec.minSpec;
-        equipment.maxSpec = defaultSpec.maxSpec;
-      }
+      const defaultSpec = specOptions[0] || null;
+      const equipment = defaultSpec
+        ? {
+            ...baseEquipment,
+            modelStandard: defaultSpec.value || defaultSpec.label || "",
+            minSpec: defaultSpec.minSpec || "",
+            maxSpec: defaultSpec.maxSpec || "",
+          }
+        : baseEquipment;
 
       return {
         ...state,
         equipment,
         chambers: state.chambers.map((chamber) =>
-          defaultSpec
-            ? applySpecToChamber({ ...chamber, specOptions: applicableSpecs }, defaultSpec.value)
-            : {
-                ...chamber,
-                modelStandard: "",
-                minSpec: "",
-                maxSpec: "",
-                specOptions: applicableSpecs,
-                calculationTarget: false,
-              }
+          syncChamberSpecOptions(
+            defaultSpec && !chamber.modelStandard
+              ? { ...chamber, modelStandard: defaultSpec.value || defaultSpec.label || "" }
+              : chamber,
+            specOptions
+          )
         ),
       };
     }
 
     case VC_CALCULATOR_ACTION_TYPES.SET_MODEL_STANDARD: {
-      // Model Standard를 고르면 연결된 Min/Max Spec을 장비 정보와 모든 Chamber에 반영합니다.
-      const applicableSpecs = getApplicableSpecs(state.options.modelStandards, state.equipment);
-      const spec = getSelectedSpec(applicableSpecs, action.payload.value);
+      // Header Model Standard applies to the active chamber only; inactive chamber tabs stay independent.
+      const specOptions = getApplicableSpecs(state.options.modelStandards, state.equipment);
+      const spec = getSelectedSpec(specOptions, action.payload.value);
 
       return {
         ...state,
@@ -164,13 +208,14 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
           maxSpec: spec?.maxSpec || "",
         },
         chambers: state.chambers.map((chamber) =>
-          applySpecToChamber({ ...chamber, specOptions: applicableSpecs }, action.payload.value)
+          chamber.id === state.activeChamberId
+            ? applyCalculatorSpec({ ...chamber, specOptions }, action.payload.value)
+            : { ...chamber, specOptions }
         ),
       };
     }
 
     case VC_CALCULATOR_ACTION_TYPES.ADD_CHAMBER: {
-      // Chamber는 업무 상한(MAX_CHAMBER_COUNT)을 넘지 않게 제한합니다.
       if (state.chambers.length >= MAX_CHAMBER_COUNT) return state;
       const chamber = createCalculatorChamber(
         state.chambers,
@@ -187,7 +232,6 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
     }
 
     case VC_CALCULATOR_ACTION_TYPES.REMOVE_CHAMBER: {
-      // Calculator는 도면 원본 탭이 없지만, 입력 시작점을 보장하기 위해 최소 1개 Chamber를 유지합니다.
       if (state.chambers.length <= 1) return state;
       const chambers = resequenceChambers(
         state.chambers.filter((chamber) => chamber.id !== action.payload.chamberId)
@@ -203,30 +247,28 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
     }
 
     case VC_CALCULATOR_ACTION_TYPES.SET_ACTIVE_CHAMBER:
-      // 탭 클릭은 activeChamberId만 갱신합니다. selector가 이 id로 편집 대상 Chamber를 계산합니다.
       return {
         ...state,
         activeChamberId: action.payload.chamberId,
       };
 
     case VC_CALCULATOR_ACTION_TYPES.UPDATE_CHAMBER_FIELD:
-      // 산출대상 checkbox는 Model Standard와 Spec이 있을 때만 true가 되도록 reducer에서 한 번 더 막습니다.
       return updateChamber(state, action.payload.chamberId, (chamber) => {
         if (action.payload.name === "modelStandard") {
-          return applySpecToChamber(chamber, action.payload.value);
+          // Clearing Model Standard must not clear calculationTarget on Calculator.
+          return applyCalculatorSpec(chamber, action.payload.value);
         }
 
         return {
           ...chamber,
           [action.payload.name]:
             action.payload.name === "calculationTarget"
-              ? Boolean(action.payload.value) && Boolean(chamber.modelStandard) && Boolean(chamber.minSpec || chamber.maxSpec)
+              ? Boolean(action.payload.value)
               : action.payload.value,
         };
       });
 
     case VC_CALCULATOR_ACTION_TYPES.ADD_PIPE_ROW:
-      // 현재 활성 Chamber 또는 명시된 Chamber에 기본 PIPE row를 추가합니다.
       return updateChamber(state, action.payload.chamberId || state.activeChamberId, (chamber) => ({
         ...chamber,
         pipeList: [...chamber.pipeList, createEmptyPipeRow(PIPE_TYPE.PIPE)],
@@ -234,7 +276,6 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
 
     case VC_CALCULATOR_ACTION_TYPES.REMOVE_SELECTED_PIPE_ROW:
       return updateChamber(state, action.payload.chamberId || state.activeChamberId, (chamber) => {
-        // 마지막 row를 삭제할 때는 완전히 비우지 않고 새 빈 row 하나를 남겨 입력 흐름을 유지합니다.
         if (!chamber.selectedPipeRowId) return chamber;
         if (chamber.pipeList.length <= 1) {
           return {
@@ -252,7 +293,6 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       });
 
     case VC_CALCULATOR_ACTION_TYPES.SELECT_PIPE_ROW:
-      // pipe radio 선택값은 삭제 대상 추적용이며, 배관 값 자체는 변경하지 않습니다.
       return updateChamber(state, action.payload.chamberId, (chamber) => ({
         ...chamber,
         selectedPipeRowId: action.payload.rowId,
@@ -264,7 +304,6 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
         pipeList: chamber.pipeList.map((row) => {
           if (row.id !== action.payload.rowId) return row;
 
-          // 유형별로 쓰지 않는 필드는 normalizePipeRowByType에서 즉시 정리됩니다.
           return normalizePipeRowByType({
             ...row,
             [action.payload.name]:
@@ -274,7 +313,6 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       }));
 
     case VC_CALCULATOR_ACTION_TYPES.CALCULATE_REQUEST:
-      // 실제 필수값 검증과 API 호출은 saga가 처리하고, reducer는 버튼 중복 클릭을 막는 loading만 켭니다.
       return {
         ...state,
         loading: {
@@ -285,7 +323,6 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       };
 
     case VC_CALCULATOR_ACTION_TYPES.CALCULATE_SUCCESS:
-      // 계산 결과는 공용 vcResult slice가 보관하므로 Calculator slice는 loading만 종료합니다.
       return {
         ...state,
         loading: {
@@ -295,7 +332,6 @@ const vcCalculatorReducer = (state = initialVcCalculatorState, action = {}) => {
       };
 
     case VC_CALCULATOR_ACTION_TYPES.CALCULATE_FAILURE:
-      // 실패 시 입력값을 그대로 유지해 사용자가 수정 후 재시도할 수 있게 합니다.
       return {
         ...state,
         loading: {

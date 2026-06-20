@@ -3,19 +3,24 @@ import React from "react";
 import {
   MAX_CHAMBER_COUNT,
   PIPE_COLUMNS,
+  PIPE_TYPE,
 } from "../core/NonBim.constant";
 import { isPipeFieldEditable, toDisplayText } from "../core/NonBim.helper";
 import { ReadonlyField } from "./FormFields";
 
-// 배관 유형에 따라 실제 활성화 여부는 isPipeFieldEditable 정책으로 결정됩니다.
 const pipeEditableFields = ["inletDiameter", "length", "angle", "outletDiameter", "quantity"];
 
-/**
- * Non-BIM과 Calculator가 공유하는 Chamber 및 배관 편집 영역입니다.
- * 이 컴포넌트는 표시와 사용자 이벤트 전달만 담당하며 상태 변경 규칙은 각 화면의 reducer가 처리합니다.
- */
+const PIPE_TYPE_ICON_CLASS = {
+  [PIPE_TYPE.PIPE]: "plumbing",
+  [PIPE_TYPE.ELBOW]: "elbow",
+  [PIPE_TYPE.REDUCER]: "reducer",
+};
+
+const getPipeTypeIconClass = (type) => PIPE_TYPE_ICON_CLASS[type] || PIPE_TYPE_ICON_CLASS[PIPE_TYPE.PIPE];
+
 export const ChamberWorkspace = ({
   activeChamber,
+  allowSpeclessCalculate = false,
   canAddChamber,
   canRemoveChamber,
   canEditPipe,
@@ -39,10 +44,10 @@ export const ChamberWorkspace = ({
   onPipeRowChange,
   onCalculate,
 }) => (
-  <section className="panel">
+  <section className="panel vc-pub-section vcsnofM001Style">
     <div className="section-header">
       <div className="section-title">{title}</div>
-      <div className="button-group">
+      <div className="button-group buttonArea">
         <button
           type="button"
           className="secondary-button"
@@ -66,7 +71,7 @@ export const ChamberWorkspace = ({
     {!selectedDrawing ? (
       <div className="empty-box">{emptyMessage}</div>
     ) : (
-      <>
+      <div className="part">
         <ChamberTabs
           chambers={chambers}
           activeChamberId={activeChamber?.id}
@@ -75,6 +80,7 @@ export const ChamberWorkspace = ({
         {activeChamber ? (
           <ChamberEditor
             activeChamber={activeChamber}
+            allowSpeclessCalculate={allowSpeclessCalculate}
             canEditPipe={canEditPipe}
             calculationLocked={calculationLocked}
             loading={loading}
@@ -88,12 +94,11 @@ export const ChamberWorkspace = ({
             onCalculate={onCalculate}
           />
         ) : null}
-      </>
+      </div>
     )}
   </section>
 );
 
-/** Chamber 목록을 탭으로 표시하고 선택된 Chamber ID를 상위 화면에 전달합니다. */
 export const ChamberTabs = ({ chambers, activeChamberId, onSetActiveChamber }) => (
   <div className="tab-bar">
     {chambers.map((chamber) => (
@@ -110,9 +115,9 @@ export const ChamberTabs = ({ chambers, activeChamberId, onSetActiveChamber }) =
   </div>
 );
 
-/** 활성 Chamber의 Spec, 배관 행, 계산 실행 영역을 한 화면에 구성합니다. */
 export const ChamberEditor = ({
   activeChamber,
+  allowSpeclessCalculate,
   canEditPipe,
   calculationLocked,
   loading,
@@ -125,12 +130,16 @@ export const ChamberEditor = ({
   onPipeRowChange,
   onCalculate,
 }) => (
-  <>
-    <ChamberSpecForm activeChamber={activeChamber} onChamberChange={onChamberChange} />
+  <div className="partArea">
+    <ChamberSpecForm
+      activeChamber={activeChamber}
+      allowSpeclessCalculate={allowSpeclessCalculate}
+      onChamberChange={onChamberChange}
+    />
 
     <div className="section-header compact">
       <div className="section-title small">Pipe Rows</div>
-      <div className="button-group">
+      <div className="button-group buttonArea">
         <button type="button" className="secondary-button" disabled={!canEditPipe} onClick={onAddPipeRow}>
           Add
         </button>
@@ -153,7 +162,6 @@ export const ChamberEditor = ({
     />
 
     <div className="footer-actions">
-      {/* 잠금 상태에서는 계산을 실행하지 않고 현재 도면 요청상태를 안내합니다. */}
       {calculationLocked ? (
         <span className="muted">Status: {toDisplayText(selectedDrawingStatus)}</span>
       ) : (
@@ -162,45 +170,52 @@ export const ChamberEditor = ({
         </button>
       )}
     </div>
-  </>
+  </div>
 );
 
-/** Model Standard 선택값과 연계된 Spec 및 산출대상 여부를 편집합니다. */
-export const ChamberSpecForm = ({ activeChamber, onChamberChange }) => (
+export const ChamberSpecForm = ({ activeChamber, allowSpeclessCalculate, onChamberChange }) => (
   <div className="form-grid">
     <label className="field">
-      <span>모델관리기준</span>
+      <span>Model Standard</span>
       <select
         value={activeChamber.modelStandard}
         onChange={(event) => onChamberChange("modelStandard", event.target.value)}
       >
-        {/* 옵션이 없으면 빈 선택지만 표시하고 산출대상 checkbox도 비활성화됩니다. */}
-        {activeChamber.specOptions.length ? (
-          activeChamber.specOptions.map((option) => (
-            <option key={option.value || option.label} value={option.value || option.label}>
-              {option.label}
-            </option>
-          ))
-        ) : (
-          <option value="">-</option>
-        )}
+        <option value="">-</option>
+        {activeChamber.specOptions.map((option) => (
+          <option key={option.value || option.label} value={option.value || option.label}>
+            {option.label}
+          </option>
+        ))}
       </select>
     </label>
     <ReadonlyField label="Min Spec" value={activeChamber.minSpec} />
     <ReadonlyField label="Max Spec" value={activeChamber.maxSpec} />
-    <label className="field switch-field">
-      <span>산출대상</span>
-      <input
-        type="checkbox"
-        checked={Boolean(activeChamber.calculationTarget)}
-        disabled={!activeChamber.modelStandard}
-        onChange={(event) => onChamberChange("calculationTarget", event.target.checked)}
-      />
-    </label>
+    <SwitchField
+      label="Calculation Target"
+      checked={Boolean(activeChamber.calculationTarget)}
+      disabled={!allowSpeclessCalculate && !activeChamber.modelStandard}
+      onChange={(checked) => onChamberChange("calculationTarget", checked)}
+    />
   </div>
 );
 
-/** 활성 Chamber의 계산 요청 DTO에 포함될 배관 목록을 표 형태로 표시합니다. */
+const SwitchField = ({ label, checked, disabled = false, onChange }) => (
+  <label className={`vc-switch-field${disabled ? " disabled" : ""}`}>
+    <span className="vc-switch-label">{label}</span>
+    <input
+      type="checkbox"
+      checked={checked}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.checked)}
+    />
+    <span className="vc-switch-track" aria-hidden="true">
+      <span className="vc-switch-thumb" />
+    </span>
+    <span className="vc-switch-value">{checked ? "Y" : "N"}</span>
+  </label>
+);
+
 export const PipeRowsTable = ({ activeChamber, pipeTypeOptions, onSelectPipeRow, onPipeRowChange }) => (
   <div className="table-wrap">
     <table>
@@ -227,10 +242,6 @@ export const PipeRowsTable = ({ activeChamber, pipeTypeOptions, onSelectPipeRow,
   </div>
 );
 
-/**
- * 배관 한 행을 편집합니다.
- * radio는 삭제 대상을 지정하고 각 input의 활성화 여부는 배관 유형별 정책을 따릅니다.
- */
 export const PipeRowsTableRow = ({ activeChamber, pipeTypeOptions, row, onSelectPipeRow, onPipeRowChange }) => (
   <tr>
     <td className="center">
@@ -242,13 +253,16 @@ export const PipeRowsTableRow = ({ activeChamber, pipeTypeOptions, row, onSelect
       />
     </td>
     <td>
-      <select value={row.type} onChange={(event) => onPipeRowChange(row.id, "type", event.target.value)}>
-        {pipeTypeOptions.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <div className="pipe-type-cell">
+        <span className={`pipe-type-icon ${getPipeTypeIconClass(row.type)}`} aria-hidden="true" />
+        <select value={row.type} onChange={(event) => onPipeRowChange(row.id, "type", event.target.value)}>
+          {pipeTypeOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
     </td>
     {pipeEditableFields.map((fieldName) => (
       <td key={fieldName}>

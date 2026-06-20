@@ -5,16 +5,16 @@ import { toDisplayText } from "../core/NonBim.helper";
 
 /**
  * 수기 도면 조회 결과를 업무 컬럼과 Foreline 도면 컬럼으로 나누어 표시합니다.
- * 선택값은 공사번호를 기준으로 관리하며 실제 상세 조회와 다운로드는 상위 callback이 수행합니다.
+ * 선택값은 WO ID를 기준으로 관리하며 실제 상세 조회와 다운로드는 상위 callback이 수행합니다.
  */
 export const DrawingResultTable = ({
   drawings,
   loading,
-  selectedConstructionNo,
+  selectedWoId,
   onSelectDrawing,
   onDownload,
 }) => (
-  <div className="table-wrap">
+  <div className="table-wrap tableScrollStyle">
     <table>
       <thead>
         <tr>
@@ -39,13 +39,13 @@ export const DrawingResultTable = ({
             </td>
           </tr>
         ) : (
-          // row.id는 API/DB PK가 아니라 eqId+constructionNo로 만든 React 렌더링 key입니다.
+          // row.id는 API/DB PK가 아니라 eqId+woId로 만든 React 렌더링 key입니다.
           drawings.map((row) => (
             <DrawingResultRow
               key={row.id}
               row={row}
               loading={loading}
-              selected={selectedConstructionNo === row.constructionNo}
+              selected={selectedWoId === row.woId}
               onSelectDrawing={onSelectDrawing}
               onDownload={onDownload}
             />
@@ -60,34 +60,35 @@ export const DrawingResultTable = ({
 export const DrawingResultRow = ({ row, loading, selected, onSelectDrawing, onDownload }) => (
   <tr className={selected ? "selected-row" : ""}>
     <td className="center">
-      {/* 공사번호를 전달하면 상위 화면에서 Chamber 및 Spec 상세 조회 action을 시작합니다. */}
+      {/* WO ID를 전달하면 상위 화면에서 Chamber 및 Spec 상세 조회 action을 시작합니다. */}
       <input
         type="radio"
         name="drawingRadio"
         checked={selected}
-        onChange={() => onSelectDrawing(row.constructionNo)}
+        onChange={() => onSelectDrawing(row.woId)}
       />
     </td>
-    <td>{toDisplayText(row.constructionNo)}</td>
+    <td>{toDisplayText(row.woId)}</td>
     <td>{toDisplayText(row.eqId)}</td>
-    <td>{toDisplayText(row.site)}</td>
-    <td>{toDisplayText(row.fab)}</td>
-    <td>{toDisplayText(row.area1)}</td>
-    <td>{toDisplayText(row.area2)}</td>
-    <td>{toDisplayText(row.changeType)}</td>
-    <td>{toDisplayText(row.equipmentType)}</td>
+    <td>{toDisplayText(row.siteNm)}</td>
+    <td>{toDisplayText(row.fabCd)}</td>
+    <td>{toDisplayText(row.area)}</td>
+    <td>{toDisplayText(row.areaDetail)}</td>
+    <td>{toDisplayText(row.chgType1Nm)}</td>
+    <td>{toDisplayText(row.catNm)}</td>
     <td>{toDisplayText(row.requestStatus)}</td>
-    <td>{toDisplayText(row.foreline?.categoryName)}</td>
-    <td>{toDisplayText(row.foreline?.registeredAt)}</td>
-    <td>{toDisplayText(row.foreline?.registeredBy)}</td>
+    <td>{toDisplayText(row.fileNm)}</td>
+    <td>{toDisplayText(row.crteDt)}</td>
+    <td>{toDisplayText(row.crteIdNm)}</td>
     <td className="center">
-      {/* 상위 saga가 공사번호에 해당하는 drawingKey와 fileId를 찾아 파일 API를 호출합니다. */}
+      {/* 상위 saga가 WO ID에 해당하는 file와 fileSeq를 찾아 파일 API를 호출합니다. */}
       <button
         type="button"
-        className="link-button"
+        className="link-button download-button"
         disabled={loading.download}
-        onClick={() => onDownload(row.constructionNo)}
+        onClick={() => onDownload(row.woId)}
       >
+        <span className="download-icon" aria-hidden="true" />
         Download
       </button>
     </td>
