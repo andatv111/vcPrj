@@ -32,7 +32,8 @@ npm run test:vc
 
 - `src/main.js`는 React root, Redux Provider, 좌측 메뉴/우측 content shell만 둡니다.
 - 화면 스타일은 `src/vc.css`에서 관리합니다.
-- `vc.css`의 모든 selector는 `.vc-app` 아래로 scope 처리되어 있습니다. 회사 시스템의 전역 layout, button, input, table style에 영향을 주지 않도록 `:root`, `body`, `*`, `table`, `input` 같은 전역 selector를 사용하지 않습니다.
+- `vc-app`은 로컬 preview shell을 감싸는 class입니다. 회사 시스템에는 해당 root가 없을 수 있으므로 실제 화면/퍼블 class는 `.vc-app`에 의존하지 않게 둡니다.
+- `vc-`로 시작하는 class(`vc-pub-screen`, `vc-pub-section`, `vc-switch-field` 등)는 개발 쪽 보조 class로 유지하고, `searchStyle`, `vcsnofM001Style`, `buttonArea`, `tableScrollStyle`처럼 퍼블 원본에 가까운 class는 전역 class처럼 둡니다.
 - 회사 시스템의 사용자 세션은 `state.userInfo?.user`에서 읽습니다.
 - 현재 사용하는 세션 field:
 

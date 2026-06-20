@@ -1,5 +1,6 @@
 .vc-app {
-  /* 앱 전체 기본 색상과 폰트 기준입니다. 화면별 컴포넌트는 이 기준 위에서 필요한 스타일만 추가합니다. */
+  /* 로컬 preview shell의 기본 색상과 폰트 기준입니다.
+     실제 퍼블 화면 class는 vc-app 없이도 회사 CSS/전역 CSS에서 동작하도록 아래에 전역 selector로 둡니다. */
   color: #20242a;
   background: #eef1f4;
   font-family:
@@ -8,9 +9,9 @@
   text-rendering: optimizeLegibility;
 }
 
-.vc-app *,
-.vc-app *::before,
-.vc-app *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -22,27 +23,27 @@
   min-height: 100vh;
 }
 
-.vc-app .side-menu {
+.side-menu {
   border-right: 1px solid #d6dce3;
   background: #172033;
   color: #fff;
   padding: 18px 14px;
 }
 
-.vc-app .side-title {
+.side-title {
   padding: 4px 8px 18px;
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 0;
 }
 
-.vc-app .menu-list {
+.menu-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.vc-app .menu-item {
+.menu-item {
   width: 100%;
   border: 1px solid transparent;
   border-radius: 7px;
@@ -53,35 +54,35 @@
   text-align: left;
 }
 
-.vc-app .menu-item.active {
+.menu-item.active {
   border-color: #5ea3e8;
   background: #22314e;
   color: #fff;
 }
 
-.vc-app .menu-label,
-.vc-app .menu-description {
+.menu-label,
+.menu-description {
   display: block;
 }
 
-.vc-app .menu-label {
+.menu-label {
   font-size: 14px;
   font-weight: 700;
 }
 
-.vc-app .menu-description {
+.menu-description {
   margin-top: 3px;
   color: #9fb0c6;
   font-size: 12px;
   line-height: 1.35;
 }
 
-.vc-app .content-shell {
+.content-shell {
   min-width: 0;
   background: #eef1f4;
 }
 
-.vc-app .content-topbar {
+.content-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -89,41 +90,39 @@
   border-bottom: 1px solid #d6dce3;
   background: #fff;
   padding: 16px 24px;
-}
-
- .vc-app button,
-.vc-app input,
-.vc-app select {
+}button,
+input,
+select {
   font: inherit;
 }
 
-.vc-app button:disabled,
-.vc-app input:disabled,
-.vc-app select:disabled {
+button:disabled,
+input:disabled,
+select:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
 
-.vc-app .page {
+.page {
   min-height: 100vh;
   padding: 24px;
 }
 
-.vc-app .embedded-page {
+.embedded-page {
   min-height: auto;
 }
 
-.vc-app .compact-page {
+.compact-page {
   min-height: auto;
 }
 
-.vc-app .panel-text {
+.panel-text {
   margin: 0;
   color: #475569;
   font-size: 14px;
 }
 
-.vc-app .page-header {
+.page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -131,23 +130,23 @@
   margin-bottom: 18px;
 }
 
-.vc-app .breadcrumb {
+.breadcrumb {
   margin-bottom: 4px;
   color: #667085;
   font-size: 12px;
 }
 
-.vc-app h1,
-.vc-app h2 {
+h1,
+h2 {
   margin: 0;
 }
 
-.vc-app h1 {
+h1 {
   font-size: 24px;
   letter-spacing: 0;
 }
 
-.vc-app .status-pill {
+.status-pill {
   border: 1px solid #cbd5e1;
   border-radius: 999px;
   background: #fff;
@@ -157,7 +156,7 @@
   white-space: nowrap;
 }
 
-.vc-app .panel {
+.panel {
   /* 검색, 도면 목록, Chamber 편집처럼 반복되는 업무 영역의 공통 박스 스타일입니다. */
   width: 100%;
   border: 1px solid #d6dce3;
@@ -168,29 +167,29 @@
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
-.vc-app .vc-pub-screen {
+.vc-pub-screen {
   /* 퍼블리셔가 준 Model2.js의 VCSNOF 화면 계열을 현재 개발 화면에 입히는 외피입니다. */
   background: #eef1f4;
 }
 
-.vc-app .vc-pub-section {
+.vc-pub-section {
   /* 회사 CSS의 VcsnofM001Style/SearchStyle/VcsnofP001Style이 들어오면 이 계층만 교체하면 됩니다. */
   border-color: #cfd6df;
 }
 
-.vc-app .searchStyle {
+.searchStyle {
   border-top: 3px solid #2f6f73;
 }
 
-.vc-app .vcsnofM001Style {
+.vcsnofM001Style {
   border-top: 3px solid #334155;
 }
 
-.vc-app .vcsnofP001Style {
+.vcsnofP001Style {
   border-top: 3px solid #9a6a16;
 }
 
-.vc-app .section-header {
+.section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -198,26 +197,26 @@
   margin-bottom: 12px;
 }
 
-.vc-app .section-header.compact {
+.section-header.compact {
   margin-top: 16px;
 }
 
-.vc-app .section-title {
+.section-title {
   margin-bottom: 12px;
   font-size: 16px;
   font-weight: 700;
 }
 
-.vc-app .section-header .section-title {
+.section-header .section-title {
   margin-bottom: 0;
 }
 
-.vc-app .section-title.small {
+.section-title.small {
   font-size: 14px;
 }
 
-.vc-app .search-row,
-.vc-app .form-grid {
+.search-row,
+.form-grid {
   /* 입력 필드가 많아질 때 줄바꿈되도록 flex-wrap을 사용합니다. */
   display: flex;
   align-items: flex-end;
@@ -225,30 +224,30 @@
   gap: 12px;
 }
 
-.vc-app .vc-pub-search-row {
+.vc-pub-search-row {
   align-items: flex-end;
 }
 
-.vc-app .field {
+.field {
   display: flex;
   flex-direction: column;
   gap: 5px;
   min-width: 180px;
 }
 
-.vc-app .field.narrow {
+.field.narrow {
   min-width: 120px;
 }
 
-.vc-app .field span {
+.field span {
   color: #48515e;
   font-size: 12px;
   font-weight: 600;
 }
 
-.vc-app input,
-.vc-app select,
-.vc-app textarea {
+input,
+select,
+textarea {
   width: 100%;
   border: 1px solid #c9d1dc;
   border-radius: 5px;
@@ -257,18 +256,18 @@
   padding: 0 8px;
 }
 
-.vc-app input,
-.vc-app select {
+input,
+select {
   height: 34px;
 }
 
-.vc-app textarea {
+textarea {
   min-height: 96px;
   padding: 8px;
   resize: vertical;
 }
 
-.vc-app .check-label {
+.check-label {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -277,19 +276,19 @@
   font-size: 13px;
 }
 
-.vc-app .check-label input {
+.check-label input {
   width: auto;
   height: auto;
 }
 
-.vc-app .switch-field input {
+.switch-field input {
   width: 18px;
   min-width: 18px;
   height: 18px;
 }
 
 /* 퍼블 기준 switch UI: input은 값 전달용으로 숨기고 track/thumb만 화면에 노출한다. */
-.vc-app .vc-switch-field {
+.vc-switch-field {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -299,7 +298,7 @@
   font-size: 13px;
 }
 
-.vc-app .vc-switch-field input {
+.vc-switch-field input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -307,13 +306,13 @@
   pointer-events: none;
 }
 
-.vc-app .vc-switch-label {
+.vc-switch-label {
   color: #48515e;
   font-size: 12px;
   font-weight: 600;
 }
 
-.vc-app .vc-switch-track {
+.vc-switch-track {
   position: relative;
   display: inline-flex;
   flex: 0 0 44px;
@@ -325,7 +324,7 @@
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.vc-app .vc-switch-thumb {
+.vc-switch-thumb {
   position: absolute;
   top: 2px;
   left: 2px;
@@ -337,29 +336,29 @@
   transition: transform 0.15s ease;
 }
 
-.vc-app .vc-switch-field input:checked + .vc-switch-track {
+.vc-switch-field input:checked + .vc-switch-track {
   border-color: #2f6f73;
   background: #2f6f73;
 }
 
-.vc-app .vc-switch-field input:checked + .vc-switch-track .vc-switch-thumb {
+.vc-switch-field input:checked + .vc-switch-track .vc-switch-thumb {
   transform: translateX(22px);
 }
 
-.vc-app .vc-switch-field.disabled {
+.vc-switch-field.disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
 
-.vc-app .vc-switch-value {
+.vc-switch-value {
   min-width: 12px;
   color: #475569;
   font-size: 12px;
   font-weight: 700;
 }
 
-.vc-app .primary-button,
-.vc-app .secondary-button {
+.primary-button,
+.secondary-button {
   height: 34px;
   border-radius: 5px;
   padding: 0 13px;
@@ -367,19 +366,19 @@
   white-space: nowrap;
 }
 
-.vc-app .primary-button {
+.primary-button {
   border: 1px solid #1f2937;
   background: #1f2937;
   color: #fff;
 }
 
-.vc-app .secondary-button {
+.secondary-button {
   border: 1px solid #aab4c1;
   background: #fff;
   color: #1f2937;
 }
 
-.vc-app .link-button {
+.link-button {
   border: 0;
   background: transparent;
   color: #1768ac;
@@ -388,54 +387,52 @@
   text-decoration: underline;
 }
 
-.vc-app .button-group,
-.vc-app .inline-actions,
-.vc-app .footer-actions {
+.button-group,
+.inline-actions,
+.footer-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.vc-app .buttonArea {
+.buttonArea {
   flex-wrap: wrap;
 }
 
-.vc-app .part {
+.part {
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin-top: 10px;
 }
 
-.vc-app .partArea {
+.partArea {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.vc-app .footer-actions {
+.footer-actions {
   justify-content: flex-end;
   margin-top: 14px;
 }
 
-.vc-app .table-wrap {
+.table-wrap {
   /* 도면/배관/결과 테이블은 컬럼이 많으므로 작은 화면에서 가로 스크롤을 허용합니다. */
   overflow-x: auto;
 }
 
-.vc-app .tableScrollStyle {
+.tableScrollStyle {
   scrollbar-color: #9aa7b5 #eef1f4;
   scrollbar-width: thin;
 }
 
-.vc-app table {
+table {
   width: 100%;
   border-collapse: collapse;
   table-layout: auto;
-}
-
- .vc-app th,
-.vc-app td {
+}th,
+td {
   border: 1px solid #d9dee6;
   padding: 7px 8px;
   font-size: 12px;
@@ -443,31 +440,31 @@
   white-space: nowrap;
 }
 
-.vc-app th {
+th {
   background: #f4f6f8;
   color: #344054;
   font-weight: 700;
   text-align: center;
 }
 
-.vc-app td input,
-.vc-app td select {
+td input,
+td select {
   min-width: 92px;
   height: 30px;
 }
 
-.vc-app .pipe-type-cell {
+.pipe-type-cell {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 180px;
 }
 
-.vc-app .pipe-type-cell select {
+.pipe-type-cell select {
   min-width: 132px;
 }
 
-.vc-app .pipe-type-icon {
+.pipe-type-icon {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -480,28 +477,28 @@
   background: #f8fafc;
 }
 
-.vc-app .pipe-type-icon::before,
-.vc-app .pipe-type-icon::after {
+.pipe-type-icon::before,
+.pipe-type-icon::after {
   content: "";
   position: absolute;
   background: currentColor;
 }
 
-.vc-app .pipe-type-icon.plumbing {
+.pipe-type-icon.plumbing {
   color: #2f6f73;
 }
 
-.vc-app .pipe-type-icon.plumbing::before {
+.pipe-type-icon.plumbing::before {
   width: 15px;
   height: 4px;
   border-radius: 999px;
 }
 
-.vc-app .pipe-type-icon.elbow {
+.pipe-type-icon.elbow {
   color: #7a4f15;
 }
 
-.vc-app .pipe-type-icon.elbow::before {
+.pipe-type-icon.elbow::before {
   width: 14px;
   height: 4px;
   left: 5px;
@@ -509,7 +506,7 @@
   border-radius: 999px;
 }
 
-.vc-app .pipe-type-icon.elbow::after {
+.pipe-type-icon.elbow::after {
   width: 4px;
   height: 14px;
   right: 8px;
@@ -517,24 +514,24 @@
   border-radius: 999px;
 }
 
-.vc-app .pipe-type-icon.reducer {
+.pipe-type-icon.reducer {
   color: #475569;
 }
 
-.vc-app .pipe-type-icon.reducer::before {
+.pipe-type-icon.reducer::before {
   width: 16px;
   height: 5px;
   clip-path: polygon(0 0, 100% 25%, 100% 75%, 0 100%);
 }
 
-.vc-app .download-button {
+.download-button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   text-decoration: none;
 }
 
-.vc-app .download-icon {
+.download-icon {
   position: relative;
   display: inline-block;
   width: 14px;
@@ -544,7 +541,7 @@
   border-radius: 2px;
 }
 
-.vc-app .download-icon::before {
+.download-icon::before {
   content: "";
   position: absolute;
   left: 5px;
@@ -554,7 +551,7 @@
   background: currentColor;
 }
 
-.vc-app .download-icon::after {
+.download-icon::after {
   content: "";
   position: absolute;
   left: 3px;
@@ -566,36 +563,36 @@
   transform: rotate(45deg);
 }
 
-.vc-app .center {
+.center {
   text-align: center;
 }
 
-.vc-app .center input {
+.center input {
   min-width: 0;
   width: auto;
 }
 
-.vc-app .selected-row {
+.selected-row {
   background: #eef6ff;
 }
 
-.vc-app .empty-cell,
-.vc-app .empty-box {
+.empty-cell,
+.empty-box {
   color: #667085;
   text-align: center;
 }
 
-.vc-app .empty-cell {
+.empty-cell {
   padding: 28px;
 }
 
-.vc-app .empty-box {
+.empty-box {
   border: 1px dashed #b9c2cf;
   border-radius: 7px;
   padding: 28px;
 }
 
-.vc-app .error-box {
+.error-box {
   margin-top: 12px;
   border: 1px solid #f2b8b5;
   border-radius: 6px;
@@ -605,12 +602,12 @@
   font-size: 13px;
 }
 
-.vc-app .muted {
+.muted {
   color: #667085;
   font-size: 12px;
 }
 
-.vc-app .tab-bar {
+.tab-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -618,7 +615,7 @@
   margin-bottom: 14px;
 }
 
-.vc-app .tab {
+.tab {
   border: 1px solid #d9dee6;
   border-bottom: 0;
   border-radius: 5px 5px 0 0;
@@ -628,14 +625,14 @@
   padding: 8px 12px;
 }
 
-.vc-app .tab.active {
+.tab.active {
   border-color: #1f2937;
   background: #fff;
   color: #1f2937;
   font-weight: 700;
 }
 
-.vc-app .modal-dim {
+.modal-dim {
   /* 결과 팝업과 기안 첨부 팝업 공통 dim 영역입니다. */
   position: fixed;
   inset: 0;
@@ -647,7 +644,7 @@
   padding: 20px;
 }
 
-.vc-app .modal {
+.modal {
   width: min(1120px, 100%);
   max-height: 88vh;
   overflow: auto;
@@ -657,7 +654,7 @@
   box-shadow: 0 18px 60px rgba(15, 23, 42, 0.25);
 }
 
-.vc-app .vc-pub-popup {
+.vc-pub-popup {
   /* 퍼블리셔 팝업 소스는 Header/Body/Button 영역을 분리해서 붙이는 것을 기본 단위로 봅니다. */
   display: flex;
   flex-direction: column;
@@ -666,19 +663,19 @@
   padding: 0;
 }
 
-.vc-app .vc-pub-popup .modal-header {
+.vc-pub-popup .modal-header {
   border-bottom: 1px solid #d9dee6;
   background: #f8fafc;
   padding: 16px 18px;
   margin-bottom: 0;
 }
 
-.vc-app .popup-body {
+.popup-body {
   gap: 14px;
   padding: 0 18px;
 }
 
-.vc-app .popup-actions {
+.popup-actions {
   justify-content: flex-end;
   border-top: 1px solid #d9dee6;
   background: #fbfcfd;
@@ -686,56 +683,56 @@
   padding: 14px 18px;
 }
 
-.vc-app .popup-close-button {
+.popup-close-button {
   min-height: 30px;
 }
 
-.vc-app .result-modal {
+.result-modal {
   max-width: 1180px;
 }
 
-.vc-app .draft-modal {
+.draft-modal {
   max-width: 640px;
 }
 
-.vc-app .modal-dim.nested {
+.modal-dim.nested {
   background: rgba(15, 23, 42, 0.28);
 }
 
-.vc-app .result-section {
+.result-section {
   margin-bottom: 16px;
 }
 
-.vc-app .result-section:last-child {
+.result-section:last-child {
   margin-bottom: 0;
 }
 
-.vc-app .result-table-wrap {
+.result-table-wrap {
   max-height: 360px;
 }
 
-.vc-app .spec-master-screen {
+.spec-master-screen {
   min-width: 0;
 }
 
-.vc-app .spec-master-grid-layout {
+.spec-master-grid-layout {
   display: grid;
   grid-template-columns: minmax(520px, 0.9fr) minmax(560px, 1.1fr);
   gap: 16px;
   align-items: start;
 }
 
-.vc-app .spec-master-panel,
-.vc-app .spec-detail-panel {
+.spec-master-panel,
+.spec-detail-panel {
   min-width: 0;
 }
 
-.vc-app .spec-master-panel .table-wrap,
-.vc-app .spec-detail-panel .table-wrap {
+.spec-master-panel .table-wrap,
+.spec-detail-panel .table-wrap {
   max-height: 430px;
 }
 
-.vc-app .spec-pagination {
+.spec-pagination {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -745,24 +742,24 @@
   font-size: 13px;
 }
 
-.vc-app .spec-master-modal {
+.spec-master-modal {
   max-width: 900px;
 }
 
-.vc-app .spec-master-form-grid {
+.spec-master-form-grid {
   align-items: flex-start;
   display: grid;
   grid-template-columns: repeat(2, minmax(180px, 1fr));
   gap: 12px;
 }
 
-.vc-app .required-mark {
+.required-mark {
   color: #d92d20;
   font-style: normal;
   margin-left: 2px;
 }
 
-.vc-app .spec-switch-row {
+.spec-switch-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -771,36 +768,36 @@
   padding-top: 12px;
 }
 
-.vc-app .spec-switch {
+.spec-switch {
   min-height: 28px;
 }
 
-.vc-app .notice-box {
+.notice-box {
   border-radius: 6px;
   margin-top: 12px;
   padding: 10px 12px;
   font-size: 13px;
 }
 
-.vc-app .notice-box.success {
+.notice-box.success {
   border: 1px solid #9bd8b4;
   background: #f0fff5;
   color: #087443;
 }
 
-.vc-app .notice-box.warning {
+.notice-box.warning {
   border: 1px solid #f2c98b;
   background: #fff8eb;
   color: #9a5b00;
 }
 
-.vc-app .notice-box.info {
+.notice-box.info {
   border: 1px solid #9cc3e6;
   background: #eef6ff;
   color: #1768ac;
 }
 
-.vc-app .judge-badge {
+.judge-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -810,27 +807,27 @@
   font-weight: 700;
 }
 
-.vc-app .judge-badge.in {
+.judge-badge.in {
   background: #e8fff0;
   color: #087443;
 }
 
-.vc-app .judge-badge.out {
+.judge-badge.out {
   background: #fff0f0;
   color: #b42318;
 }
 
-.vc-app .judge-badge.none {
+.judge-badge.none {
   background: #eef1f4;
   color: #667085;
 }
 
-.vc-app .full-field {
+.full-field {
   width: 100%;
   margin-top: 12px;
 }
 
-.vc-app .modal-header {
+.modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -838,7 +835,7 @@
   margin-bottom: 14px;
 }
 
-.vc-app .modal-header h2 {
+.modal-header h2 {
   font-size: 18px;
 }
 
@@ -848,33 +845,33 @@
     grid-template-columns: 1fr;
   }
 
-  .vc-app .side-menu {
+  .side-menu {
     border-right: 0;
     border-bottom: 1px solid #d6dce3;
   }
 
-  .vc-app .content-topbar {
+  .content-topbar {
     align-items: flex-start;
     flex-direction: column;
     padding: 14px;
   }
 
-  .vc-app .page {
+  .page {
     padding: 14px;
   }
 
-  .vc-app .page-header,
-  .vc-app .section-header {
+  .page-header,
+  .section-header {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .vc-app .field {
+  .field {
     width: 100%;
   }
 
-  .vc-app .spec-master-grid-layout,
-  .vc-app .spec-master-form-grid {
+  .spec-master-grid-layout,
+  .spec-master-form-grid {
     grid-template-columns: 1fr;
   }
 }

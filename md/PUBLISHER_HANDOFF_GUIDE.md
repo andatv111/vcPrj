@@ -2,6 +2,8 @@
 
 이 프로젝트에서는 퍼블리셔가 준 화면 소스를 그대로 복사하지 않고, 기존 F/E 기능 흐름 위에 마크업과 className을 입히는 방식으로 반영한다. Redux action, saga 호출 순서, B/E endpoint, payload key는 유지하고 화면 표현 계층만 교체하는 것이 기본 원칙이다.
 
+`vc-app`은 로컬 preview shell에서만 쓰는 감싸는 class다. 회사 시스템에서는 root에 `vc-app`이 없을 수 있으므로, 퍼블에서 온 `searchStyle`, `vcsnofM001Style`, `vcsnofP001Style`, `buttonArea`, `partArea`, `tableScrollStyle` 같은 class는 `.vc-app`에 묶지 않고 전역 class처럼 둔다. `vc-pub-*`, `vc-switch-*`처럼 `vc-`가 붙은 class는 개발 쪽 보조 class로 유지한다.
+
 ## 이번 반영 기준
 
 - `Model2.js`의 `VcsnofM001Style`, `SearchStyle`, `VcsnofP001Style`, `TableScrollStyle` 개념을 `src/vc.css`의 호환 class로 옮겼다.
@@ -23,6 +25,7 @@
    - 검색 조건: `SearchStyle`, `searchStyle`, `vc-pub-search-row`
    - 본문 grid: `VcsnofM001Style`, `vcsnofM001Style`, `partArea`
    - 팝업: `VcsnofP001Style`, `vcsnofP001Style`, `vc-pub-popup`, `popup-body`, `popup-actions`
+   - `vc-app`은 붙이지 않는다. 화면 class는 회사 CSS가 전역으로 처리할 수 있게 유지한다.
 
 3. 컨테이너와 UI 파일 경계를 지킨다.
    - 컨테이너: Redux selector, dispatch, 화면 흐름 제어
@@ -64,5 +67,199 @@
 - 파일명이 확정된 경우: 회사 CSS 파일을 추가하고 해당 화면 컨테이너에서 import한다.
 - 화면별 CSS가 많은 경우: 해당 화면 또는 `ui/`, `popup/` 근처에 CSS를 두고 해당 컴포넌트가 import한다.
 - 공통 table/scroll/button CSS인 경우: `src/vc.css` 또는 공통 styles 파일로 올린다.
+- 회사 CSS가 이미 `searchStyle`, `vcsnofM001Style`, `buttonArea` 같은 전역 class를 제공하면 해당 className은 그대로 두고, 현재 preview용 CSS만 제거하거나 우선순위를 낮춘다.
 
 기능이 맞는지 헷갈리면 className을 먼저 붙이고, 이벤트 핸들러와 Redux action은 기존 코드를 따라가면 된다.
+
+## 퍼블 소스에서 현재 코드로 옮긴 방식
+
+퍼블리셔가 준 소스는 화면 모양을 잡는 데 사용하고, 업무 상태와 API 흐름은 기존 개발 코드에 남긴다. 그래서 “퍼블 코드를 복사”한 것이 아니라 아래처럼 className과 영역 구조만 옮겼다.
+
+### 1. SearchStyle은 SearchPanel로 옮김
+
+퍼블 소스의 검색 영역 개념:
+
+```jsx
+<SearchStyle>
+  <select>FAB</select>
+  <select>MODEL</select>
+  <button>조회</button>
+</SearchStyle>
+```
+
+현재 코드:
+
+```jsx
+const SearchPanel = ({ search, options, loading, onChange, onReset, onSearch }) => (
+  <section className="panel vc-pub-section searchStyle">
+    <div className="section-title">Search Conditions</div>
+    <div className="search-row vc-pub-search-row">
+      <SelectField label="FAB" value={search.fabId} options={options.fabIds} onChange={(value) => onChange("fabId", value)} />
+      <SelectField label="MODEL" value={search.setModelNm} options={options.setModelNms} onChange={(value) => onChange("setModelNm", value)} />
+      <SelectField label="모델관리기준" value={search.specNm} options={options.specNms} onChange={(value) => onChange("specNm", value)} />
+      <button type="button" className="secondary-button" disabled={loading.search} onClick={onReset}>초기화</button>
+      <button type="button" className="primary-button" disabled={loading.search} onClick={onSearch}>조회</button>
+    </div>
+  </section>
+);
+```
+
+여기서 퍼블 반영 포인트는 `searchStyle`, `vc-pub-search-row`, 버튼 class다. 검색 조건 값은 `useState`로 새로 만들지 않고 Redux `search` state를 그대로 사용한다.
+
+### 2. VcsnofM001Style은 Master/Detail Grid로 옮김
+
+퍼블 소스의 본문 table 영역 개념:
+
+```jsx
+<VcsnofM001Style>
+  <div className="buttonArea">...</div>
+  <TableScrollStyle>
+    <table>...</table>
+  </TableScrollStyle>
+</VcsnofM001Style>
+```
+
+현재 코드:
+
+```jsx
+<section className="panel vc-pub-section vcsnofM001Style spec-master-panel">
+  <div className="section-header">
+    <div className="section-title">Master Grid</div>
+    <div className="button-group buttonArea">
+      <button type="button" className="secondary-button" onClick={onCreate}>신규</button>
+      <button type="button" className="secondary-button" disabled={!selectedSpecId} onClick={onEdit}>수정</button>
+      <button type="button" className="secondary-button" disabled={!selectedSpecId} onClick={onDelete}>삭제</button>
+    </div>
+  </div>
+  <div className="table-wrap tableScrollStyle">
+    <table>...</table>
+  </div>
+</section>
+```
+
+Master Grid와 Detail Grid는 같은 퍼블 class를 쓰지만 데이터 의미가 다르다.
+
+| 영역 | 데이터 기준 | 현재 컴포넌트 |
+| --- | --- | --- |
+| 좌측 Master Grid | `upperCd`가 빈 row | `MasterGridPanel` |
+| 우측 Detail Grid | `upperCd == selectedMaster.specId` | `DetailGridPanel` |
+
+### 3. VcsnofP001Style은 SpecMasterPopup으로 옮김
+
+퍼블 소스의 팝업 개념:
+
+```jsx
+<VcsnofP001Style>
+  <div className="popup">
+    <div className="popup-body">...</div>
+    <div className="buttonArea">...</div>
+  </div>
+</VcsnofP001Style>
+```
+
+현재 코드:
+
+```jsx
+<div className="modal-dim vcsnofP001Style">
+  <div className="modal spec-master-modal vc-pub-popup">
+    <div className="modal-header">...</div>
+    <div className="popup-body partArea">...</div>
+    <div className="footer-actions popup-actions buttonArea">...</div>
+  </div>
+</div>
+```
+
+팝업은 하나지만 `popup.scope` 값으로 Master/Detail 입력 항목을 나눈다.
+
+```jsx
+{isDetail ? (
+  <>
+    <SelectField label="공정대분류" required ... />
+    <SelectField label="공정중분류" required ... />
+    <SelectField label="CHAMBER SPEC" required ... />
+  </>
+) : null}
+
+{isMaster ? <SwitchField label="상세스펙 유무" ... /> : null}
+{isMaster ? <SwitchField label="수기등록" ... /> : null}
+<SwitchField label="사용여부" ... />
+```
+
+즉 Master 팝업에는 공정/Chamber를 숨기고, Detail 팝업에는 상세스펙 유무와 수기등록을 숨긴다.
+
+### 4. Switch 퍼블은 checkbox 기능 위에 class만 입힘
+
+퍼블에서 switch처럼 보이던 항목은 실제 업무값이 `Y/N`이다. 그래서 화면에는 switch로 보이게 하고, 값은 그대로 `Y/N`으로 Redux에 저장한다.
+
+현재 코드:
+
+```jsx
+const SwitchField = ({ label, value, onChange }) => (
+  <label className="vc-switch-field spec-switch">
+    <span className="vc-switch-label">{label}</span>
+    <input type="checkbox" checked={value === "Y"} onChange={(event) => onChange(event.target.checked ? "Y" : "N")} />
+    <span className="vc-switch-track" aria-hidden="true">
+      <span className="vc-switch-thumb" />
+    </span>
+    <span className="vc-switch-value">{value === "Y" ? "Y" : "N"}</span>
+  </label>
+);
+```
+
+CSS:
+
+```css
+.vc-switch-field input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vc-switch-field input:checked + .vc-switch-track {
+  border-color: #2f6f73;
+  background: #2f6f73;
+}
+```
+
+숨겨진 checkbox는 값 전달용이고, 실제로 사용자가 보는 모양은 `vc-switch-track`과 `vc-switch-thumb`이다.
+
+### 5. Excel 버튼은 퍼블 버튼만 반영하고 다운로드 로직은 유지
+
+퍼블의 다운로드 버튼 모양은 `download-button`, `download-icon` class로 옮겼다.
+
+```jsx
+<button type="button" className="secondary-button download-button" disabled={!selectedMaster} onClick={onExcel}>
+  <span className="download-icon" aria-hidden="true" />
+  Excel
+</button>
+```
+
+다운로드 데이터는 화면 사상에 맞춰 Master와 Detail을 분리한다.
+
+```js
+downloadExcel({
+  selectedMaster,
+  detailRows,
+});
+```
+
+Master와 Detail은 컬럼이 다르므로 하나의 CSV row로 합치지 않고, Excel에서 열 수 있는 HTML table 두 개로 만든다.
+
+### 6. 퍼블 반영 시 유지해야 할 연결선
+
+퍼블 소스를 다시 받더라도 아래 연결선은 바꾸지 않는다.
+
+| 화면 조작 | 유지해야 할 개발 코드 |
+| --- | --- |
+| Search Conditions 값 변경 | `specMasterActions.setSearchField` |
+| 조회 버튼 | `specMasterActions.searchRequest` |
+| Master radio 선택 | `specMasterActions.selectMaster` |
+| Detail 조회 | `specMasterActions.fetchDetailsRequest` |
+| 신규/수정 팝업 열기 | `openCreatePopup`, `openEditPopup` |
+| 팝업 값 변경 | `setPopupField` |
+| 저장 | `saveRequest` |
+| 삭제 | `deleteRequest` |
+
+퍼블은 className, table 구조, popup markup을 조정하고, 위 action과 saga/API 흐름은 그대로 둔다.

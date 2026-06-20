@@ -32,6 +32,8 @@ const MASTER_COLUMNS = [
   { key: "detSearYn", label: "상세스펙" },
 ];
 
+// 좌측 Master Grid는 upperCd가 없는 상위 Spec만 보여준다.
+// 공정/Chamber 컬럼은 Detail 속성이므로 Master column에는 넣지 않는다.
 const DETAIL_COLUMNS = [
   { key: "select", label: "" },
   { key: "no", label: "No" },
@@ -139,6 +141,8 @@ const SpecMaster = () => {
   }, [dispatch]);
 
   return (
+    // vc-pub-screen/spec-master-screen은 퍼블 외피 class이고,
+    // 실제 데이터 흐름은 아래 dispatch와 selector가 계속 소유한다.
     <main className="page embedded-page vc-pub-screen spec-master-screen">
       <SearchPanel
         search={search}
@@ -201,6 +205,7 @@ const SpecMaster = () => {
 };
 
 const SearchPanel = ({ search, options, loading, onChange, onReset, onSearch }) => (
+  // 퍼블 SearchStyle 영역. 입력 변경은 Redux search state만 바꾸고, 조회 버튼이 SEARCH_REQUEST를 발생시킨다.
   <section className="panel vc-pub-section searchStyle">
     <div className="section-title">Search Conditions</div>
     <div className="search-row vc-pub-search-row">
@@ -218,6 +223,8 @@ const SearchPanel = ({ search, options, loading, onChange, onReset, onSearch }) 
 );
 
 const MasterGridPanel = ({ rows, selectedSpecId, loading, page, onSelect, onCreate, onEdit, onDelete, onPageChange }) => (
+  // 퍼블 VcsnofM001Style 계열을 입힌 좌측 grid.
+  // row radio 선택값은 selectedSpecId 하나만 들고 있고, Detail 조회는 saga가 이어서 처리한다.
   <section className="panel vc-pub-section vcsnofM001Style spec-master-panel">
     <div className="section-header">
       <div className="section-title">Master Grid <span className="muted">전체 {page.totalElements || rows.length}</span></div>
@@ -262,6 +269,8 @@ const MasterGridPanel = ({ rows, selectedSpecId, loading, page, onSelect, onCrea
 );
 
 const DetailGridPanel = ({ rows, selectedMaster, selectedDetailSpecId, loading, onSelect, onCreate, onEdit, onDelete, onExcel }) => (
+  // 우측 grid는 선택 Master의 children만 보여준다.
+  // Excel은 이 영역의 버튼이지만 selected Master 1건과 Detail 전체를 함께 내려받는다.
   <section className="panel vc-pub-section vcsnofM001Style spec-detail-panel">
     <div className="section-header">
       <div className="section-title">Detail Grid <span className="muted">{selectedMaster ? selectedMaster.specNm : "Master를 선택하세요"}</span></div>
@@ -317,6 +326,8 @@ const SpecMasterPopup = ({ popup, options, loading, selectedMaster, onChange, on
   const title = `${isDetail ? "Spec Detail" : "Spec Master"} ${popup.mode === "edit" ? "수정" : "신규"}`;
 
   return (
+    // 퍼블 팝업 class는 여기에서만 담당한다.
+    // 저장/검증/API 호출은 onSave -> SAVE_REQUEST -> saga 흐름으로 넘어간다.
     <div className="modal-dim vcsnofP001Style">
       <div className="modal spec-master-modal vc-pub-popup">
         <div className="modal-header">
@@ -330,6 +341,7 @@ const SpecMasterPopup = ({ popup, options, loading, selectedMaster, onChange, on
         <div className="popup-body partArea">
           {isDetail ? <div className="notice-box info">선택한 Master 아래에 상세 Spec을 저장합니다: {toDisplayText(selectedMaster?.specNm)}</div> : null}
           <div className="form-grid spec-master-form-grid">
+            {/* Detail 팝업은 선택 Master 아래에 생성되므로 FAB/AREA/MAKER/MODEL을 수정하지 못하게 잠근다. */}
             <SelectField label="FAB" required value={form.fabId} options={options.fabIds} disabled={isDetail} onChange={(value) => onChange("fabId", value)} />
             <SelectField label="AREA" value={form.area} options={options.areas} disabled={isDetail || manualModel} onChange={(value) => onChange("area", value)} />
             <SelectField label="MAKER" required={isMaster && !manualModel} value={form.maker} options={options.makers} disabled={isDetail || manualModel} onChange={(value) => onChange("maker", value)} />
@@ -378,6 +390,8 @@ const SpecMasterPopup = ({ popup, options, loading, selectedMaster, onChange, on
 };
 
 const SelectField = ({ label, value, options = [], required = false, disabled = false, onChange }) => (
+  // 퍼블 select markup을 공통화한 작은 필드 컴포넌트다.
+  // option shape는 saga에서 { value, label }로 normalize한다.
   <label className="field">
     <span>{label}{required ? <em className="required-mark">*</em> : null}</span>
     <select value={value || ""} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
@@ -392,6 +406,7 @@ const SelectField = ({ label, value, options = [], required = false, disabled = 
 );
 
 const InputField = ({ label, value, required = false, disabled = false, onChange }) => (
+  // popup text 입력 공통 컴포넌트. 값 보정과 validation은 reducer/saga에서 처리한다.
   <label className="field">
     <span>{label}{required ? <em className="required-mark">*</em> : null}</span>
     <input value={value || ""} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
@@ -399,6 +414,8 @@ const InputField = ({ label, value, required = false, disabled = false, onChange
 );
 
 const SwitchField = ({ label, value, onChange }) => (
+  // 퍼블은 switch 모양을 요구하지만 값은 기존 Y/N 업무값을 유지한다.
+  // checkbox input은 숨겨진 값 전달용이고 track/thumb이 사용자가 보는 switch UI다.
   <label className="vc-switch-field spec-switch">
     <span className="vc-switch-label">{label}</span>
     <input type="checkbox" checked={value === "Y"} onChange={(event) => onChange(event.target.checked ? "Y" : "N")} />

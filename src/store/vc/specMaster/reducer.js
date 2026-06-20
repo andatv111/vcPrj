@@ -6,6 +6,8 @@ const DEFAULT_SEARCH = {
   specNm: "",
 };
 
+// 화면 진입 시 saga가 채우는 콤보 후보들이다.
+// FAB는 공통코드 API가 원천이고, 나머지는 SpecMaster filter API 또는 row 데이터에서 만든다.
 const DEFAULT_OPTIONS = {
   fabIds: [],
   areas: [],
@@ -17,6 +19,8 @@ const DEFAULT_OPTIONS = {
   chambModelNms: [],
 };
 
+// Master/Detail 등록 팝업이 공유하는 form 기본값.
+// scope가 master인지 detail인지에 따라 실제 노출 필드는 SpecMasterPopup에서 갈라진다.
 const EMPTY_POPUP_FORM = {
   specId: "",
   specNm: "",
@@ -41,24 +45,33 @@ const EMPTY_POPUP_FORM = {
 };
 
 export const initialSpecMasterState = {
+  // Search Conditions 영역
   search: { ...DEFAULT_SEARCH },
   options: { ...DEFAULT_OPTIONS },
+
+  // 좌측 Master Grid와 우측 Detail Grid 데이터
   masterRows: [],
   detailRows: [],
   selectedSpecId: "",
   selectedDetailSpecId: "",
+
+  // 좌측 Master Grid paging. Detail은 선택 Master 기준 전체를 보여준다.
   page: {
     page: 0,
     size: 10,
     totalPages: 1,
     totalElements: 0,
   },
+
+  // 등록/수정 팝업 상태. mode는 create/edit, scope는 master/detail이다.
   popup: {
     visible: false,
     mode: "create",
     scope: "master",
     form: { ...EMPTY_POPUP_FORM },
   },
+
+  // 화면 전체 loading을 하나로 뭉치지 않고 영역별로 둬서 버튼 disabled와 문구를 분리한다.
   loading: {
     init: false,
     search: false,
@@ -70,6 +83,7 @@ export const initialSpecMasterState = {
   message: "",
 };
 
+// B/E가 true/false, Y/N, 1/0 중 어떤 형태로 내려줘도 화면 내부에서는 Y/N으로 통일한다.
 const toFlag = (value, trueValue = "Y", falseValue = "N") =>
   value === true || value === trueValue || value === "1" ? trueValue : falseValue;
 
@@ -105,6 +119,7 @@ const setLoading = (state, key, value) => ({
   },
 });
 
+// reducer 안에서 팝업을 열 때 현재 선택된 Master row를 바로 찾아 Detail form 기본값으로 사용한다.
 const findSelectedMaster = (state) => state.masterRows.find((row) => row.specId === state.selectedSpecId) || null;
 
 const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
@@ -231,6 +246,7 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
           visible: true,
           mode: "create",
           scope: action.payload.scope,
+          // Detail 신규는 선택 Master의 FAB/MODEL/specId를 기본으로 물려받는다.
           form: normalizePopupForm({}, action.payload.scope, findSelectedMaster(state)),
         },
         error: null,
@@ -243,6 +259,7 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
           visible: true,
           mode: "edit",
           scope: action.payload.scope,
+          // 수정은 grid row를 그대로 가져오되, Detail이면 선택 Master의 parent 정보도 함께 보정한다.
           form: normalizePopupForm(action.payload.row, action.payload.scope, findSelectedMaster(state)),
         },
         error: null,

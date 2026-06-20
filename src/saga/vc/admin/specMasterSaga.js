@@ -21,6 +21,8 @@ const toArray = (value) => {
   return [value];
 };
 
+// API 오류 형태가 아직 확정되지 않았기 때문에 화면에는 최대한 사람이 읽을 수 있는 메시지를 전달한다.
+// B/E가 message/errorMessage/payload 중 어떤 이름을 쓰더라도 reducer.error에는 문자열만 넣는다.
 const getErrorMessage = (error) => {
   if (!error) return "알 수 없는 오류가 발생했습니다.";
   if (typeof error === "string") return error;
@@ -36,6 +38,8 @@ const getErrorMessage = (error) => {
   return "Spec Master API 처리 중 오류가 발생했습니다.";
 };
 
+// 공통코드 API, SpecMaster filter API, row 기반 후보값을 모두 select option 형태로 맞춘다.
+// 화면 컴포넌트는 { value, label }만 알면 되므로 API별 필드명 차이는 saga에서 흡수한다.
 const normalizeOption = (item) => {
   if (typeof item === "string") return { value: item, label: item };
   const value = item?.value ?? item?.commonCd ?? item?.code ?? item?.setModelNm ?? item?.specNm ?? item?.name ?? "";
@@ -50,6 +54,7 @@ const normalizeOption = (item) => {
   return { value: String(value), label: String(label) };
 };
 
+// 같은 코드가 여러 API에서 중복으로 내려올 수 있어 value 기준으로 한 번만 남긴다.
 const uniqueOptions = (items = []) => {
   const map = new Map();
   toArray(items).map(normalizeOption).forEach((item) => {
@@ -58,6 +63,8 @@ const uniqueOptions = (items = []) => {
   return Array.from(map.values());
 };
 
+// B/E 필드명이 일부 다르거나 GoodDocs 오타가 있어도 화면 row 이름은 여기서 통일한다.
+// 이후 reducer/component는 specId, fabId, setModelNm, upperCd 같은 화면 표준 이름만 사용한다.
 const normalizeSpecRow = (row = {}, index = 0) => ({
   id: row.specId || row.id || `SPEC_ROW_${index + 1}`,
   specId: row.specId || row.id || "",
@@ -83,6 +90,7 @@ const normalizeSpecRow = (row = {}, index = 0) => ({
   raw: row,
 });
 
+// Spring paging(content/number/size)과 일반 배열 응답을 모두 좌측 grid paging 상태로 변환한다.
 const normalizePage = (response, fallbackPage) => ({
   page: Number(response?.number ?? response?.page ?? fallbackPage.page ?? 0),
   size: Number(response?.size ?? fallbackPage.size ?? 10),
@@ -90,6 +98,7 @@ const normalizePage = (response, fallbackPage) => ({
   totalElements: Number(response?.totalElements ?? response?.totalCount ?? toArray(response).length),
 });
 
+// init API 두 개의 결과를 SearchPanel/Popup select들이 바로 쓸 수 있는 options로 만든다.
 const buildOptionsFromResponse = (response = {}) => {
   const rows = toArray(response.rows || response.specs || response);
   return {
@@ -106,6 +115,8 @@ const buildOptionsFromResponse = (response = {}) => {
   };
 };
 
+// 저장 payload는 화면 form 그대로 보내지 않고 DB row 의미에 맞는 key만 추린다.
+// 상세스펙 유무가 Y인 Master는 자체 MIN/MAX 기준을 갖지 않으므로 빈 값으로 보낸다.
 const sanitizeSpecPayload = (form = {}, user = {}) => ({
   specNm: form.specNm,
   fabId: form.fabId,
@@ -149,9 +160,11 @@ function* searchSpecMasterFlow() {
     // 보냄: { page, size, fabId, setModelNm, specNm }
     // 받음: 좌측 Master grid paging rows. 화면 사상상 upperCd가 없는 Master row만 사용한다.
     const response = yield call(specMasterApi.searchMaster, { search, page });
+    // selectleftpaging은 원칙상 Master만 내려와야 하지만, preview/초기 B/E가 전체 row를 줄 수 있어 한 번 더 방어한다.
     const rows = toArray(response).map(normalizeSpecRow).filter((row) => !row.upperCd);
     yield put(specMasterActions.searchSuccess({ rows, page: normalizePage(response, page) }));
 
+    // 좌측 첫 row가 선택되면 사용자가 radio를 누르지 않아도 우측 Detail Grid가 바로 채워진다.
     if (rows[0]?.specId) {
       yield put(specMasterActions.fetchDetailsRequest(rows[0].specId));
     }
@@ -166,6 +179,8 @@ function* fetchDetailsFlow(action) {
     // API: GET /api/vc/specmaster/{specId}/children
     // GoodDocs 10번은 POST로 적혀 있으나 조회이므로 adapter에서 GET 우선, POST fallback을 수행합니다.
     const response = yield call(specMasterApi.getChildren, specId);
+    // Detail row는 upperCd가 선택 Master specId인 하위 row다.
+    // 화면에서는 Master와 같은 column 이름을 쓰므로 normalizeSpecRow를 공통으로 사용한다.
     const rows = toArray(response).map(normalizeSpecRow);
     yield put(specMasterActions.fetchDetailsSuccess({ specId, rows }));
   } catch (error) {
@@ -210,13 +225,16 @@ function* saveSpecMasterFlow() {
         yield call(specMasterApi.createChild, parentSpecId, payload);
       }
     } else if (popup.mode === "edit" && popup.form.specId) {
+      // Master 수정과 Detail 수정은 같은 PATCH API를 사용한다.
       yield call(specMasterApi.updateSpec, popup.form.specId, payload);
     } else {
+      // Master 신규는 upperCd 없이 상위 row로 저장한다.
       yield call(specMasterApi.createMaster, payload);
     }
 
     yield put(specMasterActions.saveSuccess("Spec Master 저장이 완료되었습니다."));
     const state = yield select(selectSpecMasterState);
+    // 저장 후 좌측 grid를 다시 조회한다. 기존 선택 Master가 있으면 Detail도 다시 맞춰 최신화한다.
     yield put(specMasterActions.searchRequest());
     if (state.selectedSpecId) yield put(specMasterActions.fetchDetailsRequest(state.selectedSpecId));
   } catch (error) {
@@ -230,6 +248,7 @@ function* deleteSpecMasterFlow(action) {
     const specId = action.payload.specId;
     if (!specId) throw new Error("삭제할 Spec을 선택해 주세요.");
 
+    // 삭제 API는 Master/Detail 공통이다. Master 삭제 시 children 처리 정책은 B/E service에 있다.
     yield call(specMasterApi.deleteSpec, specId, user?.empNo || user?.empno || "");
     yield put(specMasterActions.deleteSuccess("Spec Master 삭제가 완료되었습니다."));
     yield put(specMasterActions.searchRequest());
