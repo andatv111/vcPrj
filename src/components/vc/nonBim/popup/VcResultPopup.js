@@ -55,10 +55,11 @@ const VcResultPopup = () => {
   if (!visible) return null;
 
   return (
-    <div className="modal-dim">
-      <div className="modal result-modal">
+    <div className="modal-dim vcsnofP001Style">
+      <div className="modal result-modal vc-pub-popup">
         <ResultPopupHeader onClose={() => dispatch(vcResultActions.closeResultPopup())} />
 
+        <div className="popup-body partArea">
         <section className="result-section">
           <div className="section-title small">기본정보</div>
           <div className="form-grid">
@@ -75,8 +76,9 @@ const VcResultPopup = () => {
 
         <div className={notice.className}>{notice.message}</div>
         {error ? <div className="error-box">{error}</div> : null}
+        </div>
 
-        <div className="footer-actions">
+        <div className="footer-actions popup-actions buttonArea">
           {/* Spec Out이면 reducer가 기안 팝업을 열고, 그 외에는 saga가 즉시 저장 API를 호출합니다. */}
           <button
             type="button"
@@ -106,7 +108,7 @@ const ResultPopupHeader = ({ onClose }) => (
       <div className="breadcrumb">Simulation &gt; V/C Simulation &gt; BIM/5D 미적용Fab &gt; Vacuum Conductance 결과</div>
       <h2>Vacuum Conductance Result</h2>
     </div>
-    <button type="button" className="link-button" onClick={onClose}>
+    <button type="button" className="link-button popup-close-button" onClick={onClose}>
       Close
     </button>
   </div>
@@ -114,7 +116,7 @@ const ResultPopupHeader = ({ onClose }) => (
 
 /** 공통 결과 컬럼 정의에 따라 Chamber별 계산 결과 행을 출력합니다. */
 const ResultTable = ({ rows }) => (
-  <div className="table-wrap">
+  <div className="table-wrap tableScrollStyle result-table-wrap">
     <table>
       <thead>
         <tr>

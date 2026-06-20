@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="4.863" tests="6" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="4.802" tests="6" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="25"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -16,7 +16,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="KR"/>
     <property name="sun.boot.library.path" value="C:\Program Files\Eclipse Adoptium\jdk-25.0.3.9-hotspot\bin"/>
-    <property name="sun.java.command" value="C:\Users\ngopr\AppData\Local\Temp\surefire15992846088889318968\surefirebooter-20260618022310419_3.jar C:\Users\ngopr\AppData\Local\Temp\surefire15992846088889318968 2026-06-18T02-23-10_203-jvmRun1 surefire-20260618022310419_1tmp surefire_0-20260618022310419_2tmp"/>
+    <property name="sun.java.command" value="C:\Users\ngopr\AppData\Local\Temp\surefire3360644205317306574\surefirebooter-20260620092437442_3.jar C:\Users\ngopr\AppData\Local\Temp\surefire3360644205317306574 2026-06-20T09-24-37_255-jvmRun1 surefire-20260620092437442_1tmp surefire_0-20260620092437442_2tmp"/>
     <property name="jdk.debug" value="release"/>
     <property name="surefire.test.class.path" value="D:\vcPrj\vcBePrj\target\test-classes;D:\vcPrj\vcBePrj\target\classes;C:\Users\ngopr\.m2\repository\org\springframework\boot\spring-boot-starter-web\3.3.6\spring-boot-starter-web-3.3.6.jar;C:\Users\ngopr\.m2\repository\org\springframework\boot\spring-boot-starter\3.3.6\spring-boot-starter-3.3.6.jar;C:\Users\ngopr\.m2\repository\org\springframework\boot\spring-boot\3.3.6\spring-boot-3.3.6.jar;C:\Users\ngopr\.m2\repository\org\springframework\boot\spring-boot-autoconfigure\3.3.6\spring-boot-autoconfigure-3.3.6.jar;C:\Users\ngopr\.m2\repository\org\springframework\boot\spring-boot-starter-logging\3.3.6\spring-boot-starter-logging-3.3.6.jar;C:\Users\ngopr\.m2\repository\ch\qos\logback\logback-classic\1.5.12\logback-classic-1.5.12.jar;C:\Users\ngopr\.m2\repository\ch\qos\logback\logback-core\1.5.12\logback-core-1.5.12.jar;C:\Users\ngopr\.m2\repository\org\apache\logging\log4j\log4j-to-slf4j\2.23.1\log4j-to-slf4j-2.23.1.jar;C:\Users\ngopr\.m2\repository\org\apache\logging\log4j\log4j-api\2.23.1\log4j-api-2.23.1.jar;C:\Users\ngopr\.m2\repository\org\slf4j\jul-to-slf4j\2.0.16\jul-to-slf4j-2.0.16.jar;C:\Users\ngopr\.m2\repository\jakarta\annotation\jakarta.annotation-api\2.1.1\jakarta.annotation-api-2.1.1.jar;C:\Users\ngopr\.m2\repository\org\yaml\snakeyaml\2.2\snakeyaml-2.2.jar;C:\Users\ngopr\.m2\repository\org\springframework\boot\spring-boot-starter-json\3.3.6\spring-boot-starter-json-3.3.6.jar;C:\Users\ngopr\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jdk8\2.17.3\jackson-datatype-jdk8-2.17.3.jar;C:\Users\ngopr\.m2\repository\com\fasterxml\jackson\module\jackson-module-parameter-names\2.17.3\jackson-module-parameter-names-2.17.3.jar;C:\Users\ngopr\.m2\repository\org\springframework\boot\spring-boot-starter-tomcat\3.3.6\spring-boot-starter-tomcat-3.3.6.jar;C:\Users\ngopr\.m2\repository\org\apache\tomcat\embed\tomcat-embed-core\10.1.33\tomcat-embed-core-10.1.33.jar;C:\Users\ngopr\.m2\repository\org\apache\tomcat\embed\tomcat-embed-websocket\10.1.33\tomcat-embed-websocket-10.1.33.jar;C:\Users\ngopr\.m2\repository\org\springframework\spring-web\6.1.15\spring-web-6.1.15.jar;C:\Users\ngopr\.m2\repository\io\micrometer\micrometer-observation\1.13.8\micrometer-observation-1.13.8.jar;C:\Users\ngopr\.m2\repository\io\micrometer\micrometer-commons\1.13.8\micrometer-commons-1.13.8.jar;C:\Users\ngopr\.m2\repository\org\springframework\spring-webmvc\6.1.15\spring-webmvc-6.1.15.jar;C:\Users\ngopr\.m2\repository\org\springframework\spring-aop\6.1.15\spring-aop-6.1.15.jar;C:\Users\ngopr\.m2\repository\org\springframework\spring-context\6.1.15\spring-context-6.1.15.jar;C:\Users\ngopr\.m2\repository\org\springframework\spring-expression\6.1.15\spring-expression-6.1.15.jar;C:\Users\ngopr\.m2\repository\org\springframework\boot\spring-boot-starter-validation\3.3.6\spring-boot-starter-validation-3.3.6.jar;C:\Users\ngopr\.m2\repository\org\apache\tomcat\embed\tomcat-embed-el\10.1.33\tomcat-embed-el-10.1.33.jar;C:\Users\ngopr\.m2\repository\org\hibernate\validator\hibernate-validator\8.0.1.Final\hibernate-validator-8.0.1.Final.jar;C:\Users\ngopr\.m2\repository\jakarta\validation\jakarta.validation-api\3.0.2\jakarta.validation-api-3.0.2.jar;C:\Users\ngopr\.m2\repository\org\jboss\logging\jboss-logging\3.5.3.Final\jboss-logging-3.5.3.Final.jar;C:\Users\ngopr\.m2\repository\com\fasterxml\classmate\1.7.0\classmate-1.7.0.jar;C:\Users\ngopr\.m2\repository\org\springframework\spring-tx\6.1.15\spring-tx-6.1.15.jar;C:\Users\ngopr\.m2\repository\org\springframework\spring-beans\6.1.15\spring-beans-6.1.15.jar;C:\Users\ngopr\.m2\repository\org\springframework\spring-core\6.1.15\spring-core-6.1.15.jar;C:\Users\ngopr\.m2\repository\org\springframework\spring-jcl\6.1.15\spring-jcl-6.1.15.jar;C:\Users\ngopr\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jsr310\2.17.3\jackson-datatype-jsr310-2.17.3.jar;C:\Users\ngopr\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.17.3\jackson-annotations-2.17.3.jar;C:\Users\ngopr\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.17.3\jackson-core-2.17.3.jar;C:\Users\ngopr\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.17.3\jackson-databind-2.17.3.jar;C:\Users\ngopr\.m2\repository\org\springframework\boot\spring-boot-starter-test\3.3.6\spring-boot-starter-test-3.3.6.jar;C:\Users\ngopr\.m2\repository\org\springframework\boot\spring-boot-test\3.3.6\spring-boot-test-3.3.6.jar;C:\Users\ngopr\.m2\repository\org\springframework\boot\spring-boot-test-autoconfigure\3.3.6\spring-boot-test-autoconfigure-3.3.6.jar;C:\Users\ngopr\.m2\repository\com\jayway\jsonpath\json-path\2.9.0\json-path-2.9.0.jar;C:\Users\ngopr\.m2\repository\org\slf4j\slf4j-api\2.0.16\slf4j-api-2.0.16.jar;C:\Users\ngopr\.m2\repository\jakarta\xml\bind\jakarta.xml.bind-api\4.0.2\jakarta.xml.bind-api-4.0.2.jar;C:\Users\ngopr\.m2\repository\jakarta\activation\jakarta.activation-api\2.1.3\jakarta.activation-api-2.1.3.jar;C:\Users\ngopr\.m2\repository\net\minidev\json-smart\2.5.1\json-smart-2.5.1.jar;C:\Users\ngopr\.m2\repository\net\minidev\accessors-smart\2.5.1\accessors-smart-2.5.1.jar;C:\Users\ngopr\.m2\repository\org\ow2\asm\asm\9.6\asm-9.6.jar;C:\Users\ngopr\.m2\repository\org\assertj\assertj-core\3.25.3\assertj-core-3.25.3.jar;C:\Users\ngopr\.m2\repository\net\bytebuddy\byte-buddy\1.14.19\byte-buddy-1.14.19.jar;C:\Users\ngopr\.m2\repository\org\awaitility\awaitility\4.2.2\awaitility-4.2.2.jar;C:\Users\ngopr\.m2\repository\org\hamcrest\hamcrest\2.2\hamcrest-2.2.jar;C:\Users\ngopr\.m2\repository\org\junit\jupiter\junit-jupiter\5.10.5\junit-jupiter-5.10.5.jar;C:\Users\ngopr\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.10.5\junit-jupiter-api-5.10.5.jar;C:\Users\ngopr\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\ngopr\.m2\repository\org\junit\platform\junit-platform-commons\1.10.5\junit-platform-commons-1.10.5.jar;C:\Users\ngopr\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\ngopr\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.10.5\junit-jupiter-params-5.10.5.jar;C:\Users\ngopr\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.10.5\junit-jupiter-engine-5.10.5.jar;C:\Users\ngopr\.m2\repository\org\junit\platform\junit-platform-engine\1.10.5\junit-platform-engine-1.10.5.jar;C:\Users\ngopr\.m2\repository\org\mockito\mockito-core\5.11.0\mockito-core-5.11.0.jar;C:\Users\ngopr\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.19\byte-buddy-agent-1.14.19.jar;C:\Users\ngopr\.m2\repository\org\objenesis\objenesis\3.3\objenesis-3.3.jar;C:\Users\ngopr\.m2\repository\org\mockito\mockito-junit-jupiter\5.11.0\mockito-junit-jupiter-5.11.0.jar;C:\Users\ngopr\.m2\repository\org\skyscreamer\jsonassert\1.5.3\jsonassert-1.5.3.jar;C:\Users\ngopr\.m2\repository\com\vaadin\external\google\android-json\0.0.20131108.vaadin1\android-json-0.0.20131108.vaadin1.jar;C:\Users\ngopr\.m2\repository\org\springframework\spring-test\6.1.15\spring-test-6.1.15.jar;C:\Users\ngopr\.m2\repository\org\xmlunit\xmlunit-core\2.9.1\xmlunit-core-2.9.1.jar;"/>
     <property name="sun.cpu.endian" value="little"/>
@@ -33,7 +33,7 @@
     <property name="java.specification.name" value="Java Platform API Specification"/>
     <property name="FILE_LOG_CHARSET" value="UTF-8"/>
     <property name="java.awt.headless" value="true"/>
-    <property name="surefire.real.class.path" value="C:\Users\ngopr\AppData\Local\Temp\surefire15992846088889318968\surefirebooter-20260618022310419_3.jar"/>
+    <property name="surefire.real.class.path" value="C:\Users\ngopr\AppData\Local\Temp\surefire3360644205317306574\surefirebooter-20260620092437442_3.jar"/>
     <property name="user.script" value=""/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="25.0.3+9-LTS"/>
@@ -52,11 +52,11 @@
     <property name="user.dir" value="D:\vcPrj\vcBePrj"/>
     <property name="os.arch" value="amd64"/>
     <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
-    <property name="PID" value="4800"/>
+    <property name="PID" value="24548"/>
     <property name="sun.os.patch.level" value=""/>
     <property name="CONSOLE_LOG_CHARSET" value="UTF-8"/>
     <property name="native.encoding" value="MS949"/>
-    <property name="java.library.path" value="C:\Program Files\Eclipse Adoptium\jdk-25.0.3.9-hotspot\bin;C:\Windows\Sun\Java\bin;C:\Windows\system32;C:\Windows;C:\Users\ngopr\.codex\tmp\arg0\codex-arg00QfOqH;C:\Program Files\Eclipse Adoptium\jdk-25.0.3.9-hotspot\bin;C:\Python312\Scripts\;C:\Python312\;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\Bandizip\;C:\Program Files\Intel\WiFi\bin\;C:\Program Files\Common Files\Intel\WirelessCommon\;C:\Program Files\nodejs\;C:\ProgramData\chocolatey\bin;C:\Program Files\nodejs;C:\Program Files\Git\cmd;C:\apache-maven-3.9.16\bin;C:\Users\ngopr\AppData\Local\Microsoft\WindowsApps;C:\Program Files\Intel\WiFi\bin\;C:\Program Files\Common Files\Intel\WirelessCommon\;C:\Program Files (x86)\IDM Computer Solutions\UltraEdit\;C:\Users\ngopr\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\ngopr\AppData\Roaming\npm;c:\Users\ngopr\.vscode\extensions\openai.chatgpt-26.609.30741-win32-x64\bin\windows-x86_64;."/>
+    <property name="java.library.path" value="C:\Program Files\Eclipse Adoptium\jdk-25.0.3.9-hotspot\bin;C:\Windows\Sun\Java\bin;C:\Windows\system32;C:\Windows;C:\Program Files\Eclipse Adoptium\jdk-25.0.3.9-hotspot\bin;C:\Users\ngopr\.codex\tmp\arg0\codex-arg0ThDZov;C:\Program Files\Eclipse Adoptium\jdk-25.0.3.9-hotspot\bin;C:\Python312\Scripts\;C:\Python312\;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\Bandizip\;C:\Program Files\Intel\WiFi\bin\;C:\Program Files\Common Files\Intel\WirelessCommon\;C:\Program Files\nodejs\;C:\ProgramData\chocolatey\bin;C:\Program Files\nodejs;C:\Program Files\Git\cmd;C:\apache-maven-3.9.16\bin;C:\Users\ngopr\AppData\Local\Microsoft\WindowsApps;C:\Program Files\Intel\WiFi\bin\;C:\Program Files\Common Files\Intel\WirelessCommon\;C:\Program Files (x86)\IDM Computer Solutions\UltraEdit\;C:\Users\ngopr\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\ngopr\AppData\Roaming\npm;c:\Users\ngopr\.vscode\extensions\openai.chatgpt-26.609.30741-win32-x64\bin\windows-x86_64;."/>
     <property name="java.vm.info" value="mixed mode, sharing"/>
     <property name="stderr.encoding" value="MS949"/>
     <property name="java.vendor" value="Eclipse Adoptium"/>
@@ -65,9 +65,9 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="69.0"/>
   </properties>
-  <testcase name="manualDrawingApiDoesNotExposeDatabaseDrawingId" classname="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="1.021">
-    <system-out><![CDATA[02:23:11.541 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.example.vcbeprj.service.DesignPortalDrawingServiceTest]: DesignPortalDrawingServiceTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-02:23:11.722 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.example.vcbeprj.VcBePrjApplication for test class com.example.vcbeprj.service.DesignPortalDrawingServiceTest
+  <testcase name="manualDrawingApiDoesNotExposeDatabaseDrawingId" classname="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="0.966">
+    <system-out><![CDATA[09:24:38.484 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.example.vcbeprj.service.DesignPortalDrawingServiceTest]: DesignPortalDrawingServiceTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+09:24:38.699 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.example.vcbeprj.VcBePrjApplication for test class com.example.vcbeprj.service.DesignPortalDrawingServiceTest
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -78,26 +78,26 @@
 
  :: Spring Boot ::                (v3.3.6)
 
-02:23:12.422 INFO  [background-preinit] o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.1.Final
-02:23:12.470 INFO  [main] c.e.v.s.DesignPortalDrawingServiceTest - Starting DesignPortalDrawingServiceTest using Java 25.0.3 with PID 4800 (started by ngopr in D:\vcPrj\vcBePrj)
-02:23:12.470 DEBUG [main] c.e.v.s.DesignPortalDrawingServiceTest - Running with Spring Boot v3.3.6, Spring v6.1.15
-02:23:12.471 INFO  [main] c.e.v.s.DesignPortalDrawingServiceTest - No active profile set, falling back to 1 default profile: "default"
-02:23:12.472 DEBUG [main] o.s.boot.SpringApplication - Loading source class com.example.vcbeprj.VcBePrjApplication
-02:23:12.492 DEBUG [main] o.s.w.c.s.GenericWebApplicationContext - Refreshing org.springframework.web.context.support.GenericWebApplicationContext@2e1792e7
-02:23:13.949 DEBUG [main] o.s.b.a.AutoConfigurationPackages - @EnableAutoConfiguration was declared on a class in the package 'com.example.vcbeprj'. Automatic @Repository and @Entity scanning is enabled.
-02:23:14.502 DEBUG [main] o.s.w.s.m.m.a.RequestMappingHandlerMapping - 15 mappings in 'requestMappingHandlerMapping'
-02:23:14.560 DEBUG [main] o.s.w.s.h.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**] in 'resourceHandlerMapping'
-02:23:14.601 DEBUG [main] o.s.w.s.m.m.a.RequestMappingHandlerAdapter - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
-02:23:14.649 DEBUG [main] o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - ControllerAdvice beans: 0 @ExceptionHandler, 1 ResponseBodyAdvice
-02:23:14.737 DEBUG [main] o.s.b.w.s.ServletContextInitializerBeans - Mapping filters: characterEncodingFilter urls=[/*] order=-2147483648, formContentFilter urls=[/*] order=-9900, requestContextFilter urls=[/*] order=-105
-02:23:14.737 DEBUG [main] o.s.b.w.s.ServletContextInitializerBeans - Mapping servlets: 
-02:23:14.745 DEBUG [main] o.s.b.w.s.f.OrderedCharacterEncodingFilter - Filter 'characterEncodingFilter' configured for use
-02:23:14.745 DEBUG [main] o.s.b.w.s.f.OrderedFormContentFilter - Filter 'formContentFilter' configured for use
-02:23:14.745 DEBUG [main] o.s.b.w.s.f.OrderedRequestContextFilter - Filter 'requestContextFilter' configured for use
-02:23:14.746 INFO  [main] o.s.b.t.m.w.SpringBootMockServletContext - Initializing Spring TestDispatcherServlet ''
-02:23:14.747 INFO  [main] o.s.t.w.s.TestDispatcherServlet - Initializing Servlet ''
-02:23:14.748 INFO  [main] o.s.t.w.s.TestDispatcherServlet - Completed initialization in 1 ms
-02:23:14.781 DEBUG [main] o.s.b.a.l.ConditionEvaluationReportLogger - 
+09:24:39.386 INFO  [background-preinit] o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.1.Final
+09:24:39.423 INFO  [main] c.e.v.s.DesignPortalDrawingServiceTest - Starting DesignPortalDrawingServiceTest using Java 25.0.3 with PID 24548 (started by ngopr in D:\vcPrj\vcBePrj)
+09:24:39.424 DEBUG [main] c.e.v.s.DesignPortalDrawingServiceTest - Running with Spring Boot v3.3.6, Spring v6.1.15
+09:24:39.425 INFO  [main] c.e.v.s.DesignPortalDrawingServiceTest - No active profile set, falling back to 1 default profile: "default"
+09:24:39.425 DEBUG [main] o.s.boot.SpringApplication - Loading source class com.example.vcbeprj.VcBePrjApplication
+09:24:39.454 DEBUG [main] o.s.w.c.s.GenericWebApplicationContext - Refreshing org.springframework.web.context.support.GenericWebApplicationContext@2e1792e7
+09:24:40.778 DEBUG [main] o.s.b.a.AutoConfigurationPackages - @EnableAutoConfiguration was declared on a class in the package 'com.example.vcbeprj'. Automatic @Repository and @Entity scanning is enabled.
+09:24:41.319 DEBUG [main] o.s.w.s.m.m.a.RequestMappingHandlerMapping - 28 mappings in 'requestMappingHandlerMapping'
+09:24:41.382 DEBUG [main] o.s.w.s.h.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**] in 'resourceHandlerMapping'
+09:24:41.425 DEBUG [main] o.s.w.s.m.m.a.RequestMappingHandlerAdapter - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+09:24:41.479 DEBUG [main] o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - ControllerAdvice beans: 0 @ExceptionHandler, 1 ResponseBodyAdvice
+09:24:41.597 DEBUG [main] o.s.b.w.s.ServletContextInitializerBeans - Mapping filters: characterEncodingFilter urls=[/*] order=-2147483648, formContentFilter urls=[/*] order=-9900, requestContextFilter urls=[/*] order=-105
+09:24:41.598 DEBUG [main] o.s.b.w.s.ServletContextInitializerBeans - Mapping servlets: 
+09:24:41.607 DEBUG [main] o.s.b.w.s.f.OrderedCharacterEncodingFilter - Filter 'characterEncodingFilter' configured for use
+09:24:41.608 DEBUG [main] o.s.b.w.s.f.OrderedFormContentFilter - Filter 'formContentFilter' configured for use
+09:24:41.608 DEBUG [main] o.s.b.w.s.f.OrderedRequestContextFilter - Filter 'requestContextFilter' configured for use
+09:24:41.609 INFO  [main] o.s.b.t.m.w.SpringBootMockServletContext - Initializing Spring TestDispatcherServlet ''
+09:24:41.609 INFO  [main] o.s.t.w.s.TestDispatcherServlet - Initializing Servlet ''
+09:24:41.611 INFO  [main] o.s.t.w.s.TestDispatcherServlet - Completed initialization in 1 ms
+09:24:41.650 DEBUG [main] o.s.b.a.l.ConditionEvaluationReportLogger - 
 
 
 ============================
@@ -1100,28 +1100,28 @@ Unconditional classes:
 
 
 
-02:23:14.808 INFO  [main] c.e.v.s.DesignPortalDrawingServiceTest - Started DesignPortalDrawingServiceTest in 2.852 seconds (process running for 4.217)
-02:23:14.810 DEBUG [main] o.s.b.a.ApplicationAvailabilityBean - Application availability state LivenessState changed to CORRECT
-02:23:14.814 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT] vcBePrj started. mockDbBasePath=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101
-02:23:14.815 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\DESIGN_PORTAL_MANUAL_DRAWING.txt
-02:23:14.815 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M14_VC_REQ_CHAMBER.txt
-02:23:14.815 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M14_VC_REQ_COMPONENT.txt
-02:23:14.816 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M14_VC_REQ_EQUIPMENT.txt
-02:23:14.816 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M15_VC_REQ_CHAMBER.txt
-02:23:14.816 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M15_VC_REQ_COMPONENT.txt
-02:23:14.816 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M15_VC_REQ_EQUIPMENT.txt
-02:23:14.816 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M16_VC_REQ_CHAMBER.txt
-02:23:14.816 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M16_VC_REQ_COMPONENT.txt
-02:23:14.816 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M16_VC_REQ_EQUIPMENT.txt
-02:23:14.816 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\VCW_VC_SPEC_MST.txt
-02:23:14.818 DEBUG [main] o.s.b.a.ApplicationAvailabilityBean - Application availability state ReadinessState changed to ACCEPTING_TRAFFIC
-02:23:15.568 DEBUG [main] o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.example.vcbeprj.controller.VcSimController#manualDrawings(String, String, String)
-02:23:15.586 INFO  [main] c.e.v.controller.VcSimController - [API][GET /api/vc/sim/non-bim/manual-drawings] fabCd=M16 eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001
-02:23:15.586 INFO  [main] c.e.v.s.DesignPortalDrawingService - [SERVICE][PORTAL][SELECT] business=searchManualDrawings table=DESIGN_PORTAL_MANUAL_DRAWING fabCd=M16 eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001
-02:23:15.713 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\DESIGN_PORTAL_MANUAL_DRAWING.txt rowType=DesignPortalDrawing rowCount=4
-02:23:15.715 INFO  [main] c.e.v.s.DesignPortalDrawingService - [SERVICE][PORTAL][SELECT][DONE] resultCount=1
-02:23:15.730 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
-02:23:15.761 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Writing [[NonBimManualDrawingResponse[woId=VC-2026-ETCH-001, eqId=EQ-VAC-ETCH-1001, siteCd=PTK, siteNm=Pyeong (truncated)...]
+09:24:41.681 INFO  [main] c.e.v.s.DesignPortalDrawingServiceTest - Started DesignPortalDrawingServiceTest in 2.746 seconds (process running for 4.082)
+09:24:41.683 DEBUG [main] o.s.b.a.ApplicationAvailabilityBean - Application availability state LivenessState changed to CORRECT
+09:24:41.686 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT] vcBePrj started. mockDbBasePath=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969
+09:24:41.688 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\DESIGN_PORTAL_MANUAL_DRAWING.txt
+09:24:41.688 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M14_VC_REQ_CHAMBER.txt
+09:24:41.688 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M14_VC_REQ_COMPONENT.txt
+09:24:41.689 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M14_VC_REQ_EQUIPMENT.txt
+09:24:41.689 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M15_VC_REQ_CHAMBER.txt
+09:24:41.689 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M15_VC_REQ_COMPONENT.txt
+09:24:41.689 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M15_VC_REQ_EQUIPMENT.txt
+09:24:41.689 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M16_VC_REQ_CHAMBER.txt
+09:24:41.689 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M16_VC_REQ_COMPONENT.txt
+09:24:41.690 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M16_VC_REQ_EQUIPMENT.txt
+09:24:41.690 INFO  [main] c.e.vcbeprj.config.StartupLogRunner - [BOOT][MOCK_DB] tableFile=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\VCW_VC_SPEC_MST.txt
+09:24:41.691 DEBUG [main] o.s.b.a.ApplicationAvailabilityBean - Application availability state ReadinessState changed to ACCEPTING_TRAFFIC
+09:24:42.393 DEBUG [main] o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.example.vcbeprj.controller.VcSimController#manualDrawings(String, String, String)
+09:24:42.415 INFO  [main] c.e.v.controller.VcSimController - [API][GET /api/vc/sim/non-bim/manual-drawings] fabCd=M16 eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001
+09:24:42.415 INFO  [main] c.e.v.s.DesignPortalDrawingService - [SERVICE][PORTAL][SELECT] business=searchManualDrawings table=DESIGN_PORTAL_MANUAL_DRAWING fabCd=M16 eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001
+09:24:42.534 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\DESIGN_PORTAL_MANUAL_DRAWING.txt rowType=DesignPortalDrawing rowCount=4
+09:24:42.536 INFO  [main] c.e.v.s.DesignPortalDrawingService - [SERVICE][PORTAL][SELECT][DONE] resultCount=1
+09:24:42.553 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+09:24:42.580 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Writing [[NonBimManualDrawingResponse[woId=VC-2026-ETCH-001, eqId=EQ-VAC-ETCH-1001, siteCd=PTK, siteNm=Pyeong (truncated)...]
 ]]></system-out>
     <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (C:\Users\ngopr\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.19\byte-buddy-agent-1.14.19.jar)
 WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
@@ -1129,85 +1129,85 @@ WARNING: If a serviceability tool is not in use, please run with -Djdk.instrumen
 WARNING: Dynamic loading of agents will be disallowed by default in a future release
 ]]></system-err>
   </testcase>
-  <testcase name="nonBimOptionsExposeFabValuesForSearchCondition" classname="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="0.034">
-    <system-out><![CDATA[02:23:15.867 DEBUG [main] o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.example.vcbeprj.controller.VcSimController#nonBimOptions()
-02:23:15.867 INFO  [main] c.e.v.controller.VcSimController - [API][GET /api/vc/sim/non-bim/options]
-02:23:15.868 INFO  [main] c.e.v.service.VcSimFacadeService - [SERVICE][SIM][OPTIONS] business=nonBimOptions
-02:23:15.872 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\DESIGN_PORTAL_MANUAL_DRAWING.txt rowType=DesignPortalDrawing rowCount=4
-02:23:15.878 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
-02:23:15.878 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Writing [{fabs=[{value=M14, label=M14}, {value=M15, label=M15}, {value=M16, label=M16}], pipeTypes=[{value=PI (truncated)...]
+  <testcase name="nonBimOptionsExposeFabValuesForSearchCondition" classname="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="0.038">
+    <system-out><![CDATA[09:24:42.687 DEBUG [main] o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.example.vcbeprj.controller.VcSimController#nonBimOptions()
+09:24:42.687 INFO  [main] c.e.v.controller.VcSimController - [API][GET /api/vc/sim/non-bim/options]
+09:24:42.688 INFO  [main] c.e.v.service.VcSimFacadeService - [SERVICE][SIM][OPTIONS] business=nonBimOptions
+09:24:42.692 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\DESIGN_PORTAL_MANUAL_DRAWING.txt rowType=DesignPortalDrawing rowCount=4
+09:24:42.696 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+09:24:42.696 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Writing [{pipeTypes=[{value=PIPE, label=Pipe}, {value=ELBOW, label=Elbow}, {value=REDUCER, label=Reducer}], f (truncated)...]
 ]]></system-out>
   </testcase>
-  <testcase name="calculationUsesRequestedSpecSnapshotWhenMasterRowIsMissing" classname="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="0.205">
-    <system-out><![CDATA[02:23:15.907 DEBUG [main] o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.example.vcbeprj.controller.VcSimController#calculateNonBim(VcSimCalculateRequest)
-02:23:15.944 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Read "application/json;charset=UTF-8" to [VcSimCalculateRequest[sourceType=NON_BIM, woId=VC-2026-ETCH-001, search=null, equipment=Equipment[eq (truncated)...]
-02:23:15.945 INFO  [main] c.e.v.controller.VcSimController - [API][POST /api/vc/sim/non-bim/calculate] sourceType=NON_BIM woId=VC-2026-ETCH-001
-02:23:15.946 INFO  [main] c.e.v.service.VcSimFacadeService - [SERVICE][SIM][CALCULATE] sourceType=NON_BIM fabCd=M16 eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001 chamberCount=1
-02:23:15.950 DEBUG [main] c.e.v.c.MockFileTransactionManager - Creating new transaction with name [com.example.vcbeprj.service.VcCalculationService.calculateVcRequest]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
-02:23:15.953 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][START] guid=f8c89b50-283d-48e3-b168-df593f0141d8 fabId=M16 eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001 chamberCount=1
-02:23:15.953 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][STEP 1] create EQUIPMENT request header
-02:23:15.953 DEBUG [main] c.e.v.service.VcTableRoutingService - [TABLE_ROUTING] fabId=M16 equipmentTable=M16_VC_REQ_EQUIPMENT chamberTable=M16_VC_REQ_CHAMBER componentTable=M16_VC_REQ_COMPONENT
-02:23:15.953 INFO  [main] c.e.v.s.VcRequestEquipmentService - [SERVICE][EQUIPMENT][INSERT] business=createRequestHeader table=M16_VC_REQ_EQUIPMENT guid=f8c89b50-283d-48e3-b168-df593f0141d8 fabId=M16 eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001
-02:23:15.955 INFO  [main] c.e.v.repository.TxtTableRepository - [TXT_DB][INSERT] table=M16_VC_REQ_EQUIPMENT rowType=VcRequestEquipment row=VcRequestEquipment[guid=f8c89b50-283d-48e3-b168-df593f0141d8, fabId=M16, fabEqpId=EQ-VAC-ETCH-1001, woId=VC-2026-ETCH-001, buildingId=, areaId=, dareaId=, eqpMakerNm=, eqpModelNm=VX-ETCH-300, dwgGbnNm=FORELINE, verVal=1, handEntryYn=Y, workEmpno=preview, workNm=Preview User, workTm=2026-06-18T02:23:15.953212600, prgsStatCd=1, downloadUrl=, fileNm=, folderPathVal=, specYn=NA, convYn=N, inqYn=Y, workStatCd=0, procYn=N, docUrl=, regTm=2026-06-18T02:23:15.953212600, regEmpno=preview, chgDtNm=null, chgChgrEmpno=]
-02:23:15.977 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=M16_VC_REQ_EQUIPMENT file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M16_VC_REQ_EQUIPMENT.txt rowType=VcRequestEquipment rowCount=25
-02:23:15.992 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][WRITE] table=M16_VC_REQ_EQUIPMENT file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M16_VC_REQ_EQUIPMENT.txt rowCount=26
-02:23:15.992 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][STEP 2] convert chamber objects to COMPONENT rows
-02:23:15.992 DEBUG [main] c.e.v.service.VcCalculationService - [FLOW][COMPONENT][MAP] guid=f8c89b50-283d-48e3-b168-df593f0141d8 chamber=Ch02 Side Pump sno=1 type=PIPE inlet=3 length=760 angle=0 outlet=0 qty=1
-02:23:15.992 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][STEP 3] save COMPONENT rows count=1
-02:23:15.993 DEBUG [main] c.e.v.service.VcTableRoutingService - [TABLE_ROUTING] fabId=M16 equipmentTable=M16_VC_REQ_EQUIPMENT chamberTable=M16_VC_REQ_CHAMBER componentTable=M16_VC_REQ_COMPONENT
-02:23:15.993 INFO  [main] c.e.v.s.VcRequestComponentService - [SERVICE][COMPONENT][INSERT_ALL] business=insertComponents table=M16_VC_REQ_COMPONENT fabId=M16 insertCount=1
-02:23:15.994 INFO  [main] c.e.v.repository.TxtTableRepository - [TXT_DB][INSERT_ALL] table=M16_VC_REQ_COMPONENT rowType=VcRequestComponent insertCount=1
-02:23:16.023 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=M16_VC_REQ_COMPONENT file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M16_VC_REQ_COMPONENT.txt rowType=VcRequestComponent rowCount=83
-02:23:16.039 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][WRITE] table=M16_VC_REQ_COMPONENT file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M16_VC_REQ_COMPONENT.txt rowCount=84
-02:23:16.039 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][STEP 4] calculate conductance, select SPEC, judge each chamber
-02:23:16.041 DEBUG [main] c.e.v.service.VcCalculationService - [FLOW][ENGINE] type=PIPE inlet=3 length=760 angle=0 qty=1 score=17.880
-02:23:16.041 DEBUG [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][ENGINE] guid=f8c89b50-283d-48e3-b168-df593f0141d8 chamber=Ch02 Side Pump objectCount=1 measVal=17.88
-02:23:16.041 INFO  [main] c.e.v.service.VcSpecMasterService - [SERVICE][SPEC_MASTER][SELECT] business=getSpecForJudge table=VCW_VC_SPEC_MST fabId=M16 setModelNm=VX-ETCH-300 chamberModelNm=ETCH-LINE-S
-02:23:16.047 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=VCW_VC_SPEC_MST file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\VCW_VC_SPEC_MST.txt rowType=SpecMaster rowCount=4
-02:23:16.048 INFO  [main] c.e.v.service.VcSpecMasterService - [SERVICE][SPEC_MASTER][SELECT][DONE] found=false specId=
-02:23:16.049 INFO  [main] c.e.vcbeprj.service.VcJudgeService - [SERVICE][JUDGE] measVal=17.88 min=42 max=58 specId= result=NG_L
-02:23:16.049 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][JUDGE] guid=f8c89b50-283d-48e3-b168-df593f0141d8 chamber=Ch02 Side Pump chamberModel=ETCH-LINE-S specId= judge=NG_L
-02:23:16.049 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][STEP 5] save CHAMBER result rows count=1
-02:23:16.049 DEBUG [main] c.e.v.service.VcTableRoutingService - [TABLE_ROUTING] fabId=M16 equipmentTable=M16_VC_REQ_EQUIPMENT chamberTable=M16_VC_REQ_CHAMBER componentTable=M16_VC_REQ_COMPONENT
-02:23:16.049 INFO  [main] c.e.v.s.VcRequestChamberService - [SERVICE][CHAMBER][INSERT_ALL] business=insertChamberResults table=M16_VC_REQ_CHAMBER fabId=M16 insertCount=1
-02:23:16.049 INFO  [main] c.e.v.repository.TxtTableRepository - [TXT_DB][INSERT_ALL] table=M16_VC_REQ_CHAMBER rowType=VcRequestChamber insertCount=1
-02:23:16.068 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=M16_VC_REQ_CHAMBER file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M16_VC_REQ_CHAMBER.txt rowType=VcRequestChamber rowCount=48
-02:23:16.079 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][WRITE] table=M16_VC_REQ_CHAMBER file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M16_VC_REQ_CHAMBER.txt rowCount=49
-02:23:16.080 INFO  [main] c.e.vcbeprj.service.VcJudgeService - [SERVICE][JUDGE][EQUIPMENT] judgeResults=[NG_L] specYn=N
-02:23:16.080 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][STEP 6] update EQUIPMENT SPEC_YN guid=f8c89b50-283d-48e3-b168-df593f0141d8 specYn=N
-02:23:16.080 DEBUG [main] c.e.v.service.VcTableRoutingService - [TABLE_ROUTING] fabId=M16 equipmentTable=M16_VC_REQ_EQUIPMENT chamberTable=M16_VC_REQ_CHAMBER componentTable=M16_VC_REQ_COMPONENT
-02:23:16.080 INFO  [main] c.e.v.s.VcRequestEquipmentService - [SERVICE][EQUIPMENT][UPDATE] business=updateSpecYn table=M16_VC_REQ_EQUIPMENT guid=f8c89b50-283d-48e3-b168-df593f0141d8 specYn=N
-02:23:16.083 INFO  [main] c.e.v.repository.TxtTableRepository - [TXT_DB][UPDATE] table=M16_VC_REQ_EQUIPMENT rowType=VcRequestEquipment
-02:23:16.088 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=M16_VC_REQ_EQUIPMENT file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M16_VC_REQ_EQUIPMENT.txt rowType=VcRequestEquipment rowCount=26
-02:23:16.095 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][WRITE] table=M16_VC_REQ_EQUIPMENT file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\M16_VC_REQ_EQUIPMENT.txt rowCount=26
-02:23:16.096 INFO  [main] c.e.v.repository.TxtTableRepository - [TXT_DB][UPDATE][DONE] table=M16_VC_REQ_EQUIPMENT updatedCount=1 totalCount=26
-02:23:16.096 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][END] guid=f8c89b50-283d-48e3-b168-df593f0141d8 fabId=M16 specYn=N responseRows=1
-02:23:16.097 DEBUG [main] c.e.v.c.MockFileTransactionManager - Initiating transaction commit
-02:23:16.099 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
-02:23:16.100 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Writing [{data={eqId=EQ-VAC-ETCH-1001, fabCd=M16, setModelNm=VX-ETCH-300, guid=f8c89b50-283d-48e3-b168-df593f (truncated)...]
+  <testcase name="calculationUsesRequestedSpecSnapshotWhenMasterRowIsMissing" classname="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="0.247">
+    <system-out><![CDATA[09:24:42.733 DEBUG [main] o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.example.vcbeprj.controller.VcSimController#calculateNonBim(VcSimCalculateRequest)
+09:24:42.779 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Read "application/json;charset=UTF-8" to [VcSimCalculateRequest[sourceType=NON_BIM, woId=VC-2026-ETCH-001, search=null, equipment=Equipment[eq (truncated)...]
+09:24:42.782 INFO  [main] c.e.v.controller.VcSimController - [API][POST /api/vc/sim/non-bim/calculate] sourceType=NON_BIM woId=VC-2026-ETCH-001
+09:24:42.783 INFO  [main] c.e.v.service.VcSimFacadeService - [SERVICE][SIM][CALCULATE] sourceType=NON_BIM fabCd=M16 eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001 chamberCount=1
+09:24:42.787 DEBUG [main] c.e.v.c.MockFileTransactionManager - Creating new transaction with name [com.example.vcbeprj.service.VcCalculationService.calculateVcRequest]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+09:24:42.791 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][START] guid=f9510e52-a882-4809-a67a-7fd6ead22a27 fabId=M16 eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001 chamberCount=1
+09:24:42.791 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][STEP 1] create EQUIPMENT request header
+09:24:42.791 DEBUG [main] c.e.v.service.VcTableRoutingService - [TABLE_ROUTING] fabId=M16 equipmentTable=M16_VC_REQ_EQUIPMENT chamberTable=M16_VC_REQ_CHAMBER componentTable=M16_VC_REQ_COMPONENT
+09:24:42.792 INFO  [main] c.e.v.s.VcRequestEquipmentService - [SERVICE][EQUIPMENT][INSERT] business=createRequestHeader table=M16_VC_REQ_EQUIPMENT guid=f9510e52-a882-4809-a67a-7fd6ead22a27 fabId=M16 eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001
+09:24:42.793 INFO  [main] c.e.v.repository.TxtTableRepository - [TXT_DB][INSERT] table=M16_VC_REQ_EQUIPMENT rowType=VcRequestEquipment row=VcRequestEquipment[guid=f9510e52-a882-4809-a67a-7fd6ead22a27, fabId=M16, fabEqpId=EQ-VAC-ETCH-1001, woId=VC-2026-ETCH-001, buildingId=, areaId=, dareaId=, eqpMakerNm=, eqpModelNm=VX-ETCH-300, dwgGbnNm=FORELINE, verVal=1, handEntryYn=Y, workEmpno=preview, workNm=Preview User, workTm=2026-06-20T09:24:42.791744900, prgsStatCd=1, downloadUrl=, fileNm=, folderPathVal=, specYn=NA, convYn=N, inqYn=Y, workStatCd=0, procYn=N, docUrl=, regTm=2026-06-20T09:24:42.791744900, regEmpno=preview, chgDtNm=null, chgChgrEmpno=]
+09:24:42.825 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=M16_VC_REQ_EQUIPMENT file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M16_VC_REQ_EQUIPMENT.txt rowType=VcRequestEquipment rowCount=33
+09:24:42.841 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][WRITE] table=M16_VC_REQ_EQUIPMENT file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M16_VC_REQ_EQUIPMENT.txt rowCount=34
+09:24:42.841 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][STEP 2] convert chamber objects to COMPONENT rows
+09:24:42.841 DEBUG [main] c.e.v.service.VcCalculationService - [FLOW][COMPONENT][MAP] guid=f9510e52-a882-4809-a67a-7fd6ead22a27 chamber=Ch02 Side Pump sno=1 type=PIPE inlet=3 length=760 angle=0 outlet=0 qty=1
+09:24:42.841 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][STEP 3] save COMPONENT rows count=1
+09:24:42.841 DEBUG [main] c.e.v.service.VcTableRoutingService - [TABLE_ROUTING] fabId=M16 equipmentTable=M16_VC_REQ_EQUIPMENT chamberTable=M16_VC_REQ_CHAMBER componentTable=M16_VC_REQ_COMPONENT
+09:24:42.841 INFO  [main] c.e.v.s.VcRequestComponentService - [SERVICE][COMPONENT][INSERT_ALL] business=insertComponents table=M16_VC_REQ_COMPONENT fabId=M16 insertCount=1
+09:24:42.842 INFO  [main] c.e.v.repository.TxtTableRepository - [TXT_DB][INSERT_ALL] table=M16_VC_REQ_COMPONENT rowType=VcRequestComponent insertCount=1
+09:24:42.871 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=M16_VC_REQ_COMPONENT file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M16_VC_REQ_COMPONENT.txt rowType=VcRequestComponent rowCount=116
+09:24:42.893 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][WRITE] table=M16_VC_REQ_COMPONENT file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M16_VC_REQ_COMPONENT.txt rowCount=117
+09:24:42.893 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][STEP 4] calculate conductance, select SPEC, judge each chamber
+09:24:42.895 DEBUG [main] c.e.v.service.VcCalculationService - [FLOW][ENGINE] type=PIPE inlet=3 length=760 angle=0 qty=1 score=17.880
+09:24:42.895 DEBUG [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][ENGINE] guid=f9510e52-a882-4809-a67a-7fd6ead22a27 chamber=Ch02 Side Pump objectCount=1 measVal=17.88
+09:24:42.895 INFO  [main] c.e.v.service.VcSpecMasterService - [SERVICE][SPEC_MASTER][SELECT] business=getSpecForJudge table=VCW_VC_SPEC_MST fabId=M16 setModelNm=VX-ETCH-300 chamberModelNm=ETCH-LINE-S
+09:24:42.904 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=VCW_VC_SPEC_MST file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\VCW_VC_SPEC_MST.txt rowType=SpecMaster rowCount=9
+09:24:42.907 INFO  [main] c.e.v.service.VcSpecMasterService - [SERVICE][SPEC_MASTER][SELECT][DONE] found=false specId=
+09:24:42.908 INFO  [main] c.e.vcbeprj.service.VcJudgeService - [SERVICE][JUDGE] measVal=17.88 min=42 max=58 specId= result=NG_L
+09:24:42.908 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][JUDGE] guid=f9510e52-a882-4809-a67a-7fd6ead22a27 chamber=Ch02 Side Pump chamberModel=ETCH-LINE-S specId= judge=NG_L
+09:24:42.908 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][STEP 5] save CHAMBER result rows count=1
+09:24:42.908 DEBUG [main] c.e.v.service.VcTableRoutingService - [TABLE_ROUTING] fabId=M16 equipmentTable=M16_VC_REQ_EQUIPMENT chamberTable=M16_VC_REQ_CHAMBER componentTable=M16_VC_REQ_COMPONENT
+09:24:42.908 INFO  [main] c.e.v.s.VcRequestChamberService - [SERVICE][CHAMBER][INSERT_ALL] business=insertChamberResults table=M16_VC_REQ_CHAMBER fabId=M16 insertCount=1
+09:24:42.908 INFO  [main] c.e.v.repository.TxtTableRepository - [TXT_DB][INSERT_ALL] table=M16_VC_REQ_CHAMBER rowType=VcRequestChamber insertCount=1
+09:24:42.930 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=M16_VC_REQ_CHAMBER file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M16_VC_REQ_CHAMBER.txt rowType=VcRequestChamber rowCount=64
+09:24:42.941 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][WRITE] table=M16_VC_REQ_CHAMBER file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M16_VC_REQ_CHAMBER.txt rowCount=65
+09:24:42.942 INFO  [main] c.e.vcbeprj.service.VcJudgeService - [SERVICE][JUDGE][EQUIPMENT] judgeResults=[NG_L] specYn=N
+09:24:42.942 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][STEP 6] update EQUIPMENT SPEC_YN guid=f9510e52-a882-4809-a67a-7fd6ead22a27 specYn=N
+09:24:42.942 DEBUG [main] c.e.v.service.VcTableRoutingService - [TABLE_ROUTING] fabId=M16 equipmentTable=M16_VC_REQ_EQUIPMENT chamberTable=M16_VC_REQ_CHAMBER componentTable=M16_VC_REQ_COMPONENT
+09:24:42.942 INFO  [main] c.e.v.s.VcRequestEquipmentService - [SERVICE][EQUIPMENT][UPDATE] business=updateSpecYn table=M16_VC_REQ_EQUIPMENT guid=f9510e52-a882-4809-a67a-7fd6ead22a27 specYn=N
+09:24:42.946 INFO  [main] c.e.v.repository.TxtTableRepository - [TXT_DB][UPDATE] table=M16_VC_REQ_EQUIPMENT rowType=VcRequestEquipment
+09:24:42.954 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=M16_VC_REQ_EQUIPMENT file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M16_VC_REQ_EQUIPMENT.txt rowType=VcRequestEquipment rowCount=34
+09:24:42.960 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][WRITE] table=M16_VC_REQ_EQUIPMENT file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\M16_VC_REQ_EQUIPMENT.txt rowCount=34
+09:24:42.960 INFO  [main] c.e.v.repository.TxtTableRepository - [TXT_DB][UPDATE][DONE] table=M16_VC_REQ_EQUIPMENT updatedCount=1 totalCount=34
+09:24:42.960 INFO  [main] c.e.v.service.VcCalculationService - [FLOW][CALCULATE][END] guid=f9510e52-a882-4809-a67a-7fd6ead22a27 fabId=M16 specYn=N responseRows=1
+09:24:42.962 DEBUG [main] c.e.v.c.MockFileTransactionManager - Initiating transaction commit
+09:24:42.964 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+09:24:42.965 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Writing [{data={eqId=EQ-VAC-ETCH-1001, fabCd=M16, setModelNm=VX-ETCH-300, guid=f9510e52-a882-4809-a67a-7fd6ea (truncated)...]
 ]]></system-out>
   </testcase>
-  <testcase name="manualDrawingResponseUsesBusinessKeyWithoutGenericId" classname="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="0.076">
-    <system-out><![CDATA[02:23:16.109 INFO  [main] c.e.v.s.DesignPortalDrawingService - [SERVICE][PORTAL][SELECT] business=findByBusinessKey table=DESIGN_PORTAL_MANUAL_DRAWING eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001
-02:23:16.112 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\DESIGN_PORTAL_MANUAL_DRAWING.txt rowType=DesignPortalDrawing rowCount=4
+  <testcase name="manualDrawingResponseUsesBusinessKeyWithoutGenericId" classname="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="0.091">
+    <system-out><![CDATA[09:24:42.977 INFO  [main] c.e.v.s.DesignPortalDrawingService - [SERVICE][PORTAL][SELECT] business=findByBusinessKey table=DESIGN_PORTAL_MANUAL_DRAWING eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001
+09:24:42.979 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\DESIGN_PORTAL_MANUAL_DRAWING.txt rowType=DesignPortalDrawing rowCount=4
 ]]></system-out>
   </testcase>
-  <testcase name="chamberLookupUsesEquipmentAndWoId" classname="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="0.015">
-    <system-out><![CDATA[02:23:16.188 INFO  [main] c.e.v.s.DesignPortalDrawingService - [SERVICE][PORTAL][SELECT] business=getDrawingChambers table=DESIGN_PORTAL_MANUAL_DRAWING eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001
-02:23:16.188 INFO  [main] c.e.v.s.DesignPortalDrawingService - [SERVICE][PORTAL][SELECT] business=findByBusinessKey table=DESIGN_PORTAL_MANUAL_DRAWING eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001
-02:23:16.190 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\DESIGN_PORTAL_MANUAL_DRAWING.txt rowType=DesignPortalDrawing rowCount=4
+  <testcase name="chamberLookupUsesEquipmentAndWoId" classname="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="0.018">
+    <system-out><![CDATA[09:24:43.070 INFO  [main] c.e.v.s.DesignPortalDrawingService - [SERVICE][PORTAL][SELECT] business=getDrawingChambers table=DESIGN_PORTAL_MANUAL_DRAWING eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001
+09:24:43.070 INFO  [main] c.e.v.s.DesignPortalDrawingService - [SERVICE][PORTAL][SELECT] business=findByBusinessKey table=DESIGN_PORTAL_MANUAL_DRAWING eqId=EQ-VAC-ETCH-1001 woId=VC-2026-ETCH-001
+09:24:43.073 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\DESIGN_PORTAL_MANUAL_DRAWING.txt rowType=DesignPortalDrawing rowCount=4
 ]]></system-out>
   </testcase>
-  <testcase name="calculatorOptionsContainFabAndModelForApplicableSpecFiltering" classname="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="0.016">
-    <system-out><![CDATA[02:23:16.205 DEBUG [main] o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.example.vcbeprj.controller.VcSimController#calculatorOptions()
-02:23:16.206 INFO  [main] c.e.v.controller.VcSimController - [API][GET /api/vc/sim/calculator/options]
-02:23:16.206 INFO  [main] c.e.v.service.VcSimFacadeService - [SERVICE][SIM][OPTIONS] business=calculatorOptions
-02:23:16.208 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\DESIGN_PORTAL_MANUAL_DRAWING.txt rowType=DesignPortalDrawing rowCount=4
-02:23:16.210 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\DESIGN_PORTAL_MANUAL_DRAWING.txt rowType=DesignPortalDrawing rowCount=4
-02:23:16.212 INFO  [main] c.e.v.service.VcSpecMasterService - [SERVICE][SPEC_MASTER][SELECT] business=getAllUsableSpecs table=VCW_VC_SPEC_MST
-02:23:16.213 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=VCW_VC_SPEC_MST file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-13093851743537510101\VCW_VC_SPEC_MST.txt rowType=SpecMaster rowCount=4
-02:23:16.215 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
-02:23:16.215 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Writing [{modelStandards=[{minSpec=35, label=ETCH-LINE-A / M16 ETCH General, fab=M16, model=VX-ETCH-300, valu (truncated)...]
+  <testcase name="calculatorOptionsContainFabAndModelForApplicableSpecFiltering" classname="com.example.vcbeprj.service.DesignPortalDrawingServiceTest" time="0.018">
+    <system-out><![CDATA[09:24:43.093 DEBUG [main] o.s.w.s.m.m.a.RequestMappingHandlerMapping - Mapped to com.example.vcbeprj.controller.VcSimController#calculatorOptions()
+09:24:43.094 INFO  [main] c.e.v.controller.VcSimController - [API][GET /api/vc/sim/calculator/options]
+09:24:43.094 INFO  [main] c.e.v.service.VcSimFacadeService - [SERVICE][SIM][OPTIONS] business=calculatorOptions
+09:24:43.096 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\DESIGN_PORTAL_MANUAL_DRAWING.txt rowType=DesignPortalDrawing rowCount=4
+09:24:43.100 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=DESIGN_PORTAL_MANUAL_DRAWING file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\DESIGN_PORTAL_MANUAL_DRAWING.txt rowType=DesignPortalDrawing rowCount=4
+09:24:43.101 INFO  [main] c.e.v.service.VcSpecMasterService - [SERVICE][SPEC_MASTER][SELECT] business=getAllUsableSpecs table=VCW_VC_SPEC_MST
+09:24:43.103 DEBUG [main] c.e.v.repository.TxtTableRepository - [TXT_DB][SELECT] table=VCW_VC_SPEC_MST file=C:\Users\ngopr\AppData\Local\Temp\vc-be-test-data-15569405232862826969\VCW_VC_SPEC_MST.txt rowType=SpecMaster rowCount=9
+09:24:43.104 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+09:24:43.105 DEBUG [main] o.s.w.s.m.m.a.RequestResponseBodyMethodProcessor - Writing [{models=[{value=CV-Pro-12, label=CV-Pro-12}, {value=LabVC-Mini, label=LabVC-Mini}, {value=Pump Rack  (truncated)...]
 ]]></system-out>
   </testcase>
 </testsuite>

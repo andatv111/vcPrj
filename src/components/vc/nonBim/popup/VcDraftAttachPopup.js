@@ -35,10 +35,11 @@ const VcDraftAttachPopup = () => {
   };
 
   return (
-    <div className="modal-dim nested">
-      <div className="modal draft-modal">
+    <div className="modal-dim nested vcsnofP001Style">
+      <div className="modal draft-modal vc-pub-popup">
         <DraftPopupHeader onClose={() => dispatch(vcResultActions.closeDraftPopup())} />
 
+        <div className="popup-body partArea">
         <div className="form-grid">
           <label className="field">
             <span>기안 제목</span>
@@ -66,8 +67,9 @@ const VcDraftAttachPopup = () => {
         </label>
 
         {error ? <div className="error-box">{error}</div> : null}
+        </div>
 
-        <div className="footer-actions">
+        <div className="footer-actions popup-actions buttonArea">
           {/* saga가 결과 rows와 기안 입력값을 결합해 최종 저장 API를 호출합니다. */}
           <button
             type="button"
@@ -94,7 +96,7 @@ const VcDraftAttachPopup = () => {
 const DraftPopupHeader = ({ onClose }) => (
   <div className="modal-header">
     <h2>표준 기안 첨부</h2>
-    <button type="button" className="link-button" onClick={onClose}>
+    <button type="button" className="link-button popup-close-button" onClick={onClose}>
       Close
     </button>
   </div>

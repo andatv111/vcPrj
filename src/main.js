@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 
+import SpecMaster from "./components/vc/admin/SpecMaster";
 import Bim5DNotApplied from "./components/vc/nonBim/Bim5DNotApplied";
 import VcCalculator from "./components/vc/nonBim/VcCalculator";
 import { store } from "./store";
@@ -22,6 +23,12 @@ const menuItems = [
     group: "V/C Simulation",
     label: "V/C Calculator",
     description: "Manual chamber and pipe V/C calculation",
+  },
+  {
+    id: "specMaster",
+    group: "V/C Administration",
+    label: "Spec Master",
+    description: "V/C spec master and detail management",
   },
   {
     id: "testData",
@@ -86,6 +93,7 @@ function SideMenu({ activeMenuId, onSelect }) {
 function ContentRouter({ activeMenuId }) {
   // 메뉴가 늘어날 경우 이 함수에 화면 컴포넌트를 추가하면 전체 shell 구조는 그대로 재사용됩니다.
   if (activeMenuId === "calculator") return h(VcCalculator);
+  if (activeMenuId === "specMaster") return h(SpecMaster);
   if (activeMenuId === "testData") return h(TestDataGuide);
   return h(Bim5DNotApplied);
 }

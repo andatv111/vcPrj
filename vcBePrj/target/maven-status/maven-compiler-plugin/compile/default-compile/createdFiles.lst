@@ -15,6 +15,7 @@ com\example\vcbeprj\domain\SpecMaster.class
 com\example\vcbeprj\service\VcSpecMasterService.class
 com\example\vcbeprj\service\VcSimFacadeService.class
 com\example\vcbeprj\domain\VcRequestChamber.class
+com\example\vcbeprj\controller\VcSpecMasterController.class
 com\example\vcbeprj\dto\VcSimCalculateRequest$Search.class
 com\example\vcbeprj\service\DesignPortalDrawingService.class
 com\example\vcbeprj\dto\NonBimManualDrawingResponse.class
@@ -41,6 +42,7 @@ com\example\vcbeprj\repository\TxtDesignPortalDrawingRepository.class
 com\example\vcbeprj\service\DesignPortalDrawingResponseMapper.class
 com\example\vcbeprj\config\StartupLogRunner.class
 com\example\vcbeprj\dto\NonBimPipeRowResponse.class
+com\example\vcbeprj\controller\CommonCodeController.class
 com\example\vcbeprj\dto\VcSimSaveRequest.class
 com\example\vcbeprj\service\VcRequestEquipmentService.class
 com\example\vcbeprj\service\VcRequestChamberService.class

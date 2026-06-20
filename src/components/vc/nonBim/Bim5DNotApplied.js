@@ -98,7 +98,7 @@ const Bim5DNotApplied = () => {
   };
 
   return (
-    <main className="page embedded-page">
+    <main className="page embedded-page vc-pub-screen vcsnof-m001">
       {/* Reset은 검색조건과 자동완성만 초기화하며 이미 조회된 도면 목록은 유지합니다. */}
       <NonBimSearchPanel
         search={search}
@@ -168,9 +168,9 @@ const NonBimSearchPanel = ({
   onResetSearch,
   onSearch,
 }) => (
-  <section className="panel">
+  <section className="panel vc-pub-section searchStyle">
     <div className="section-title">Search Conditions</div>
-    <div className="search-row">
+    <div className="search-row vc-pub-search-row">
       <label className="field">
         <span>FAB</span>
         <input value={search.fabCd} readOnly />
@@ -222,7 +222,7 @@ const NonBimSearchPanel = ({
 
 /** 조회된 수기 도면 목록과 현재 선택 상태를 테이블 컴포넌트에 전달합니다. */
 const DrawingResultsPanel = ({ drawings, loading, selectedWoId, onSelectDrawing, onDownload }) => (
-  <section className="panel">
+  <section className="panel vc-pub-section vcsnofM001Style">
     <div className="section-header">
       <div className="section-title">Manual Drawing Results</div>
       {loading.drawings ? <span className="muted">Searching...</span> : null}

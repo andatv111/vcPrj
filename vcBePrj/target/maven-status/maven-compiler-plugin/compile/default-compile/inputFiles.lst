@@ -2,8 +2,10 @@ D:\vcPrj\vcBePrj\src\main\java\com\example\vcbeprj\config\MockDbProperties.java
 D:\vcPrj\vcBePrj\src\main\java\com\example\vcbeprj\config\MockFileTransactionManager.java
 D:\vcPrj\vcBePrj\src\main\java\com\example\vcbeprj\config\StartupLogRunner.java
 D:\vcPrj\vcBePrj\src\main\java\com\example\vcbeprj\config\VcConfig.java
+D:\vcPrj\vcBePrj\src\main\java\com\example\vcbeprj\controller\CommonCodeController.java
 D:\vcPrj\vcBePrj\src\main\java\com\example\vcbeprj\controller\VcCalculationController.java
 D:\vcPrj\vcBePrj\src\main\java\com\example\vcbeprj\controller\VcSimController.java
+D:\vcPrj\vcBePrj\src\main\java\com\example\vcbeprj\controller\VcSpecMasterController.java
 D:\vcPrj\vcBePrj\src\main\java\com\example\vcbeprj\domain\DesignPortalDrawing.java
 D:\vcPrj\vcBePrj\src\main\java\com\example\vcbeprj\domain\JudgeResult.java
 D:\vcPrj\vcBePrj\src\main\java\com\example\vcbeprj\domain\ObjectType.java

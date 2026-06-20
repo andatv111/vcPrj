@@ -51,9 +51,12 @@ npm run test:vc
 | `src/components/vc/nonBim/VcCalculator.js` | V/C Calculator container |
 | `src/components/vc/nonBim/ui` | 퍼블리셔가 보기 쉬운 JSX UI 영역 |
 | `src/components/vc/nonBim/core/NonBim.helper.js` | DTO 조립, validation, result normalization |
+| `src/components/vc/admin/SpecMaster.js` | V/C Spec Master 관리 화면과 등록/수정 팝업 |
 | `src/store/vc` | Redux action/reducer/selector |
 | `src/saga/vc/nonBim/vcSimSaga.js` | API 호출과 비동기 flow |
+| `src/saga/vc/admin/specMasterSaga.js` | SpecMaster 조회, 상세, 저장, 삭제 flow |
 | `src/service/api/vc/sim/vcSimApi.js` | V/C B/E API 단일 HTTP adapter |
+| `src/service/api/vc/admin/specMasterApi.js` | SpecMaster B/E API adapter |
 
 ## 화면 동작 계약
 
@@ -78,6 +81,17 @@ npm run test:vc
 - Model Standard 또는 Min/Max Spec이 없어도 pipe 필수값이 있으면 Calculate가 가능합니다.
 - spec 없는 계산 결과는 conductance 계산값과 `judge: "NA"`로 표시합니다.
 
+### Spec Master
+
+- 메뉴 경로는 `V/C Administration > Spec Master`입니다.
+- FAB 콤보는 회사 공통코드 API `/api/commcode/comm-code-list?mstCd=VC_FAB_ID&sysId=VC`를 원천으로 사용합니다.
+- 좌측 Master Grid는 `upperCd`가 빈 상위 Spec만 보여줍니다.
+- 우측 Detail Grid는 선택한 Master의 `specId`를 기준으로 `upperCd == specId`인 상세 Spec을 보여줍니다.
+- Master 팝업에는 공정대분류, 공정중분류, CHAMBER SPEC을 노출하지 않습니다.
+- Detail 팝업에는 상세스펙 유무와 수기등록 스위치를 노출하지 않습니다.
+- Excel 다운로드는 선택 Master 1건과 Detail 전체를 서로 다른 표로 내려받습니다.
+- API별 판단과 B/E 협의 포인트는 [md/SPEC_MASTER_DEVELOPMENT_GUIDE.md](./md/SPEC_MASTER_DEVELOPMENT_GUIDE.md)를 기준으로 봅니다.
+
 ## API 관리 원칙
 
 - 화면과 saga는 `vcSimApi.js`만 사용합니다.
@@ -91,6 +105,7 @@ npm run test:vc
 | Endpoint URL | `vcSimApi.js`, `VcSimController.java`, `README_API.md` |
 | Request/Response field | `NonBim.helper.js`, `vcSimSaga.js`, Java DTO, `README_API.md` |
 | 화면 표시/검증 규칙 | container, reducer, selector, `README.md` |
+| SpecMaster API | `specMasterApi.js`, `specMasterSaga.js`, `VcSpecMasterController.java`, `SPEC_MASTER_DEVELOPMENT_GUIDE.md` |
 
 상세 API 계약은 [README_API.md](./README_API.md)를 기준으로 합니다.
 B/E 실행과 mock table 설명은 [vcBePrj/README.md](./vcBePrj/README.md)를 기준으로 합니다.

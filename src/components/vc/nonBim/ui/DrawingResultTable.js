@@ -14,7 +14,7 @@ export const DrawingResultTable = ({
   onSelectDrawing,
   onDownload,
 }) => (
-  <div className="table-wrap">
+  <div className="table-wrap tableScrollStyle">
     <table>
       <thead>
         <tr>
@@ -84,10 +84,11 @@ export const DrawingResultRow = ({ row, loading, selected, onSelectDrawing, onDo
       {/* 상위 saga가 WO ID에 해당하는 file와 fileSeq를 찾아 파일 API를 호출합니다. */}
       <button
         type="button"
-        className="link-button"
+        className="link-button download-button"
         disabled={loading.download}
         onClick={() => onDownload(row.woId)}
       >
+        <span className="download-icon" aria-hidden="true" />
         Download
       </button>
     </td>

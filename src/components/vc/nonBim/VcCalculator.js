@@ -55,7 +55,7 @@ const VcCalculator = () => {
   };
 
   return (
-    <main className="page embedded-page">
+    <main className="page embedded-page vc-pub-screen vcsnof-m001">
       <CalculatorSearchPanel
         equipment={equipment}
         options={options}
@@ -97,9 +97,9 @@ const VcCalculator = () => {
 };
 
 const CalculatorSearchPanel = ({ equipment, options, onFieldChange }) => (
-  <section className="panel">
+  <section className="panel vc-pub-section searchStyle">
     <div className="section-title">Search Conditions</div>
-    <div className="search-row">
+    <div className="search-row vc-pub-search-row">
       <SelectField
         label="FAB"
         placeholder="All"

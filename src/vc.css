@@ -168,6 +168,28 @@
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
+.vc-app .vc-pub-screen {
+  /* 퍼블리셔가 준 Model2.js의 VCSNOF 화면 계열을 현재 개발 화면에 입히는 외피입니다. */
+  background: #eef1f4;
+}
+
+.vc-app .vc-pub-section {
+  /* 회사 CSS의 VcsnofM001Style/SearchStyle/VcsnofP001Style이 들어오면 이 계층만 교체하면 됩니다. */
+  border-color: #cfd6df;
+}
+
+.vc-app .searchStyle {
+  border-top: 3px solid #2f6f73;
+}
+
+.vc-app .vcsnofM001Style {
+  border-top: 3px solid #334155;
+}
+
+.vc-app .vcsnofP001Style {
+  border-top: 3px solid #9a6a16;
+}
+
 .vc-app .section-header {
   display: flex;
   align-items: center;
@@ -201,6 +223,10 @@
   align-items: flex-end;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.vc-app .vc-pub-search-row {
+  align-items: flex-end;
 }
 
 .vc-app .field {
@@ -262,6 +288,76 @@
   height: 18px;
 }
 
+/* 퍼블 기준 switch UI: input은 값 전달용으로 숨기고 track/thumb만 화면에 노출한다. */
+.vc-app .vc-switch-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  color: #344054;
+  font-size: 13px;
+}
+
+.vc-app .vc-switch-field input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vc-app .vc-switch-label {
+  color: #48515e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.vc-app .vc-switch-track {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 22px;
+  border: 1px solid #aab4c1;
+  border-radius: 999px;
+  background: #e5e7eb;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.vc-app .vc-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.24);
+  transition: transform 0.15s ease;
+}
+
+.vc-app .vc-switch-field input:checked + .vc-switch-track {
+  border-color: #2f6f73;
+  background: #2f6f73;
+}
+
+.vc-app .vc-switch-field input:checked + .vc-switch-track .vc-switch-thumb {
+  transform: translateX(22px);
+}
+
+.vc-app .vc-switch-field.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.vc-app .vc-switch-value {
+  min-width: 12px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .vc-app .primary-button,
 .vc-app .secondary-button {
   height: 34px;
@@ -300,6 +396,23 @@
   gap: 8px;
 }
 
+.vc-app .buttonArea {
+  flex-wrap: wrap;
+}
+
+.vc-app .part {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.vc-app .partArea {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .vc-app .footer-actions {
   justify-content: flex-end;
   margin-top: 14px;
@@ -308,6 +421,11 @@
 .vc-app .table-wrap {
   /* 도면/배관/결과 테이블은 컬럼이 많으므로 작은 화면에서 가로 스크롤을 허용합니다. */
   overflow-x: auto;
+}
+
+.vc-app .tableScrollStyle {
+  scrollbar-color: #9aa7b5 #eef1f4;
+  scrollbar-width: thin;
 }
 
 .vc-app table {
@@ -336,6 +454,116 @@
 .vc-app td select {
   min-width: 92px;
   height: 30px;
+}
+
+.vc-app .pipe-type-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+}
+
+.vc-app .pipe-type-cell select {
+  min-width: 132px;
+}
+
+.vc-app .pipe-type-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #cfd6df;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.vc-app .pipe-type-icon::before,
+.vc-app .pipe-type-icon::after {
+  content: "";
+  position: absolute;
+  background: currentColor;
+}
+
+.vc-app .pipe-type-icon.plumbing {
+  color: #2f6f73;
+}
+
+.vc-app .pipe-type-icon.plumbing::before {
+  width: 15px;
+  height: 4px;
+  border-radius: 999px;
+}
+
+.vc-app .pipe-type-icon.elbow {
+  color: #7a4f15;
+}
+
+.vc-app .pipe-type-icon.elbow::before {
+  width: 14px;
+  height: 4px;
+  left: 5px;
+  bottom: 8px;
+  border-radius: 999px;
+}
+
+.vc-app .pipe-type-icon.elbow::after {
+  width: 4px;
+  height: 14px;
+  right: 8px;
+  top: 5px;
+  border-radius: 999px;
+}
+
+.vc-app .pipe-type-icon.reducer {
+  color: #475569;
+}
+
+.vc-app .pipe-type-icon.reducer::before {
+  width: 16px;
+  height: 5px;
+  clip-path: polygon(0 0, 100% 25%, 100% 75%, 0 100%);
+}
+
+.vc-app .download-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+}
+
+.vc-app .download-icon {
+  position: relative;
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1px solid currentColor;
+  border-top: 0;
+  border-radius: 2px;
+}
+
+.vc-app .download-icon::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: -3px;
+  width: 4px;
+  height: 8px;
+  background: currentColor;
+}
+
+.vc-app .download-icon::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
 }
 
 .vc-app .center {
@@ -429,6 +657,39 @@
   box-shadow: 0 18px 60px rgba(15, 23, 42, 0.25);
 }
 
+.vc-app .vc-pub-popup {
+  /* 퍼블리셔 팝업 소스는 Header/Body/Button 영역을 분리해서 붙이는 것을 기본 단위로 봅니다. */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid #cfd6df;
+  padding: 0;
+}
+
+.vc-app .vc-pub-popup .modal-header {
+  border-bottom: 1px solid #d9dee6;
+  background: #f8fafc;
+  padding: 16px 18px;
+  margin-bottom: 0;
+}
+
+.vc-app .popup-body {
+  gap: 14px;
+  padding: 0 18px;
+}
+
+.vc-app .popup-actions {
+  justify-content: flex-end;
+  border-top: 1px solid #d9dee6;
+  background: #fbfcfd;
+  margin-top: 0;
+  padding: 14px 18px;
+}
+
+.vc-app .popup-close-button {
+  min-height: 30px;
+}
+
 .vc-app .result-modal {
   max-width: 1180px;
 }
@@ -443,6 +704,75 @@
 
 .vc-app .result-section {
   margin-bottom: 16px;
+}
+
+.vc-app .result-section:last-child {
+  margin-bottom: 0;
+}
+
+.vc-app .result-table-wrap {
+  max-height: 360px;
+}
+
+.vc-app .spec-master-screen {
+  min-width: 0;
+}
+
+.vc-app .spec-master-grid-layout {
+  display: grid;
+  grid-template-columns: minmax(520px, 0.9fr) minmax(560px, 1.1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.vc-app .spec-master-panel,
+.vc-app .spec-detail-panel {
+  min-width: 0;
+}
+
+.vc-app .spec-master-panel .table-wrap,
+.vc-app .spec-detail-panel .table-wrap {
+  max-height: 430px;
+}
+
+.vc-app .spec-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.vc-app .spec-master-modal {
+  max-width: 900px;
+}
+
+.vc-app .spec-master-form-grid {
+  align-items: flex-start;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.vc-app .required-mark {
+  color: #d92d20;
+  font-style: normal;
+  margin-left: 2px;
+}
+
+.vc-app .spec-switch-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 12px;
+}
+
+.vc-app .spec-switch {
+  min-height: 28px;
 }
 
 .vc-app .notice-box {
@@ -541,5 +871,10 @@
 
   .vc-app .field {
     width: 100%;
+  }
+
+  .vc-app .spec-master-grid-layout,
+  .vc-app .spec-master-form-grid {
+    grid-template-columns: 1fr;
   }
 }

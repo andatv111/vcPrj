@@ -27,6 +27,14 @@
 | Calculator 옵션 조회 | GET | `/api/vc/sim/calculator/options` |
 | Calculator 계산 | POST | `/api/vc/sim/calculator/calculate` |
 | 계산 결과 저장 | POST | `/api/vc/sim/result/save` |
+| SpecMaster FAB 공통코드 | GET | `/api/commcode/comm-code-list?mstCd=VC_FAB_ID&sysId=VC` |
+| SpecMaster 필터 옵션 | GET | `/api/vc/specmaster/selectfilteroptions` |
+| SpecMaster Master 조회 | GET | `/api/vc/specmaster/selectleftpaging` |
+| SpecMaster Detail 조회 | GET | `/api/vc/specmaster/{specId}/children` |
+| SpecMaster Master 신규 | POST | `/api/vc/specmaster` |
+| SpecMaster Detail 신규 | POST | `/api/vc/specmaster/{specId}/children` |
+| SpecMaster 수정 | PATCH | `/api/vc/specmaster/{specId}` |
+| SpecMaster 삭제 | DELETE | `/api/vc/specmaster/{specId}` |
 
 ## 1. Non-BIM 옵션 조회
 
@@ -749,7 +757,151 @@ Content-Type: application/json
 | `data.draftAttached` | boolean | Y | 기안 첨부 여부 |
 | `data.nextStatus` | string | Y | 저장 후 화면 상태. `Saved` 또는 `Draft Attached` |
 
-## 공통 코드 값
+## 11. SpecMaster Admin
+
+`V/C Administration > Spec Master` 화면에서 V/C Spec Master와 하위 Detail Spec을 관리합니다.
+
+GoodDocs 원문 API는 조회 목적이 겹치는 항목이 있어, 화면에서는 아래 기준으로 사용합니다. 상세한 B/E 협의용 판단표는 [md/SPEC_MASTER_DEVELOPMENT_GUIDE.md](./md/SPEC_MASTER_DEVELOPMENT_GUIDE.md)를 기준으로 봅니다.
+
+### 화면 진입 콤보
+
+FAB는 SpecMaster API가 아니라 회사 공통코드 API를 원천으로 사용합니다.
+
+```http
+GET /api/commcode/comm-code-list?mstCd=VC_FAB_ID&sysId=VC
+```
+
+```json
+[
+  {
+    "mstCd": "VC_FAB_ID",
+    "sysId": "VC",
+    "commonCd": "M16",
+    "commonCdKoNm": "M16",
+    "commonCdEnNm": "M16",
+    "commonCdDesc": "M16A;M16B;M16C",
+    "alignSeq": "2",
+    "useYn": "Y"
+  }
+]
+```
+
+MODEL, 모델관리기준, 공정, CHAMBER SPEC 후보는 아래 API에서 조회합니다.
+
+```http
+GET /api/vc/specmaster/selectfilteroptions
+```
+
+```json
+{
+  "fabIds": ["M14", "M15", "M16"],
+  "setModelNms": ["VX-ETCH-300"],
+  "specNms": ["M16 ETCH General"],
+  "operLargeCatgVals": ["ETCH"],
+  "operMidCatgVals": ["Metal Etch"],
+  "chambModelNms": ["ETCH-LINE-A"],
+  "rows": []
+}
+```
+
+### Master Grid 조회
+
+좌측 Master Grid는 상위 Spec만 조회합니다. B/E는 `upperCd`가 빈 row만 내려줘야 합니다.
+
+```http
+GET /api/vc/specmaster/selectleftpaging?page=0&size=10&fabId=M16&setModelNm=VX-ETCH-300&specNm=ETCH
+```
+
+```json
+{
+  "content": [
+    {
+      "specId": "SPEC-M16-ETCH-A",
+      "specNm": "M16 ETCH General",
+      "fabId": "M16",
+      "setModelNm": "VX-ETCH-300",
+      "detSearYn": "N",
+      "upperCd": "",
+      "specMinVal": 35,
+      "specMaxVal": 72,
+      "chgrNm": "K. Lee"
+    }
+  ],
+  "rows": [
+    {
+      "specId": "SPEC-M16-ETCH-A",
+      "specNm": "M16 ETCH General",
+      "fabId": "M16",
+      "setModelNm": "VX-ETCH-300",
+      "detSearYn": "N",
+      "upperCd": "",
+      "specMinVal": 35,
+      "specMaxVal": 72,
+      "chgrNm": "K. Lee"
+    }
+  ],
+  "page": 0,
+  "size": 10,
+  "totalPages": 1,
+  "totalElements": 1
+}
+```
+
+### Detail Grid 조회
+
+우측 Detail Grid는 선택한 Master의 `specId`를 path로 보내 조회합니다. B/E는 `upperCd == specId`인 row만 내려줘야 합니다.
+
+```http
+GET /api/vc/specmaster/SPEC-M16-ETCH-A/children
+```
+
+```json
+[
+  {
+    "specId": "SPEC-M16-ETCH-A-CH01",
+    "specNm": "M16 ETCH Main Chamber",
+    "fabId": "M16",
+    "setModelNm": "VX-ETCH-300",
+    "operLargeCatgVal": "ETCH",
+    "operMidCatgVal": "Metal Etch",
+    "chambModelNm": "ETCH-LINE-A",
+    "upperCd": "SPEC-M16-ETCH-A",
+    "specMinVal": 38,
+    "specMaxVal": 68,
+    "chgrNm": "K. Lee"
+  }
+]
+```
+
+### 저장/수정/삭제
+
+| 동작 | Method | URL | 설명 |
+| --- | --- | --- | --- |
+| Master 신규 | POST | `/api/vc/specmaster` | `upperCd`를 비워 저장 |
+| Detail 신규 | POST | `/api/vc/specmaster/{parentSpecId}/children` | `upperCd`에 parentSpecId 저장 |
+| Master/Detail 수정 | PATCH | `/api/vc/specmaster/{specId}` | 같은 table row 수정 |
+| Master/Detail 삭제 | DELETE | `/api/vc/specmaster/{specId}?chgchgrempno={empNo}` | 현재 preview는 Master 삭제 시 Detail도 함께 삭제 |
+
+### 주요 Field
+
+| Field | Type | 설명 |
+| --- | --- | --- |
+| `specId` | string | Spec row PK |
+| `specNm` | string | 모델관리기준명 또는 Spec 이름 |
+| `fabId` | string | FAB 코드 |
+| `setModelNm` | string | 장비 Set Model |
+| `operLargeCatgVal` | string | 공정대분류. Detail 팝업에서 사용 |
+| `operMidCatgVal` | string | 공정중분류. Detail 팝업에서 사용 |
+| `chambModelNm` | string | Chamber Spec. Detail 팝업에서 사용 |
+| `detSearYn` | string | 상세스펙 유무 `Y/N` |
+| `upperCd` | string | 상위 Master `specId`; 빈 값이면 Master |
+| `mgmtTgtYn` | string | 사용여부 `Y/N` |
+| `specMinVal` | number | V/C 최소 기준 |
+| `specMaxVal` | number | V/C 최대 기준 |
+| `chgrEmpno` | string | 담당자 사번 |
+| `chgrNm` | string | 담당자 이름 |
+
+## 12. 공통 코드 값
 
 ### Judge
 
