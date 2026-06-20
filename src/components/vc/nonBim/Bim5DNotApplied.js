@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
-// 화면 공통 스타일은 실제 업무 화면에서 소유합니다.
-// 퍼블리셔 산출물이 들어오면 ui 컴포넌트별 CSS로 분리해 이 import를 교체합니다.
-import "../../../vc.css";
-
 import nonBimActions from "../../../store/vc/nonBim/action";
 import {
   selectActiveChamber,

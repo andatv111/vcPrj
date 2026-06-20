@@ -2,7 +2,9 @@
 
 이 프로젝트에서는 퍼블리셔가 준 화면 소스를 그대로 복사하지 않고, 기존 F/E 기능 흐름 위에 마크업과 className을 입히는 방식으로 반영한다. Redux action, saga 호출 순서, B/E endpoint, payload key는 유지하고 화면 표현 계층만 교체하는 것이 기본 원칙이다.
 
-`vc-app`은 로컬 preview shell에서만 쓰는 감싸는 class다. 회사 시스템에서는 root에 `vc-app`이 없을 수 있으므로, 퍼블에서 온 `searchStyle`, `vcsnofM001Style`, `vcsnofP001Style`, `buttonArea`, `partArea`, `tableScrollStyle` 같은 class는 `.vc-app`에 묶지 않고 전역 class처럼 둔다. `vc-pub-*`, `vc-switch-*`처럼 `vc-`가 붙은 class는 개발 쪽 보조 class로 유지한다.
+화면 className은 퍼블 소스 기준을 그대로 유지한다. 퍼블에서 온 `searchStyle`, `vcsnofM001Style`, `vcsnofP001Style`, `buttonArea`, `partArea`, `tableScrollStyle` 같은 class는 전역 class처럼 둔다. `vc-pub-*`, `vc-switch-*`처럼 `vc-`가 붙은 class도 퍼블 기준에 맞춰 그대로 유지한다.
+
+회사 시스템 반영 시에는 화면 컴포넌트가 `vc.css`를 직접 import하지 않는다. 현재 `src/vc.css`는 로컬 preview용이며 `src/main.js`에서만 import한다. 회사 시스템에 `SpecMaster.js` 같은 화면 컴포넌트를 붙이면, className은 그대로 두고 회사 쪽에 이미 있는 CSS가 적용되는 구조다.
 
 ## 이번 반영 기준
 
@@ -25,7 +27,7 @@
    - 검색 조건: `SearchStyle`, `searchStyle`, `vc-pub-search-row`
    - 본문 grid: `VcsnofM001Style`, `vcsnofM001Style`, `partArea`
    - 팝업: `VcsnofP001Style`, `vcsnofP001Style`, `vc-pub-popup`, `popup-body`, `popup-actions`
-   - `vc-app`은 붙이지 않는다. 화면 class는 회사 CSS가 전역으로 처리할 수 있게 유지한다.
+   - 화면 class는 회사 CSS가 전역으로 처리할 수 있게 퍼블 className 그대로 유지한다.
 
 3. 컨테이너와 UI 파일 경계를 지킨다.
    - 컨테이너: Redux selector, dispatch, 화면 흐름 제어
@@ -62,12 +64,12 @@
 
 ## 회사 CSS를 받았을 때 연결 위치
 
-현재는 `src/vc.css`에 퍼블 호환 class가 들어 있다. 실제 회사 CSS 파일을 받으면 다음 중 하나로 정리한다.
+현재 `src/vc.css`는 로컬 preview용 퍼블 호환 CSS다. 실제 회사 시스템에 반영할 때는 다음 기준으로 정리한다.
 
-- 파일명이 확정된 경우: 회사 CSS 파일을 추가하고 해당 화면 컨테이너에서 import한다.
-- 화면별 CSS가 많은 경우: 해당 화면 또는 `ui/`, `popup/` 근처에 CSS를 두고 해당 컴포넌트가 import한다.
-- 공통 table/scroll/button CSS인 경우: `src/vc.css` 또는 공통 styles 파일로 올린다.
-- 회사 CSS가 이미 `searchStyle`, `vcsnofM001Style`, `buttonArea` 같은 전역 class를 제공하면 해당 className은 그대로 두고, 현재 preview용 CSS만 제거하거나 우선순위를 낮춘다.
+- 회사 시스템에 이미 CSS가 있으면: 화면 컴포넌트에서 CSS import를 추가하지 않는다.
+- 회사 CSS 파일명이 확정된 경우: 회사 shell 또는 공통 layout 쪽에서 import한다.
+- 화면별 CSS가 별도로 제공되는 경우: 회사 프로젝트의 정해진 위치에서 import하고, React 화면 파일의 className은 그대로 둔다.
+- `src/vc.css`는 preview 확인용이므로 회사 반영 산출물에는 포함하지 않아도 된다.
 
 기능이 맞는지 헷갈리면 className을 먼저 붙이고, 이벤트 핸들러와 Redux action은 기존 코드를 따라가면 된다.
 
