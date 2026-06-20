@@ -31,9 +31,10 @@ npm run test:vc
 ## 회사 시스템 반영 기준
 
 - `src/main.js`는 React root, Redux Provider, 좌측 메뉴/우측 content shell만 둡니다.
-- 화면 스타일은 `src/vc.css`에서 관리합니다.
-- `vc-app`은 로컬 preview shell을 감싸는 class입니다. 회사 시스템에는 해당 root가 없을 수 있으므로 실제 화면/퍼블 class는 `.vc-app`에 의존하지 않게 둡니다.
-- `vc-`로 시작하는 class(`vc-pub-screen`, `vc-pub-section`, `vc-switch-field` 등)는 개발 쪽 보조 class로 유지하고, `searchStyle`, `vcsnofM001Style`, `buttonArea`, `tableScrollStyle`처럼 퍼블 원본에 가까운 class는 전역 class처럼 둡니다.
+- 로컬 preview 스타일은 `src/main.js`에서만 `src/vc.css`를 import합니다.
+- 업무 화면 컴포넌트는 `vc.css`를 직접 import하지 않습니다. 회사 시스템에 화면 컴포넌트만 붙이면 회사 시스템에 이미 있는 CSS가 className 기준으로 적용됩니다.
+- 화면 className은 퍼블 소스 기준을 그대로 유지합니다. `searchStyle`, `vcsnofM001Style`, `buttonArea`, `tableScrollStyle`처럼 퍼블 원본에 가까운 class는 전역 class로 둡니다.
+- `vc-`로 시작하는 class(`vc-pub-screen`, `vc-pub-section`, `vc-switch-field` 등)는 퍼블에서 쓰는 형태에 맞춰 그대로 유지합니다.
 - 회사 시스템의 사용자 세션은 `state.userInfo?.user`에서 읽습니다.
 - 현재 사용하는 세션 field:
 
@@ -47,7 +48,7 @@ npm run test:vc
 | 경로 | 역할 |
 | --- | --- |
 | `src/main.js` | React root, Redux Provider, app shell, menu routing |
-| `src/vc.css` | V/C 화면 전용 scoped CSS |
+| `src/vc.css` | 로컬 preview용 퍼블 호환 CSS. 회사 반영 시 화면 컴포넌트가 직접 import하지 않음 |
 | `src/components/vc/nonBim/Bim5DNotApplied.js` | BIM/5D Not Applied Fab container |
 | `src/components/vc/nonBim/VcCalculator.js` | V/C Calculator container |
 | `src/components/vc/nonBim/ui` | 퍼블리셔가 보기 쉬운 JSX UI 영역 |

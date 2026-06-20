@@ -1,8 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
-import "../../../vc.css";
-
 import vcCalculatorActions from "../../../store/vc/vcCalculator/action";
 import {
   selectVcCalculatorActiveChamber,

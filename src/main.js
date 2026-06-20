@@ -6,6 +6,7 @@ import SpecMaster from "./components/vc/admin/SpecMaster";
 import Bim5DNotApplied from "./components/vc/nonBim/Bim5DNotApplied";
 import VcCalculator from "./components/vc/nonBim/VcCalculator";
 import { store } from "./store";
+import "./vc.css";
 
 const h = React.createElement;
 
@@ -49,7 +50,7 @@ function App() {
 
   return h(
     "div",
-    { className: "vc-app app-shell" },
+    { className: "app-shell" },
     h(SideMenu, { activeMenuId, onSelect: setActiveMenuId }),
     h(
       "section",
