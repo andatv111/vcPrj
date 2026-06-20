@@ -193,7 +193,6 @@ const SpecMaster = () => {
         popup={popup}
         options={options}
         loading={loading}
-        selectedMaster={selectedMaster}
         onChange={(name, value) => dispatch(specMasterActions.setPopupField({ name, value }))}
         onClose={() => dispatch(specMasterActions.closePopup())}
         onSave={() => dispatch(specMasterActions.saveRequest())}
@@ -313,7 +312,7 @@ const DetailGridPanel = ({ rows, selectedMaster, selectedDetailSpecId, loading, 
   </section>
 );
 
-const SpecMasterPopup = ({ popup, options, loading, selectedMaster, onChange, onClose, onSave }) => {
+const SpecMasterPopup = ({ popup, options, loading, onChange, onClose, onSave }) => {
   if (!popup.visible) return null;
 
   const form = popup.form;
@@ -337,7 +336,7 @@ const SpecMasterPopup = ({ popup, options, loading, selectedMaster, onChange, on
         </div>
 
         <div className="popup-body partArea">
-          {isDetail ? <div className="notice-box info">선택한 Master 아래에 상세 Spec을 저장합니다: {toDisplayText(selectedMaster?.specNm)}</div> : null}
+          {isDetail ? <div className="notice-box info">선택한 Master 아래에 상세 Spec을 저장합니다: {toDisplayText(form.specNm || form.setModelNm || form.upperCd)}</div> : null}
           <div className="form-grid spec-master-form-grid">
             {/* Detail 팝업은 선택 Master 아래에 생성되므로 FAB/AREA/MAKER/MODEL을 수정하지 못하게 잠근다. */}
             <SelectField label="FAB" required value={form.fabId} options={options.fabIds} disabled={isDetail} onChange={(value) => onChange("fabId", value)} />
