@@ -5,7 +5,6 @@ import {
   selectSpecMasterPage,
   selectSpecMasterPopup,
   selectSpecMasterSearch,
-  selectSpecMasterSelectedMaster,
   selectSpecMasterState,
 } from "../../../store/vc/specMaster/vcSpecMasterSelector";
 import specMasterApi from "../../../service/api/vc/admin/specMasterApi";
@@ -206,7 +205,6 @@ function validatePopup(scope, form) {
 function* saveSpecMasterFlow() {
   try {
     const popup = yield select(selectSpecMasterPopup);
-    const selectedMaster = yield select(selectSpecMasterSelectedMaster);
     const user = yield select((state) => state.userInfo?.user || {});
     const validationMessage = validatePopup(popup.scope, popup.form);
 
@@ -216,7 +214,9 @@ function* saveSpecMasterFlow() {
 
     if (popup.scope === "detail") {
       // Detail 신규 저장은 선택 Master의 specId가 upperCd가 되는 구조다.
-      const parentSpecId = popup.form.upperCd || selectedMaster?.specId;
+      // Detail 저장 parent는 팝업을 연 시점에 form.upperCd로 고정한다.
+      // 저장 시점의 메인 grid 선택값을 다시 읽으면 popup 입력 대상과 저장 대상이 달라질 수 있다.
+      const parentSpecId = popup.form.upperCd;
       if (!parentSpecId) throw new Error("상세 Spec을 등록할 상위 Master를 선택해 주세요.");
 
       if (popup.mode === "edit" && popup.form.specId) {
