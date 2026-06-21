@@ -2,6 +2,8 @@ import React, { useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 
+import Footer from "./components/organisms/Footer";
+import Header from "./components/organisms/Header";
 import SpecMaster from "./components/vc/admin/SpecMaster";
 import Bim5DNotApplied from "./components/vc/nonBim/Bim5DNotApplied";
 import VcCalculator from "./components/vc/nonBim/VcCalculator";
@@ -55,13 +57,9 @@ function App() {
     h(
       "section",
       { className: "content-shell" },
-      h(
-        "header",
-        { className: "content-topbar" },
-        h("div", null, h("div", { className: "breadcrumb" }, activeMenu.group), h("h1", null, activeMenu.label)),
-        h("span", { className: "status-pill" }, "React JS Preview")
-      ),
-      h(ContentRouter, { activeMenuId })
+      h(Header, { activeMenu }),
+      h("div", { className: "content-main" }, h(ContentRouter, { activeMenuId })),
+      h(Footer)
     )
   );
 }
