@@ -21,6 +21,9 @@ export const SPEC_MASTER_ACTION_TYPES = {
   CHANGE_PAGE: `${SPEC_MASTER_ACTION_PREFIX}/CHANGE_PAGE`,
   SELECT_MASTER: `${SPEC_MASTER_ACTION_PREFIX}/SELECT_MASTER`,
   SELECT_DETAIL: `${SPEC_MASTER_ACTION_PREFIX}/SELECT_DETAIL`,
+  DETAIL_REQUEST: `${SPEC_MASTER_ACTION_PREFIX}/DETAIL_REQUEST`,
+  DETAIL_SUCCESS: `${SPEC_MASTER_ACTION_PREFIX}/DETAIL_SUCCESS`,
+  DETAIL_FAILURE: `${SPEC_MASTER_ACTION_PREFIX}/DETAIL_FAILURE`,
 
   // 우측 Detail Grid 조회. 선택 Master의 specId를 upperCd 조건처럼 사용한다.
 
@@ -64,6 +67,15 @@ export const specMasterActions = {
   changePage: (page) => ({ type: SPEC_MASTER_ACTION_TYPES.CHANGE_PAGE, payload: { page } }),
   selectMaster: (specId) => ({ type: SPEC_MASTER_ACTION_TYPES.SELECT_MASTER, payload: { specId } }),
   selectDetail: (specId) => ({ type: SPEC_MASTER_ACTION_TYPES.SELECT_DETAIL, payload: { specId } }),
+  detailRequest: ({ specId, selectedDetailSpecId } = {}) => ({
+    type: SPEC_MASTER_ACTION_TYPES.DETAIL_REQUEST,
+    payload: { specId, selectedDetailSpecId },
+  }),
+  detailSuccess: ({ specId, details, selectedDetailSpecId }) => ({
+    type: SPEC_MASTER_ACTION_TYPES.DETAIL_SUCCESS,
+    payload: { specId, details, selectedDetailSpecId },
+  }),
+  detailFailure: (error) => ({ type: SPEC_MASTER_ACTION_TYPES.DETAIL_FAILURE, payload: { error } }),
 
   openCreatePopup: (scope) => ({ type: SPEC_MASTER_ACTION_TYPES.OPEN_CREATE_POPUP, payload: { scope } }),
   openEditPopup: ({ scope, row }) => ({ type: SPEC_MASTER_ACTION_TYPES.OPEN_EDIT_POPUP, payload: { scope, row } }),

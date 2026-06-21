@@ -197,6 +197,14 @@ class DesignPortalDrawingServiceTest {
     }
 
     @Test
+    void specMasterChildrenEndpointReturnsOnlySelectedMasterDetails() throws Exception {
+        mockMvc.perform(get("/api/vc/specmaster/SPEC-M14-LITHO-A/children"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.upperCd == 'SPEC-M14-LITHO-A')].specId").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.upperCd != 'SPEC-M14-LITHO-A')]").isEmpty());
+    }
+
+    @Test
     void deprecatedSpecMasterLookupEndpointsAreNotExposed() throws Exception {
         mockMvc.perform(get("/api/vc/specmaster/selectpaging"))
                 .andExpect(status().isMethodNotAllowed());
@@ -205,8 +213,6 @@ class DesignPortalDrawingServiceTest {
         mockMvc.perform(get("/api/vc/specmaster/selectleftpaging"))
                 .andExpect(status().isMethodNotAllowed());
         mockMvc.perform(get("/api/vc/specmaster/selectcondition"))
-                .andExpect(status().isMethodNotAllowed());
-        mockMvc.perform(get("/api/vc/specmaster/SPEC-M16-ETCH-A/children"))
                 .andExpect(status().isMethodNotAllowed());
     }
 

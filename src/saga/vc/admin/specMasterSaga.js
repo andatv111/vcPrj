@@ -236,7 +236,26 @@ function* changePageFlow() {
 
 function* selectMasterFlow(action) {
   if (action.payload.specId) {
-    yield put(specMasterActions.searchRequest({ selectedSpecId: action.payload.specId }));
+    yield put(specMasterActions.detailRequest({ specId: action.payload.specId }));
+  }
+}
+
+function* detailSpecMasterFlow(action = {}) {
+  try {
+    const specId = action.payload?.specId;
+    if (!specId) {
+      yield put(specMasterActions.detailSuccess({ specId: "", details: [], selectedDetailSpecId: "" }));
+      return;
+    }
+
+    const response = yield call(specMasterApi.getChildren, specId);
+    yield put(specMasterActions.detailSuccess({
+      specId,
+      details: toArray(response).map(normalizeSpecRow),
+      selectedDetailSpecId: action.payload?.selectedDetailSpecId,
+    }));
+  } catch (error) {
+    yield put(specMasterActions.detailFailure(getErrorMessage(error)));
   }
 }
 
@@ -245,6 +264,7 @@ export function* watchSpecMasterSaga() {
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.SEARCH_REQUEST, searchSpecMasterFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.CHANGE_PAGE, changePageFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.SELECT_MASTER, selectMasterFlow);
+  yield takeLatest(SPEC_MASTER_ACTION_TYPES.DETAIL_REQUEST, detailSpecMasterFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.SAVE_REQUEST, saveSpecMasterFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.DELETE_REQUEST, deleteSpecMasterFlow);
 }

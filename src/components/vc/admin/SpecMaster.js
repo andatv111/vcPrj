@@ -314,7 +314,12 @@ const GridHeaderFilter = ({ column, value, onChange }) => {
   const active = Boolean(value);
 
   return (
-    <span className="grid-header-filter">
+    <span
+      className="grid-header-filter"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+    >
       <button
         type="button"
         className={active ? "grid-filter-button active" : "grid-filter-button"}

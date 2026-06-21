@@ -131,6 +131,10 @@ export const specMasterApi = {
     });
   },
 
+  getChildren(parentSpecId) {
+    return requestJson(SPEC_MASTER_ENDPOINTS.children(parentSpecId));
+  },
+
   createMaster(payload) {
     return requestJson(SPEC_MASTER_ENDPOINTS.createMaster, {
       method: "POST",

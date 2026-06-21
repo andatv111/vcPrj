@@ -1,6 +1,6 @@
 # Git 작업 메모
 
-이 문서는 로컬 PC에서 Codex 작업 브랜치를 GitHub에 올릴 때 사용하는 짧은 절차입니다. 프로젝트 기능 설명은 `README.md`, API 계약은 `README_API.md`, B/E 실행 설명은 `vcBePrj/README.md`를 기준으로 봅니다.
+이 문서는 로컬 PC에서 Codex 작업 브랜치를 GitHub에 올릴 때 사용하는 짧은 절차입니다. 프로젝트 기능 설명은 `README.md`, Simulation API 계약은 `md/SIM_API.md`, SpecMaster API 계약은 `md/SPEC_MASTER_API.md`, 화면 코드 이해는 `md/simReview.md`와 `md/specMasterReview.md`, B/E 실행 설명은 `vcBePrj/README.md`를 기준으로 봅니다.
 
 ## 최초 설정
 

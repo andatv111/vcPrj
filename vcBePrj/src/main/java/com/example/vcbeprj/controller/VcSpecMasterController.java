@@ -97,6 +97,12 @@ public class VcSpecMasterController {
         return Map.of("deletedCount", deletedCount);
     }
 
+    @GetMapping("/{specId}/children")
+    public List<SpecMaster> children(@PathVariable String specId) {
+        log.info("[API][GET /api/vc/specmaster/{}/children]", specId);
+        return specMasterService.getChildren(specId);
+    }
+
     @PostMapping("/{specId}/children")
     public SpecMaster createChild(@PathVariable String specId, @RequestBody Map<String, Object> payload) {
         log.info("[API][POST /api/vc/specmaster/{}/children]", specId);

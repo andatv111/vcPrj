@@ -212,6 +212,12 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
       return {
         ...state,
         selectedSpecId: action.payload.specId,
+        selectedDetailSpecId: "",
+        detailRows: [],
+        loading: {
+          ...state.loading,
+          details: true,
+        },
         error: null,
       };
 
@@ -219,6 +225,40 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
       return {
         ...state,
         selectedDetailSpecId: action.payload.specId,
+      };
+
+    case SPEC_MASTER_ACTION_TYPES.DETAIL_REQUEST:
+      return {
+        ...state,
+        loading: {
+          ...state.loading,
+          details: true,
+        },
+        error: null,
+      };
+
+    case SPEC_MASTER_ACTION_TYPES.DETAIL_SUCCESS: {
+      const detailRows = action.payload.details || [];
+      const selectedDetailSpecId = detailRows.some((row) => row.specId === action.payload.selectedDetailSpecId)
+        ? action.payload.selectedDetailSpecId
+        : detailRows[0]?.specId || "";
+      return {
+        ...state,
+        selectedSpecId: action.payload.specId || state.selectedSpecId,
+        selectedDetailSpecId,
+        detailRows,
+        loading: {
+          ...state.loading,
+          details: false,
+        },
+        error: null,
+      };
+    }
+
+    case SPEC_MASTER_ACTION_TYPES.DETAIL_FAILURE:
+      return {
+        ...setLoading(state, "details", false),
+        error: action.payload.error,
       };
 
     case SPEC_MASTER_ACTION_TYPES.OPEN_CREATE_POPUP:

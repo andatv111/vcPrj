@@ -104,10 +104,18 @@ npm run test:vc
 
 | 변경 대상 | 같이 확인할 파일 |
 | --- | --- |
-| Endpoint URL | `vcSimApi.js`, `VcSimController.java`, `README_API.md` |
-| Request/Response field | `NonBim.helper.js`, `vcSimSaga.js`, Java DTO, `README_API.md` |
+| Simulation Endpoint URL | `vcSimApi.js`, `VcSimController.java`, `md/SIM_API.md` |
+| Simulation Request/Response field | `NonBim.helper.js`, `vcSimSaga.js`, Java DTO, `md/SIM_API.md` |
 | 화면 표시/검증 규칙 | container, reducer, selector, `README.md` |
-| SpecMaster API | `specMasterApi.js`, `specMasterSaga.js`, `VcSpecMasterController.java`, `SPEC_MASTER_API.md` |
+| SpecMaster API | `specMasterApi.js`, `specMasterSaga.js`, `VcSpecMasterController.java`, `md/SPEC_MASTER_API.md` |
 
-상세 API 계약은 [README_API.md](./README_API.md)를 기준으로 합니다.
+Simulation API 계약은 [md/SIM_API.md](./md/SIM_API.md)를 기준으로 합니다.
+SpecMaster API 계약은 [md/SPEC_MASTER_API.md](./md/SPEC_MASTER_API.md)를 기준으로 합니다.
 B/E 실행과 mock table 설명은 [vcBePrj/README.md](./vcBePrj/README.md)를 기준으로 합니다.
+
+## 코드 이해 문서
+
+| 문서 | 설명 |
+| --- | --- |
+| [md/simReview.md](./md/simReview.md) | Non-BIM, Calculator, Result popup의 화면/state/API 흐름 |
+| [md/specMasterReview.md](./md/specMasterReview.md) | SpecMaster Master/Detail grid, popup, Redux, API 흐름 |
