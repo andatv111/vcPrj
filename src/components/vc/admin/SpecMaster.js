@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 import specMasterActions from "../../../store/vc/specMaster/action";
@@ -46,8 +46,35 @@ const DETAIL_COLUMNS = [
   { key: "chgrNm", label: "담당자" },
 ];
 
+const GRID_PAGE_SIZE = 10;
+const DETAIL_PAGE_SIZE = 8;
+const FILTERABLE_MASTER_COLUMNS = MASTER_COLUMNS.filter((column) => !["select", "no"].includes(column.key));
+const FILTERABLE_DETAIL_COLUMNS = DETAIL_COLUMNS.filter((column) => !["select", "no"].includes(column.key));
+
 const toDisplayText = (value) => (value === undefined || value === null || value === "" ? "-" : String(value));
 const getBooleanYn = (value) => (value === "Y" || value === true ? "Y" : "N");
+const getFilterText = (row, key) => {
+  const value = key === "detSearYn" ? getBooleanYn(row[key]) : row[key];
+  return value === undefined || value === null ? "" : String(value).toLowerCase();
+};
+
+const createEmptyFilters = (columns) =>
+  columns.reduce((acc, column) => {
+    acc[column.key] = "";
+    return acc;
+  }, {});
+
+const filterRows = (rows, filters, columns) =>
+  rows.filter((row) =>
+    columns.every((column) => {
+      const filterValue = String(filters[column.key] || "").trim().toLowerCase();
+      if (!filterValue) return true;
+      return getFilterText(row, column.key).includes(filterValue);
+    })
+  );
+
+const paginateRows = (rows, page, size) => rows.slice(page * size, page * size + size);
+const getTotalPages = (count, size) => Math.max(1, Math.ceil(count / size));
 
 // Excel은 Master와 Detail의 컬럼 구성이 달라서 하나의 CSV row 구조로 섞지 않고,
 // Excel이 열 수 있는 HTML table 두 개로 내려받게 한다.
@@ -130,6 +157,29 @@ const SpecMaster = () => {
   const loading = useSelector(selectSpecMasterLoading);
   const error = useSelector(selectSpecMasterError);
   const message = useSelector(selectSpecMasterMessage);
+  const [masterFilters, setMasterFilters] = useState(() => createEmptyFilters(FILTERABLE_MASTER_COLUMNS));
+  const [detailFilters, setDetailFilters] = useState(() => createEmptyFilters(FILTERABLE_DETAIL_COLUMNS));
+  const [masterPage, setMasterPage] = useState(0);
+  const [detailPage, setDetailPage] = useState(0);
+
+  const filteredMasterRows = useMemo(
+    () => filterRows(masterRows, masterFilters, FILTERABLE_MASTER_COLUMNS),
+    [masterRows, masterFilters]
+  );
+  const filteredDetailRows = useMemo(
+    () => filterRows(detailRows, detailFilters, FILTERABLE_DETAIL_COLUMNS),
+    [detailRows, detailFilters]
+  );
+  const masterTotalPages = getTotalPages(filteredMasterRows.length, GRID_PAGE_SIZE);
+  const detailTotalPages = getTotalPages(filteredDetailRows.length, DETAIL_PAGE_SIZE);
+  const visibleMasterRows = useMemo(
+    () => paginateRows(filteredMasterRows, Math.min(masterPage, masterTotalPages - 1), GRID_PAGE_SIZE),
+    [filteredMasterRows, masterPage, masterTotalPages]
+  );
+  const visibleDetailRows = useMemo(
+    () => paginateRows(filteredDetailRows, Math.min(detailPage, detailTotalPages - 1), DETAIL_PAGE_SIZE),
+    [filteredDetailRows, detailPage, detailTotalPages]
+  );
 
   useEffect(() => {
     // 화면 진입 시 콤보 후보와 좌측 Master 목록을 동시에 준비한다.
@@ -137,6 +187,28 @@ const SpecMaster = () => {
     dispatch(specMasterActions.initRequest());
     dispatch(specMasterActions.searchRequest());
   }, [dispatch]);
+
+  useEffect(() => {
+    setMasterPage(0);
+  }, [masterFilters, masterRows]);
+
+  useEffect(() => {
+    setDetailPage(0);
+  }, [detailFilters, detailRows, selectedSpecId]);
+
+  useEffect(() => {
+    if (!filteredMasterRows.length) return;
+    if (filteredMasterRows.some((row) => row.specId === selectedSpecId)) return;
+    dispatch(specMasterActions.selectMaster(filteredMasterRows[0].specId));
+  }, [dispatch, filteredMasterRows, selectedSpecId]);
+
+  const handleMasterFilterChange = (key, value) => {
+    setMasterFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleDetailFilterChange = (key, value) => {
+    setDetailFilters((prev) => ({ ...prev, [key]: value }));
+  };
 
   return (
     // vc-pub-screen/spec-master-screen은 퍼블 외피 class이고,
@@ -153,36 +225,53 @@ const SpecMaster = () => {
 
       <div className="spec-master-grid-layout">
         <MasterGridPanel
-          rows={masterRows}
+          rows={visibleMasterRows}
+          totalCount={masterRows.length}
+          filteredCount={filteredMasterRows.length}
           selectedSpecId={selectedSpecId}
           loading={loading}
-          page={page}
+          page={{ page: masterPage, totalPages: masterTotalPages }}
+          filters={masterFilters}
+          onFilterChange={handleMasterFilterChange}
           onSelect={(specId) => dispatch(specMasterActions.selectMaster(specId))}
           onCreate={() => dispatch(specMasterActions.openCreatePopup("master"))}
           onEdit={() =>
             selectedMaster && dispatch(specMasterActions.openEditPopup({ scope: "master", row: selectedMaster }))
           }
-          onDelete={() =>
-            selectedSpecId && dispatch(specMasterActions.deleteRequest({ scope: "master", specId: selectedSpecId }))
-          }
-          onPageChange={(nextPage) => dispatch(specMasterActions.changePage(nextPage))}
+          onDelete={() => {
+            if (!selectedSpecId) return;
+            const targetName = selectedMaster?.specNm || selectedSpecId;
+            if (window.confirm(`선택한 Master "${targetName}"를 삭제하시겠습니까?\n하위 Detail 데이터도 함께 삭제될 수 있습니다.`)) {
+              dispatch(specMasterActions.deleteRequest({ scope: "master", specId: selectedSpecId }));
+            }
+          }}
+          onPageChange={setMasterPage}
         />
 
         <DetailGridPanel
-          rows={detailRows}
+          rows={visibleDetailRows}
+          totalCount={detailRows.length}
+          filteredCount={filteredDetailRows.length}
           selectedMaster={selectedMaster}
           selectedDetailSpecId={selectedDetailSpecId}
           loading={loading}
+          page={{ page: detailPage, totalPages: detailTotalPages }}
+          filters={detailFilters}
+          onFilterChange={handleDetailFilterChange}
+          onPageChange={setDetailPage}
           onSelect={(specId) => dispatch(specMasterActions.selectDetail(specId))}
           onCreate={() => dispatch(specMasterActions.openCreatePopup("detail"))}
           onEdit={() =>
             selectedDetail && dispatch(specMasterActions.openEditPopup({ scope: "detail", row: selectedDetail }))
           }
-          onDelete={() =>
-            selectedDetail &&
-            dispatch(specMasterActions.deleteRequest({ scope: "detail", specId: selectedDetail.specId }))
-          }
-          onExcel={() => downloadExcel({ selectedMaster, detailRows })}
+          onDelete={() => {
+            if (!selectedDetail) return;
+            const targetName = selectedDetail.specNm || selectedDetail.specId;
+            if (window.confirm(`선택한 Detail "${targetName}"를 삭제하시겠습니까?`)) {
+              dispatch(specMasterActions.deleteRequest({ scope: "detail", specId: selectedDetail.specId }));
+            }
+          }}
+          onExcel={() => downloadExcel({ selectedMaster, detailRows: filteredDetailRows })}
         />
       </div>
 
@@ -219,12 +308,63 @@ const SearchPanel = ({ search, options, loading, onChange, onReset, onSearch }) 
   </section>
 );
 
-const MasterGridPanel = ({ rows, selectedSpecId, loading, page, onSelect, onCreate, onEdit, onDelete, onPageChange }) => (
+const GridHeaderFilter = ({ column, value, onChange }) => {
+  const [open, setOpen] = useState(false);
+  if (column.key === "select" || column.key === "no") return null;
+  const active = Boolean(value);
+
+  return (
+    <span className="grid-header-filter">
+      <button
+        type="button"
+        className={active ? "grid-filter-button active" : "grid-filter-button"}
+        aria-label={`${column.label} 필터`}
+        aria-expanded={open}
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <span className="grid-filter-icon" aria-hidden="true" />
+      </button>
+      {open ? (
+        <span className="grid-filter-popover">
+          <input
+            className="grid-filter-input"
+            value={value || ""}
+            placeholder={`${column.label} 필터`}
+            autoFocus
+            onChange={(event) => onChange(column.key, event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setOpen(false);
+            }}
+          />
+          <button type="button" className="grid-filter-clear" onClick={() => onChange(column.key, "")}>
+            Clear
+          </button>
+        </span>
+      ) : null}
+    </span>
+  );
+};
+
+const MasterGridPanel = ({
+  rows,
+  totalCount,
+  filteredCount,
+  selectedSpecId,
+  loading,
+  page,
+  filters,
+  onFilterChange,
+  onSelect,
+  onCreate,
+  onEdit,
+  onDelete,
+  onPageChange,
+}) => (
   // 퍼블 VcsnofM001Style 계열을 입힌 좌측 grid.
   // row radio 선택값은 selectedSpecId 하나만 들고 있고, Detail 조회는 saga가 이어서 처리한다.
   <section className="panel vc-pub-section vcsnofM001Style spec-master-panel">
     <div className="section-header">
-      <div className="section-title">Master Grid <span className="muted">전체 {page.totalElements || rows.length}</span></div>
+      <div className="section-title">Master Grid <span className="muted">전체 {totalCount} / 필터 {filteredCount}</span></div>
       <div className="button-group buttonArea">
         <button type="button" className="secondary-button" onClick={onCreate}>신규</button>
         <button type="button" className="secondary-button" disabled={!selectedSpecId} onClick={onEdit}>수정</button>
@@ -234,7 +374,12 @@ const MasterGridPanel = ({ rows, selectedSpecId, loading, page, onSelect, onCrea
     <div className="table-wrap tableScrollStyle">
       <table>
         <thead>
-          <tr>{MASTER_COLUMNS.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
+          <tr>{MASTER_COLUMNS.map((column) => (
+            <th key={column.key}>
+              <span className="grid-header-label">{column.label}</span>
+              <GridHeaderFilter column={column} value={filters[column.key]} onChange={onFilterChange} />
+            </th>
+          ))}</tr>
         </thead>
         <tbody>
           {rows.length ? rows.map((row) => (
@@ -265,12 +410,28 @@ const MasterGridPanel = ({ rows, selectedSpecId, loading, page, onSelect, onCrea
   </section>
 );
 
-const DetailGridPanel = ({ rows, selectedMaster, selectedDetailSpecId, loading, onSelect, onCreate, onEdit, onDelete, onExcel }) => (
+const DetailGridPanel = ({
+  rows,
+  totalCount,
+  filteredCount,
+  selectedMaster,
+  selectedDetailSpecId,
+  loading,
+  page,
+  filters,
+  onFilterChange,
+  onPageChange,
+  onSelect,
+  onCreate,
+  onEdit,
+  onDelete,
+  onExcel,
+}) => (
   // 우측 grid는 선택 Master의 children만 보여준다.
   // Excel은 이 영역의 버튼이지만 selected Master 1건과 Detail 전체를 함께 내려받는다.
   <section className="panel vc-pub-section vcsnofM001Style spec-detail-panel">
     <div className="section-header">
-      <div className="section-title">Detail Grid <span className="muted">{selectedMaster ? selectedMaster.specNm : "Master를 선택하세요"}</span></div>
+      <div className="section-title">Detail Grid <span className="muted">{selectedMaster ? `${selectedMaster.specNm} | 전체 ${totalCount} / 필터 ${filteredCount}` : "Master를 선택하세요"}</span></div>
       <div className="button-group buttonArea">
         <button type="button" className="secondary-button" disabled={!selectedMaster} onClick={onCreate}>신규</button>
         <button type="button" className="secondary-button" disabled={!rows.length} onClick={onEdit}>수정</button>
@@ -284,7 +445,12 @@ const DetailGridPanel = ({ rows, selectedMaster, selectedDetailSpecId, loading, 
     <div className="table-wrap tableScrollStyle">
       <table>
         <thead>
-          <tr>{DETAIL_COLUMNS.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
+          <tr>{DETAIL_COLUMNS.map((column) => (
+            <th key={column.key}>
+              <span className="grid-header-label">{column.label}</span>
+              <GridHeaderFilter column={column} value={filters[column.key]} onChange={onFilterChange} />
+            </th>
+          ))}</tr>
         </thead>
         <tbody>
           {rows.length ? rows.map((row, index) => (
@@ -308,6 +474,11 @@ const DetailGridPanel = ({ rows, selectedMaster, selectedDetailSpecId, loading, 
           )}
         </tbody>
       </table>
+    </div>
+    <div className="spec-pagination">
+      <button type="button" className="secondary-button" disabled={page.page <= 0} onClick={() => onPageChange(page.page - 1)}>{"<<"}</button>
+      <span>{page.page + 1} / {page.totalPages || 1}</span>
+      <button type="button" className="secondary-button" disabled={page.page + 1 >= (page.totalPages || 1)} onClick={() => onPageChange(page.page + 1)}>{">>"}</button>
     </div>
   </section>
 );

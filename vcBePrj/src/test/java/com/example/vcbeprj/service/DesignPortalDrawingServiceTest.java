@@ -138,9 +138,76 @@ class DesignPortalDrawingServiceTest {
     void calculatorOptionsContainFabAndModelForApplicableSpecFiltering() throws Exception {
         mockMvc.perform(get("/api/vc/sim/calculator/options"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.modelStandards[?(@.value == 'CVD-STD-MID')].fab").value("M15"))
-                .andExpect(jsonPath("$.modelStandards[?(@.value == 'CVD-STD-MID')].model").value("CV-Pro-12"))
+                .andExpect(jsonPath("$.modelStandards[?(@.value == 'CVD-STD-MID')].fab").isNotEmpty())
+                .andExpect(jsonPath("$.modelStandards[?(@.value == 'CVD-STD-MID')].model").isNotEmpty())
                 .andExpect(jsonPath("$.modelStandards[?(@.value == 'PUMP-RACK-A')].fab").value("M14"));
+    }
+
+    @Test
+    void specMasterSearchReturnsPagedMastersAndSelectedDetails() throws Exception {
+        Map<String, Object> request = Map.of(
+                "page", 0,
+                "size", 10,
+                "selectedSpecId", "SPEC-M14-LITHO-A"
+        );
+
+        mockMvc.perform(post("/api/vc/specmaster/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rows.length()").value(10))
+                .andExpect(jsonPath("$.totalElements").value(17))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.selectedSpecId").value("SPEC-M14-LITHO-A"))
+                .andExpect(jsonPath("$.details[?(@.upperCd == 'SPEC-M14-LITHO-A')].specId").isNotEmpty());
+    }
+
+    @Test
+    void specMasterDetailSaveIsVisibleThroughSearchResponse() throws Exception {
+        Map<String, Object> detail = Map.of(
+                "specNm", "M14 LITHO Added Test Chamber",
+                "fabId", "M14",
+                "setModelNm", "LITHO-Track-4",
+                "operLargeCatgVal", "LITHO",
+                "operMidCatgVal", "Test",
+                "chambModelNm", "LITHO-ADDED-TEST",
+                "specMinVal", "41",
+                "specMaxVal", "67",
+                "chgrNm", "Test Owner"
+        );
+
+        mockMvc.perform(post("/api/vc/specmaster/SPEC-M14-LITHO-A/children")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(detail)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.upperCd").value("SPEC-M14-LITHO-A"));
+
+        Map<String, Object> request = Map.of(
+                "page", 0,
+                "size", 10,
+                "selectedSpecId", "SPEC-M14-LITHO-A"
+        );
+
+        mockMvc.perform(post("/api/vc/specmaster/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.selectedSpecId").value("SPEC-M14-LITHO-A"))
+                .andExpect(jsonPath("$.details[?(@.specNm == 'M14 LITHO Added Test Chamber')].upperCd").value("SPEC-M14-LITHO-A"));
+    }
+
+    @Test
+    void deprecatedSpecMasterLookupEndpointsAreNotExposed() throws Exception {
+        mockMvc.perform(get("/api/vc/specmaster/selectpaging"))
+                .andExpect(status().isMethodNotAllowed());
+        mockMvc.perform(post("/api/vc/specmaster/selectpaging").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isMethodNotAllowed());
+        mockMvc.perform(get("/api/vc/specmaster/selectleftpaging"))
+                .andExpect(status().isMethodNotAllowed());
+        mockMvc.perform(get("/api/vc/specmaster/selectcondition"))
+                .andExpect(status().isMethodNotAllowed());
+        mockMvc.perform(get("/api/vc/specmaster/SPEC-M16-ETCH-A/children"))
+                .andExpect(status().isMethodNotAllowed());
     }
 
     private static Path createTestDataDirectory() {

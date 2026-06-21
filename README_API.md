@@ -29,8 +29,7 @@
 | 계산 결과 저장 | POST | `/api/vc/sim/result/save` |
 | SpecMaster FAB 공통코드 | GET | `/api/commcode/comm-code-list?mstCd=VC_FAB_ID&sysId=VC` |
 | SpecMaster 필터 옵션 | GET | `/api/vc/specmaster/selectfilteroptions` |
-| SpecMaster Master 조회 | GET | `/api/vc/specmaster/selectleftpaging` |
-| SpecMaster Detail 조회 | GET | `/api/vc/specmaster/{specId}/children` |
+| SpecMaster Master 조회 | POST | `/api/vc/specmaster/search` |
 | SpecMaster Master 신규 | POST | `/api/vc/specmaster` |
 | SpecMaster Detail 신규 | POST | `/api/vc/specmaster/{specId}/children` |
 | SpecMaster 수정 | PATCH | `/api/vc/specmaster/{specId}` |
@@ -761,7 +760,7 @@ Content-Type: application/json
 
 `V/C Administration > Spec Master` 화면에서 V/C Spec Master와 하위 Detail Spec을 관리합니다.
 
-GoodDocs 원문 API는 조회 목적이 겹치는 항목이 있어, 화면에서는 아래 기준으로 사용합니다. 상세한 B/E 협의용 판단표는 [md/SPEC_MASTER_DEVELOPMENT_GUIDE.md](./md/SPEC_MASTER_DEVELOPMENT_GUIDE.md)를 기준으로 봅니다.
+GoodDocs 원문 API는 조회 목적이 겹치는 항목이 있어, 화면에서는 아래 기준으로 사용합니다. 현재 프로그램에서 실제로 도는 SpecMaster API 계약은 [md/SPEC_MASTER_API.md](./md/SPEC_MASTER_API.md)를 기준으로 봅니다.
 
 ### 화면 진입 콤보
 
@@ -809,7 +808,7 @@ GET /api/vc/specmaster/selectfilteroptions
 좌측 Master Grid는 상위 Spec만 조회합니다. B/E는 `upperCd`가 빈 row만 내려줘야 합니다.
 
 ```http
-GET /api/vc/specmaster/selectleftpaging?page=0&size=10&fabId=M16&setModelNm=VX-ETCH-300&specNm=ETCH
+POST /api/vc/specmaster/search?page=0&size=10&fabId=M16&setModelNm=VX-ETCH-300&specNm=ETCH
 ```
 
 ```json
@@ -852,7 +851,7 @@ GET /api/vc/specmaster/selectleftpaging?page=0&size=10&fabId=M16&setModelNm=VX-E
 우측 Detail Grid는 선택한 Master의 `specId`를 path로 보내 조회합니다. B/E는 `upperCd == specId`인 row만 내려줘야 합니다.
 
 ```http
-GET /api/vc/specmaster/SPEC-M16-ETCH-A/children
+POST /api/vc/specmaster/search
 ```
 
 ```json
@@ -880,7 +879,7 @@ GET /api/vc/specmaster/SPEC-M16-ETCH-A/children
 | Master 신규 | POST | `/api/vc/specmaster` | `upperCd`를 비워 저장 |
 | Detail 신규 | POST | `/api/vc/specmaster/{parentSpecId}/children` | `upperCd`에 parentSpecId 저장 |
 | Master/Detail 수정 | PATCH | `/api/vc/specmaster/{specId}` | 같은 table row 수정 |
-| Master/Detail 삭제 | DELETE | `/api/vc/specmaster/{specId}?chgchgrempno={empNo}` | 현재 preview는 Master 삭제 시 Detail도 함께 삭제 |
+| Master/Detail 삭제 | DELETE | `/api/vc/specmaster/{specId}` | 현재 preview는 Master 삭제 시 Detail도 함께 삭제 |
 
 ### 주요 Field
 
@@ -929,3 +928,15 @@ GET /api/vc/specmaster/SPEC-M16-ETCH-A/children
 - Chamber tab label은 B/E `chamberName`을 유지합니다.
 - 계산 결과 저장 후 `nextStatus`로 Manual Drawing Results 상태를 갱신합니다.
 - API error는 `message` 또는 `errorMessage`를 우선 표시합니다.
+
+
+## SpecMaster Search API Update
+
+- SpecMaster grid reads through `POST /api/vc/specmaster/search`.
+- This API returns both Master paging rows and the selected Master's Detail rows in one response.
+- request body: `{ page, size, fabId, setModelNm, specNm, selectedSpecId, selectedDetailSpecId }`.
+- response body: `{ content, rows, details, selectedSpecId, page, size, totalPages, totalElements }`.
+- Initial load selects the first Master row returned by the response and fills the Detail grid from the same response.
+- After Detail save, the front end searches again with the parent Master `selectedSpecId`, so the Master radio selection and refreshed Detail rows stay visible.
+- Old GoodDocs read endpoints are consolidated into `POST /api/vc/specmaster/search`.
+- Detail lookup is no longer a separate HTTP endpoint. `POST /api/vc/specmaster/{specId}/children` is used only for Detail creation.

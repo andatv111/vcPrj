@@ -92,7 +92,7 @@ npm run test:vc
 - Master 팝업에는 공정대분류, 공정중분류, CHAMBER SPEC을 노출하지 않습니다.
 - Detail 팝업에는 상세스펙 유무와 수기등록 스위치를 노출하지 않습니다.
 - Excel 다운로드는 선택 Master 1건과 Detail 전체를 서로 다른 표로 내려받습니다.
-- API별 판단과 B/E 협의 포인트는 [md/SPEC_MASTER_DEVELOPMENT_GUIDE.md](./md/SPEC_MASTER_DEVELOPMENT_GUIDE.md)를 기준으로 봅니다.
+- 실제 SpecMaster API 계약은 [md/SPEC_MASTER_API.md](./md/SPEC_MASTER_API.md)를 기준으로 봅니다.
 
 ## API 관리 원칙
 
@@ -107,7 +107,7 @@ npm run test:vc
 | Endpoint URL | `vcSimApi.js`, `VcSimController.java`, `README_API.md` |
 | Request/Response field | `NonBim.helper.js`, `vcSimSaga.js`, Java DTO, `README_API.md` |
 | 화면 표시/검증 규칙 | container, reducer, selector, `README.md` |
-| SpecMaster API | `specMasterApi.js`, `specMasterSaga.js`, `VcSpecMasterController.java`, `SPEC_MASTER_DEVELOPMENT_GUIDE.md` |
+| SpecMaster API | `specMasterApi.js`, `specMasterSaga.js`, `VcSpecMasterController.java`, `SPEC_MASTER_API.md` |
 
 상세 API 계약은 [README_API.md](./README_API.md)를 기준으로 합니다.
 B/E 실행과 mock table 설명은 [vcBePrj/README.md](./vcBePrj/README.md)를 기준으로 합니다.

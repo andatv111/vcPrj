@@ -161,25 +161,30 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
     case SPEC_MASTER_ACTION_TYPES.SEARCH_REQUEST:
       return {
         ...setLoading(state, "search", true),
-        masterRows: [],
-        detailRows: [],
-        selectedSpecId: "",
-        selectedDetailSpecId: "",
         error: null,
         message: "",
       };
 
     case SPEC_MASTER_ACTION_TYPES.SEARCH_SUCCESS: {
       const rows = action.payload.rows || [];
-      // 조회 후 첫 Master를 자동 선택해 우측 Detail 조회가 이어지게 한다.
-      // 실제 Detail API 호출은 saga가 FETCH_DETAILS_REQUEST로 분리해서 수행한다.
-      const selectedSpecId = rows[0]?.specId || "";
+      const detailRows = action.payload.details || [];
+      const selectedSpecId = rows.some((row) => row.specId === action.payload.selectedSpecId)
+        ? action.payload.selectedSpecId
+        : rows[0]?.specId || "";
+      const selectedDetailSpecId = detailRows.some((row) => row.specId === action.payload.selectedDetailSpecId)
+        ? action.payload.selectedDetailSpecId
+        : detailRows[0]?.specId || "";
       return {
-        ...setLoading(state, "search", false),
+        ...state,
+        loading: {
+          ...state.loading,
+          search: false,
+          details: false,
+        },
         masterRows: rows,
         selectedSpecId,
-        selectedDetailSpecId: "",
-        detailRows: [],
+        selectedDetailSpecId,
+        detailRows,
         page: {
           ...state.page,
           ...(action.payload.page || {}),
@@ -207,23 +212,6 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
       return {
         ...state,
         selectedSpecId: action.payload.specId,
-        detailRows: [],
-        selectedDetailSpecId: "",
-        error: null,
-      };
-
-    case SPEC_MASTER_ACTION_TYPES.FETCH_DETAILS_REQUEST:
-      return {
-        ...setLoading(state, "details", true),
-        error: null,
-      };
-
-    case SPEC_MASTER_ACTION_TYPES.FETCH_DETAILS_SUCCESS:
-      if (state.selectedSpecId !== action.payload.specId) return state;
-      return {
-        ...setLoading(state, "details", false),
-        detailRows: action.payload.rows || [],
-        selectedDetailSpecId: action.payload.rows?.[0]?.specId || "",
         error: null,
       };
 
@@ -231,12 +219,6 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
       return {
         ...state,
         selectedDetailSpecId: action.payload.specId,
-      };
-
-    case SPEC_MASTER_ACTION_TYPES.FETCH_DETAILS_FAILURE:
-      return {
-        ...setLoading(state, "details", false),
-        error: action.payload.error,
       };
 
     case SPEC_MASTER_ACTION_TYPES.OPEN_CREATE_POPUP:

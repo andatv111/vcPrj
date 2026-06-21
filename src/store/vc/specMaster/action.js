@@ -23,9 +23,6 @@ export const SPEC_MASTER_ACTION_TYPES = {
   SELECT_DETAIL: `${SPEC_MASTER_ACTION_PREFIX}/SELECT_DETAIL`,
 
   // 우측 Detail Grid 조회. 선택 Master의 specId를 upperCd 조건처럼 사용한다.
-  FETCH_DETAILS_REQUEST: `${SPEC_MASTER_ACTION_PREFIX}/FETCH_DETAILS_REQUEST`,
-  FETCH_DETAILS_SUCCESS: `${SPEC_MASTER_ACTION_PREFIX}/FETCH_DETAILS_SUCCESS`,
-  FETCH_DETAILS_FAILURE: `${SPEC_MASTER_ACTION_PREFIX}/FETCH_DETAILS_FAILURE`,
 
   // 등록/수정 팝업은 하나를 재사용하고 scope(master/detail)로 입력 항목을 다르게 보여준다.
   OPEN_CREATE_POPUP: `${SPEC_MASTER_ACTION_PREFIX}/OPEN_CREATE_POPUP`,
@@ -54,26 +51,19 @@ export const specMasterActions = {
   }),
   resetSearch: () => ({ type: SPEC_MASTER_ACTION_TYPES.RESET_SEARCH }),
 
-  searchRequest: () => ({ type: SPEC_MASTER_ACTION_TYPES.SEARCH_REQUEST }),
-  searchSuccess: ({ rows, page }) => ({
+  searchRequest: ({ selectedSpecId, selectedDetailSpecId } = {}) => ({
+    type: SPEC_MASTER_ACTION_TYPES.SEARCH_REQUEST,
+    payload: { selectedSpecId, selectedDetailSpecId },
+  }),
+  searchSuccess: ({ rows, details, page, selectedSpecId, selectedDetailSpecId }) => ({
     type: SPEC_MASTER_ACTION_TYPES.SEARCH_SUCCESS,
-    payload: { rows, page },
+    payload: { rows, details, page, selectedSpecId, selectedDetailSpecId },
   }),
   searchFailure: (error) => ({ type: SPEC_MASTER_ACTION_TYPES.SEARCH_FAILURE, payload: { error } }),
 
   changePage: (page) => ({ type: SPEC_MASTER_ACTION_TYPES.CHANGE_PAGE, payload: { page } }),
   selectMaster: (specId) => ({ type: SPEC_MASTER_ACTION_TYPES.SELECT_MASTER, payload: { specId } }),
   selectDetail: (specId) => ({ type: SPEC_MASTER_ACTION_TYPES.SELECT_DETAIL, payload: { specId } }),
-
-  fetchDetailsRequest: (specId) => ({
-    type: SPEC_MASTER_ACTION_TYPES.FETCH_DETAILS_REQUEST,
-    payload: { specId },
-  }),
-  fetchDetailsSuccess: ({ specId, rows }) => ({
-    type: SPEC_MASTER_ACTION_TYPES.FETCH_DETAILS_SUCCESS,
-    payload: { specId, rows },
-  }),
-  fetchDetailsFailure: (error) => ({ type: SPEC_MASTER_ACTION_TYPES.FETCH_DETAILS_FAILURE, payload: { error } }),
 
   openCreatePopup: (scope) => ({ type: SPEC_MASTER_ACTION_TYPES.OPEN_CREATE_POPUP, payload: { scope } }),
   openEditPopup: ({ scope, row }) => ({ type: SPEC_MASTER_ACTION_TYPES.OPEN_EDIT_POPUP, payload: { scope, row } }),
