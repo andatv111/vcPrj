@@ -106,16 +106,45 @@ public class VcSpecMasterService {
     public Map<String, Object> filterOptions() {
         List<SpecMaster> rows = repository.selectAll(SPEC_TABLE, SpecMaster.class);
         Map<String, Object> result = new LinkedHashMap<>();
-        // FAB는 F/E에서 공통코드 API를 원천으로 보지만, filterOptions에도 보조 후보를 내려 호환성을 유지합니다.
-        result.put("fabIds", distinctOptions(rows, SpecMaster::fabId));
-        result.put("areas", List.of());
-        result.put("makers", List.of());
-        result.put("setModelNms", distinctOptions(rows, SpecMaster::setModelNm));
-        result.put("specNms", distinctOptions(rows, SpecMaster::specNm));
-        result.put("operLargeCatgVals", distinctOptions(rows, SpecMaster::operLargeCatgVal));
-        result.put("operMidCatgVals", distinctOptions(rows, SpecMaster::operMidCatgVal));
-        result.put("chambModelNms", distinctOptions(rows, SpecMaster::chambModelNm));
-        result.put("rows", rows);
+        // 콤보 API는 조회 결과와 분리한다. 화면 테스트가 가능한 소수 후보만 내려 과도한 콤보 노출을 막는다.
+        result.put("fabIds", List.of("M16", "M15", "M14"));
+        result.put("areas", List.of("M16A", "M16B", "M15A", "M14A"));
+        result.put("makers", List.of("TEL", "AMAT", "LAM", "SEMES"));
+        result.put("setModelNms", limitedOptions(rows, SpecMaster::setModelNm, 8));
+        result.put("specNms", limitedOptions(rows, SpecMaster::specNm, 8));
+        result.put("operLargeCatgVals", List.of("ETCH", "CVD", "LITHO", "UTILITY"));
+        result.put("operMidCatgVals", List.of("Metal Etch", "Clean", "Deposition", "Coater", "Vacuum Pump"));
+        result.put("chambModelNms", List.of("ETCH-STD-A", "CVD-M12-A", "LITHO-STD-A", "PUMP-STD-A"));
+        result.put("areasByFab", Map.of(
+                "M16", List.of("M16A", "M16B"),
+                "M15", List.of("M15A", "M15B"),
+                "M14", List.of("M14A", "M14B")
+        ));
+        result.put("makersByArea", Map.of(
+                "M16A", List.of("TEL", "AMAT"),
+                "M16B", List.of("LAM"),
+                "M15A", List.of("AMAT", "SEMES"),
+                "M15B", List.of("TEL"),
+                "M14A", List.of("LAM", "SEMES"),
+                "M14B", List.of("TEL")
+        ));
+        result.put("modelsByFab", Map.of(
+                "M16", List.of("VX-ETCH-300", "CV-Pro-12", "Pump Rack 8"),
+                "M15", List.of("PVD-Metal-5", "CMP-Fine-8"),
+                "M14", modelsForFab(rows, "M14")
+        ));
+        result.put("modelsByMaker", Map.of(
+                "TEL", List.of("VX-ETCH-300", "LITHO-Track-4"),
+                "AMAT", List.of("CV-Pro-12", "PVD-Metal-5"),
+                "LAM", List.of("VX-ETCH-200", "Pump Rack 8"),
+                "SEMES", List.of("CMP-Fine-8", "MET-CD-3")
+        ));
+        result.put("operMidByLarge", Map.of(
+                "ETCH", List.of("Metal Etch", "Clean"),
+                "CVD", List.of("Deposition"),
+                "LITHO", List.of("Coater", "Developer"),
+                "UTILITY", List.of("Vacuum Pump")
+        ));
         return result;
     }
 
@@ -222,6 +251,27 @@ public class VcSpecMasterService {
                 .filter(value -> !isBlank(value))
                 .distinct()
                 .sorted()
+                .collect(Collectors.toList());
+    }
+
+    private List<String> limitedOptions(List<SpecMaster> rows, Function<SpecMaster, String> mapper, int limit) {
+        return rows.stream()
+                .map(mapper)
+                .filter(value -> !isBlank(value))
+                .distinct()
+                .sorted()
+                .limit(limit)
+                .collect(Collectors.toList());
+    }
+
+    private List<String> modelsForFab(List<SpecMaster> rows, String fabId) {
+        return rows.stream()
+                .filter(row -> equalsText(row.fabId(), fabId))
+                .map(SpecMaster::setModelNm)
+                .filter(value -> !isBlank(value))
+                .distinct()
+                .sorted()
+                .limit(4)
                 .collect(Collectors.toList());
     }
 

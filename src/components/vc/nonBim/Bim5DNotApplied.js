@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
+import { Bim5dMainStyle } from "../../../styles/vc/pumpingStyle";
 import nonBimActions from "../../../store/vc/nonBim/action";
 import {
   selectActiveChamber,
@@ -94,7 +95,7 @@ const Bim5DNotApplied = () => {
   };
 
   return (
-    <main className="page embedded-page vc-pub-screen vcsnof-m001">
+    <Bim5dMainStyle className="page embedded-page vc-pub-screen vcsnof-m001">
       {/* Reset은 검색조건과 자동완성만 초기화하며 이미 조회된 도면 목록은 유지합니다. */}
       <NonBimSearchPanel
         search={search}
@@ -103,6 +104,10 @@ const Bim5DNotApplied = () => {
         validationMessage={searchValidationMessage}
         loading={loading}
         onSearchChange={handleSearchChange}
+        onSelectEqSuggestion={(value) => {
+          setSearchValidationMessage("");
+          dispatch(nonBimActions.setSearchField({ name: "eqId", value }));
+        }}
         onResetSearch={() => dispatch(nonBimActions.resetSearch())}
         onSearch={handleSearch}
       />
@@ -149,7 +154,7 @@ const Bim5DNotApplied = () => {
 
       <VcResultPopup />
       <VcDraftAttachPopup />
-    </main>
+    </Bim5dMainStyle>
   );
 };
 
@@ -161,6 +166,7 @@ const NonBimSearchPanel = ({
   validationMessage,
   loading,
   onSearchChange,
+  onSelectEqSuggestion,
   onResetSearch,
   onSearch,
 }) => (
@@ -187,6 +193,22 @@ const NonBimSearchPanel = ({
             </option>
           ))}
         </datalist>
+        {search.eqId && eqSuggestions.length ? (
+          <div className="eq-suggestion-list signlw-list-bordered-block">
+            {eqSuggestions.slice(0, 5).map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className="eq-suggestion-item"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onSelectEqSuggestion(item.value)}
+              >
+                <span>{item.value}</span>
+                <small>{item.label}</small>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </label>
 
       <label className="field">

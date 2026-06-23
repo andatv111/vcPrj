@@ -37,7 +37,7 @@ const VcDraftAttachPopup = () => {
   return (
     <div className="modal-dim nested vcsnofP001Style">
       <div className="modal draft-modal vc-pub-popup">
-        <DraftPopupHeader onClose={() => dispatch(vcResultActions.closeDraftPopup())} />
+        <DraftPopupHeader />
 
         <div className="popup-body partArea">
         <div className="form-grid">
@@ -93,12 +93,9 @@ const VcDraftAttachPopup = () => {
 };
 
 /** 기안 팝업의 제목과 닫기 동작을 제공하는 헤더입니다. */
-const DraftPopupHeader = ({ onClose }) => (
+const DraftPopupHeader = () => (
   <div className="modal-header">
     <h2>표준 기안 첨부</h2>
-    <button type="button" className="link-button popup-close-button" onClick={onClose}>
-      Close
-    </button>
   </div>
 );
 

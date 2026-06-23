@@ -144,22 +144,36 @@ class DesignPortalDrawingServiceTest {
     }
 
     @Test
-    void specMasterSearchReturnsPagedMastersAndSelectedDetails() throws Exception {
+    void specMasterSearchReturnsAllMastersAndSelectedDetailsForClientPaging() throws Exception {
         Map<String, Object> request = Map.of(
                 "page", 0,
                 "size", 10,
                 "selectedSpecId", "SPEC-M14-LITHO-A"
         );
 
-        mockMvc.perform(post("/api/vc/specmaster/search")
+        mockMvc.perform(post("/api/vc/specmaster/selectcondition")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.rows.length()").value(10))
+                .andExpect(jsonPath("$.rows.length()").value(17))
                 .andExpect(jsonPath("$.totalElements").value(17))
-                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.totalPages").value(1))
                 .andExpect(jsonPath("$.selectedSpecId").value("SPEC-M14-LITHO-A"))
                 .andExpect(jsonPath("$.details[?(@.upperCd == 'SPEC-M14-LITHO-A')].specId").isNotEmpty());
+    }
+
+    @Test
+    void specMasterFilterOptionsAreProvidedByDedicatedComboApi() throws Exception {
+        mockMvc.perform(get("/api/vc/specmaster/selectfilteroptions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fabIds[?(@ == 'M14')]").isNotEmpty())
+                .andExpect(jsonPath("$.setModelNms[?(@ == 'LITHO-Track-4')]").isNotEmpty())
+                .andExpect(jsonPath("$.operLargeCatgVals[?(@ == 'LITHO')]").isNotEmpty())
+                .andExpect(jsonPath("$.chambModelNms[?(@ == 'LITHO-STD-A')]").isNotEmpty())
+                .andExpect(jsonPath("$.areasByFab.M16[?(@ == 'M16A')]").isNotEmpty())
+                .andExpect(jsonPath("$.makersByArea.M16A[?(@ == 'TEL')]").isNotEmpty())
+                .andExpect(jsonPath("$.modelsByMaker.TEL[?(@ == 'VX-ETCH-300')]").isNotEmpty())
+                .andExpect(jsonPath("$.operMidByLarge.ETCH[?(@ == 'Metal Etch')]").isNotEmpty());
     }
 
     @Test
@@ -188,7 +202,7 @@ class DesignPortalDrawingServiceTest {
                 "selectedSpecId", "SPEC-M14-LITHO-A"
         );
 
-        mockMvc.perform(post("/api/vc/specmaster/search")
+        mockMvc.perform(post("/api/vc/specmaster/selectcondition")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -207,7 +221,7 @@ class DesignPortalDrawingServiceTest {
         mockMvc.perform(get("/api/vc/specmaster/selectcondition"))
                 .andExpect(status().isMethodNotAllowed());
         mockMvc.perform(get("/api/vc/specmaster/SPEC-M16-ETCH-A/children"))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().isOk());
     }
 
     private static Path createTestDataDirectory() {

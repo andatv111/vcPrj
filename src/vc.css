@@ -111,6 +111,10 @@
   border-top: 3px solid #2f6f73;
 }
 
+.search_area {
+  margin-bottom: 16px;
+}
+
 .vcsnofM001Style {
   border-top: 3px solid #334155;
 }
@@ -126,6 +130,32 @@
 
 .buttonArea {
   flex-wrap: wrap;
+}
+
+.btn_small {
+  min-width: 54px;
+}
+
+.signlw-form-item {
+  min-width: 180px;
+}
+
+.signlw-pagination {
+  min-height: 34px;
+}
+
+.signlw-table {
+  border-collapse: collapse;
+}
+
+.signlw-picker,
+.signlw-text-field-affix-wrapper-sm,
+.signlw-btn {
+  font: inherit;
+}
+
+.signlw-list-bordered-block {
+  border: 1px solid #d9dee6;
 }
 
 .part {
@@ -498,10 +528,6 @@ td select {
   padding: 14px 18px;
 }
 
-.popup-close-button {
-  min-height: 30px;
-}
-
 .modal-dim.nested {
   background: rgba(15, 23, 42, 0.28);
 }
@@ -776,6 +802,10 @@ td select {
   display: grid;
   grid-template-columns: repeat(2, minmax(180px, 1fr));
   gap: 12px;
+}
+
+.full-grid-field {
+  grid-column: 1 / -1;
 }
 
 .required-mark {

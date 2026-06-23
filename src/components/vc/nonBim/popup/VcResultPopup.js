@@ -57,7 +57,7 @@ const VcResultPopup = () => {
   return (
     <div className="modal-dim vcsnofP001Style">
       <div className="modal result-modal vc-pub-popup">
-        <ResultPopupHeader onClose={() => dispatch(vcResultActions.closeResultPopup())} />
+        <ResultPopupHeader />
 
         <div className="popup-body partArea">
         <section className="result-section">
@@ -102,15 +102,12 @@ const VcResultPopup = () => {
 };
 
 /** 결과 팝업의 업무 경로와 닫기 동작을 표시하는 헤더입니다. */
-const ResultPopupHeader = ({ onClose }) => (
+const ResultPopupHeader = () => (
   <div className="modal-header">
     <div>
       <div className="breadcrumb">Simulation &gt; V/C Simulation &gt; BIM/5D 미적용Fab &gt; Vacuum Conductance 결과</div>
       <h2>Vacuum Conductance Result</h2>
     </div>
-    <button type="button" className="link-button popup-close-button" onClick={onClose}>
-      Close
-    </button>
   </div>
 );
 

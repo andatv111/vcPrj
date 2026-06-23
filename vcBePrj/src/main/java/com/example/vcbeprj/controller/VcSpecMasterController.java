@@ -9,9 +9,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,22 +31,19 @@ public class VcSpecMasterController {
         this.specMasterService = specMasterService;
     }
 
-    @PostMapping("/search")
-    public Map<String, Object> search(@RequestBody(required = false) Map<String, Object> payload) {
+    @PostMapping("/selectcondition")
+    public Map<String, Object> selectCondition(@RequestBody(required = false) Map<String, Object> payload) {
         Map<String, Object> body = payload == null ? Map.of() : payload;
         int page = number(body, "page", 0);
         int size = number(body, "size", 10);
-        log.info("[API][POST /api/vc/specmaster/search] page={} size={} body={}", page, size, body);
+        log.info("[API][POST /api/vc/specmaster/selectcondition] page={} size={} body={}", page, size, body);
 
-        Map<String, Object> result = paging(
-                specMasterService.searchMasters(
-                        text(body, "fabId"),
-                        text(body, "setModelNm"),
-                        text(body, "specNm")
-                ),
-                page,
-                size
+        List<SpecMaster> searchedMasters = specMasterService.searchMasters(
+                text(body, "fabId"),
+                text(body, "setModelNm"),
+                text(body, "specNm")
         );
+        Map<String, Object> result = allRows(searchedMasters, page, size);
 
         @SuppressWarnings("unchecked")
         List<SpecMaster> masterRows = (List<SpecMaster>) result.get("rows");
@@ -59,10 +59,23 @@ public class VcSpecMasterController {
         return result;
     }
 
+    @GetMapping("/selectfilteroptions")
+    public Map<String, Object> selectFilterOptions() {
+        log.info("[API][GET /api/vc/specmaster/selectfilteroptions]");
+        return specMasterService.filterOptions();
+    }
+
     @PostMapping
     public SpecMaster createMaster(@RequestBody Map<String, Object> payload) {
         log.info("[API][POST /api/vc/specmaster]");
         return specMasterService.createMaster(payload);
+    }
+
+    @GetMapping("/{specId}")
+    public SpecMaster findById(@PathVariable String specId) {
+        log.info("[API][GET /api/vc/specmaster/{}]", specId);
+        return specMasterService.getById(specId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Spec Master row not found: " + specId));
     }
 
     @PostMapping("/selectexact")
@@ -78,12 +91,6 @@ public class VcSpecMasterController {
         );
     }
 
-    @GetMapping("/selectfilteroptions")
-    public Map<String, Object> selectFilterOptions() {
-        log.info("[API][GET /api/vc/specmaster/selectfilteroptions]");
-        return specMasterService.filterOptions();
-    }
-
     @PatchMapping("/{specId}")
     public SpecMaster update(@PathVariable String specId, @RequestBody Map<String, Object> payload) {
         log.info("[API][PATCH /api/vc/specmaster/{}]", specId);
@@ -91,10 +98,16 @@ public class VcSpecMasterController {
     }
 
     @DeleteMapping("/{specId}")
-    public Map<String, Object> delete(@PathVariable String specId) {
-        log.info("[API][DELETE /api/vc/specmaster/{}]", specId);
+    public Map<String, Object> delete(@PathVariable String specId, @RequestParam(required = false) String chgchgrempno) {
+        log.info("[API][DELETE /api/vc/specmaster/{}] chgchgrempno={}", specId, chgchgrempno);
         int deletedCount = specMasterService.delete(specId);
         return Map.of("deletedCount", deletedCount);
+    }
+
+    @GetMapping("/{specId}/children")
+    public List<SpecMaster> children(@PathVariable String specId) {
+        log.info("[API][GET /api/vc/specmaster/{}/children]", specId);
+        return specMasterService.getChildren(specId);
     }
 
     @PostMapping("/{specId}/children")
@@ -103,23 +116,26 @@ public class VcSpecMasterController {
         return specMasterService.createChild(specId, payload);
     }
 
-    private Map<String, Object> paging(List<SpecMaster> allRows, int page, int size) {
-        int safeSize = Math.max(size, 1);
-        int safePage = Math.max(page, 0);
-        int from = Math.min(safePage * safeSize, allRows.size());
-        int to = Math.min(from + safeSize, allRows.size());
-        List<SpecMaster> content = allRows.subList(from, to);
-        int totalPages = Math.max(1, (int) Math.ceil((double) allRows.size() / safeSize));
-
+    private Map<String, Object> allRows(List<SpecMaster> rows, int page, int size) {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("content", content);
-        result.put("rows", content);
-        result.put("number", safePage);
-        result.put("page", safePage);
-        result.put("size", safeSize);
-        result.put("totalPages", totalPages);
-        result.put("totalElements", allRows.size());
+        result.put("content", rows);
+        result.put("rows", rows);
+        result.put("number", Math.max(page, 0));
+        result.put("page", Math.max(page, 0));
+        result.put("size", Math.max(size, rows.size()));
+        result.put("totalPages", 1);
+        result.put("totalElements", rows.size());
         return result;
+    }
+
+    @GetMapping("/selectcondition")
+    public void selectConditionGetNotSupported() {
+        throw new ResponseStatusException(HttpStatus.METHOD_NOT_ALLOWED, "Use POST /api/vc/specmaster/selectcondition");
+    }
+
+    @RequestMapping({"/selectpaging", "/selectleftpaging"})
+    public void legacyPagingEndpointsNotSupported() {
+        throw new ResponseStatusException(HttpStatus.METHOD_NOT_ALLOWED, "Use POST /api/vc/specmaster/selectcondition");
     }
 
     private String text(Map<String, Object> payload, String key) {

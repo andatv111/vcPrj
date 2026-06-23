@@ -53,12 +53,13 @@ npm run test:vc
 | `src/components/vc/nonBim/VcCalculator.js` | V/C Calculator container |
 | `src/components/vc/nonBim/ui` | 퍼블리셔가 보기 쉬운 JSX UI 영역 |
 | `src/components/vc/nonBim/core/NonBim.helper.js` | DTO 조립, validation, result normalization |
-| `src/components/vc/admin/SpecMaster.js` | V/C Spec Master 관리 화면과 등록/수정 팝업 |
+| `src/components/vc/admin/specMaster/SpecMgmt.js` | V/C Spec Master 관리 메인 화면 |
+| `src/components/vc/admin/specMaster/pop/SpecMgmtPopup.js` | V/C Spec Master 등록/수정 팝업 |
 | `src/store/vc` | Redux action/reducer/selector |
 | `src/saga/vc/nonBim/vcSimSaga.js` | API 호출과 비동기 flow |
-| `src/saga/vc/admin/specMasterSaga.js` | SpecMaster 조회, 상세, 저장, 삭제 flow |
+| `src/saga/vc/admin/vcSpecSaga.js` | Spec Master 조회, 저장, 삭제 flow |
 | `src/service/api/vc/sim/vcSimApi.js` | V/C B/E API 단일 HTTP adapter |
-| `src/service/api/vc/admin/specMasterApi.js` | SpecMaster B/E API adapter |
+| `src/service/api/vc/admin/vcSpecApi.js` | Spec Master B/E API adapter |
 
 ## 화면 동작 계약
 
@@ -107,7 +108,7 @@ npm run test:vc
 | Endpoint URL | `vcSimApi.js`, `VcSimController.java`, `README_API.md` |
 | Request/Response field | `NonBim.helper.js`, `vcSimSaga.js`, Java DTO, `README_API.md` |
 | 화면 표시/검증 규칙 | container, reducer, selector, `README.md` |
-| SpecMaster API | `specMasterApi.js`, `specMasterSaga.js`, `VcSpecMasterController.java`, `SPEC_MASTER_API.md` |
+| SpecMaster API | `vcSpecApi.js`, `vcSpecSaga.js`, `VcSpecMasterController.java`, `SPEC_MASTER_API.md` |
 
 상세 API 계약은 [README_API.md](./README_API.md)를 기준으로 합니다.
 B/E 실행과 mock table 설명은 [vcBePrj/README.md](./vcBePrj/README.md)를 기준으로 합니다.

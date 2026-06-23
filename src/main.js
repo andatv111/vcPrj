@@ -4,7 +4,7 @@ import { Provider } from "react-redux";
 
 import Footer from "./components/organisms/Footer";
 import Header from "./components/organisms/Header";
-import SpecMaster from "./components/vc/admin/SpecMaster";
+import SpecMgmt from "./components/vc/admin/specMaster/SpecMgmt";
 import Bim5DNotApplied from "./components/vc/nonBim/Bim5DNotApplied";
 import VcCalculator from "./components/vc/nonBim/VcCalculator";
 import { store } from "./store";
@@ -92,7 +92,7 @@ function SideMenu({ activeMenuId, onSelect }) {
 function ContentRouter({ activeMenuId }) {
   // 메뉴가 늘어날 경우 이 함수에 화면 컴포넌트를 추가하면 전체 shell 구조는 그대로 재사용됩니다.
   if (activeMenuId === "calculator") return h(VcCalculator);
-  if (activeMenuId === "specMaster") return h(SpecMaster);
+  if (activeMenuId === "specMaster") return h(SpecMgmt);
   if (activeMenuId === "testData") return h(TestDataGuide);
   return h(Bim5DNotApplied);
 }
