@@ -6,6 +6,7 @@ export const selectSpecMgmtState = (state) => state?.vc?.specMaster || initialSp
 // SearchPanel에서 사용하는 조회조건과 콤보 후보.
 export const selectSpecMgmtSearch = (state) => selectSpecMgmtState(state).search;
 export const selectSpecMgmtOptions = (state) => selectSpecMgmtState(state).options;
+export const selectSpecMgmtSpecNameSuggestions = (state) => selectSpecMgmtState(state).specNameSuggestions;
 
 // 좌측 Master Grid와 우측 Detail Grid row.
 export const selectSpecMgmtMasterRows = (state) => selectSpecMgmtState(state).masterRows;

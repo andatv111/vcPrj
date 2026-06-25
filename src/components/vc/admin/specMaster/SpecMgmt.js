@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { Alert, Button, Modal, Space } from "antd";
 
 import { SpecMgmtMainStyle } from "../../../../styles/vc/pumpingStyle";
 import specMasterActions from "../../../../store/vc/vcMgmt/action";
@@ -12,6 +13,7 @@ import {
   selectSpecMgmtOptions,
   selectSpecMgmtPopup,
   selectSpecMgmtSearch,
+  selectSpecMgmtSpecNameSuggestions,
   selectSpecMgmtSelectedDetail,
   selectSpecMgmtSelectedDetailSpecId,
   selectSpecMgmtSelectedMaster,
@@ -29,6 +31,7 @@ import {
   paginateRows,
 } from "./core/SpecMgmt.core";
 import SpecMgmtPopup from "./pop/SpecMgmtPopup";
+import SuggestInput from "../../common/SuggestInput";
 import { SelectField } from "./ui/SpecMgmtFields";
 import { DetailGridPanel, MasterGridPanel } from "./ui/SpecMgmtGrid";
 
@@ -36,6 +39,7 @@ const SpecMgmt = () => {
   const dispatch = useDispatch();
   const search = useSelector(selectSpecMgmtSearch);
   const options = useSelector(selectSpecMgmtOptions);
+  const specNameSuggestions = useSelector(selectSpecMgmtSpecNameSuggestions);
   const masterRows = useSelector(selectSpecMgmtMasterRows);
   const detailRows = useSelector(selectSpecMgmtDetailRows);
   const selectedSpecId = useSelector(selectSpecMgmtSelectedSpecId);
@@ -71,9 +75,12 @@ const SpecMgmt = () => {
   );
 
   useEffect(() => {
-    // 최초 진입 시 콤보 후보 API와 grid 조회 API를 분리 호출한다.
     dispatch(specMasterActions.initRequest());
   }, [dispatch]);
+
+  useEffect(() => {
+    dispatch(specMasterActions.fetchSpecNameSuggestionsRequest(search.specNm));
+  }, [dispatch, search.specNm]);
 
   useEffect(() => {
     setMasterPage(0);
@@ -92,17 +99,27 @@ const SpecMgmt = () => {
   const handleDeleteMaster = () => {
     if (!selectedSpecId) return;
     const targetName = selectedMaster?.specNm || selectedSpecId;
-    if (window.confirm(`선택한 Master "${targetName}"를 삭제하시겠습니까?\n하위 Detail 데이터도 함께 삭제될 수 있습니다.`)) {
-      dispatch(specMasterActions.deleteRequest({ scope: "master", specId: selectedSpecId }));
-    }
+    Modal.confirm({
+      title: "Delete Master",
+      content: `Delete master "${targetName}" and its detail rows?`,
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      cancelText: "Cancel",
+      onOk: () => dispatch(specMasterActions.deleteRequest({ scope: "master", specId: selectedSpecId })),
+    });
   };
 
   const handleDeleteDetail = () => {
     if (!selectedDetail) return;
     const targetName = selectedDetail.specNm || selectedDetail.specId;
-    if (window.confirm(`선택한 Detail "${targetName}"를 삭제하시겠습니까?`)) {
-      dispatch(specMasterActions.deleteRequest({ scope: "detail", specId: selectedDetail.specId }));
-    }
+    Modal.confirm({
+      title: "Delete Detail",
+      content: `Delete detail "${targetName}"?`,
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      cancelText: "Cancel",
+      onOk: () => dispatch(specMasterActions.deleteRequest({ scope: "detail", specId: selectedDetail.specId })),
+    });
   };
 
   return (
@@ -110,6 +127,7 @@ const SpecMgmt = () => {
       <SearchPanel
         search={search}
         options={options}
+        specNameSuggestions={specNameSuggestions}
         loading={loading}
         onChange={(name, value) => dispatch(specMasterActions.setSearchField({ name, value }))}
         onReset={() => dispatch(specMasterActions.resetSearch())}
@@ -156,8 +174,8 @@ const SpecMgmt = () => {
         />
       </div>
 
-      {message ? <div className="notice-box success">{message}</div> : null}
-      {error ? <div className="error-box">{error}</div> : null}
+      {message ? <Alert className="notice-box success" type="success" message={message} /> : null}
+      {error ? <Alert className="error-box" type="error" message={error} /> : null}
 
       <SpecMgmtPopup
         popup={popup}
@@ -171,22 +189,32 @@ const SpecMgmt = () => {
   );
 };
 
-const SearchPanel = ({ search, options, loading, onChange, onReset, onSearch }) => {
-  const modelOptions = search.fabId && options.modelsByFab[search.fabId] ? options.modelsByFab[search.fabId] : options.setModelNms;
+const SearchPanel = ({ search, options, specNameSuggestions, loading, onChange, onReset, onSearch }) => {
+  const modelOptions =
+    search.fabId && options.modelsByFab[search.fabId] ? options.modelsByFab[search.fabId] : options.setModelNms;
+  const specNameItems = specNameSuggestions.length ? specNameSuggestions : options.specNms;
 
   return (
     <section className="panel vc-pub-section searchStyle search_area">
       <div className="section-title">Search Conditions</div>
-      <div className="search-row vc-pub-search-row">
+      <div className="search-row vc-pub-search-row vc-search-actions-row">
         <SelectField label="FAB" value={search.fabId} options={options.fabIds} onChange={(value) => onChange("fabId", value)} />
         <SelectField label="MODEL" value={search.setModelNm} options={modelOptions} onChange={(value) => onChange("setModelNm", value)} />
-        <SelectField label="모델관리기준명" value={search.specNm} options={options.specNms} onChange={(value) => onChange("specNm", value)} />
-        <button type="button" className="secondary-button signlw-btn" disabled={loading.search} onClick={onReset}>
-          초기화
-        </button>
-        <button type="button" className="primary-button signlw-btn" disabled={loading.search} onClick={onSearch}>
-          {loading.search ? "조회 중..." : "조회"}
-        </button>
+        <SuggestInput
+          label="Spec Name"
+          value={search.specNm}
+          placeholder="Spec Name"
+          items={specNameItems}
+          onChange={(value) => onChange("specNm", value)}
+        />
+        <Space className="vc-search-actions">
+          <Button disabled={loading.search} onClick={onReset}>
+            Reset
+          </Button>
+          <Button type="primary" loading={loading.search} onClick={onSearch}>
+            Search
+          </Button>
+        </Space>
       </div>
     </section>
   );

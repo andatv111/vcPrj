@@ -65,6 +65,12 @@ public class VcSpecMasterController {
         return specMasterService.filterOptions();
     }
 
+    @GetMapping("/specnames")
+    public List<Map<String, String>> specNameSuggestions(@RequestParam(required = false) String keyword) {
+        log.info("[API][GET /api/vc/specmaster/specnames] keyword={}", keyword);
+        return specMasterService.searchSpecNameSuggestions(keyword);
+    }
+
     @PostMapping
     public SpecMaster createMaster(@RequestBody Map<String, Object> payload) {
         log.info("[API][POST /api/vc/specmaster]");

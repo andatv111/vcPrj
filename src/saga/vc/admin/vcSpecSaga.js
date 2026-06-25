@@ -1,4 +1,4 @@
-import { all, call, put, select, takeLatest } from "redux-saga/effects";
+import { all, call, delay, put, select, takeLatest } from "redux-saga/effects";
 
 import { SPEC_MASTER_ACTION_TYPES, specMasterActions } from "../../../store/vc/vcMgmt/action";
 import {
@@ -177,6 +177,20 @@ function* loadSpecConditionFlow(action = {}) {
   }
 }
 
+function* fetchSpecNameSuggestionsFlow(action) {
+  try {
+    const keyword = action.payload?.keyword || "";
+
+    yield delay(200);
+
+    const response = yield call(vcSpecApi.searchSpecNameSuggestions, keyword);
+    const items = toArray(response).map(normalizeOption).filter((item) => item.value);
+    yield put(specMasterActions.fetchSpecNameSuggestionsSuccess(items));
+  } catch (error) {
+    yield put(specMasterActions.fetchSpecNameSuggestionsFailure(getErrorMessage(error)));
+  }
+}
+
 function* initSpecMasterFlow() {
   try {
     yield call(loadFilterOptionsFlow);
@@ -283,6 +297,7 @@ function* openEditPopupFlow(action) {
 
 export function* watchSpecSaga() {
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.INIT_REQUEST, initSpecMasterFlow);
+  yield takeLatest(SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_REQUEST, fetchSpecNameSuggestionsFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.SEARCH_REQUEST, loadSpecConditionFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.CHANGE_PAGE, loadSpecConditionFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.SELECT_MASTER, selectMasterFlow);

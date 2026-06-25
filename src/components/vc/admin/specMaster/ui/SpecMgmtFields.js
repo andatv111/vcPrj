@@ -1,33 +1,45 @@
 import React from "react";
+import { Form, Input, Select, Switch } from "antd";
+
+const toSelectOptions = (options = []) =>
+  options.map((option) => ({
+    label: option.label || option.value,
+    value: option.value || option.label,
+  }));
 
 export const SelectField = ({ label, value, options = [], required = false, disabled = false, full = false, onChange }) => (
-  <label className={full ? "field signlw-form-item full-grid-field" : "field signlw-form-item"}>
-    <span>{label}{required ? <em className="required-mark">*</em> : null}</span>
-    <select value={value || ""} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
-      <option value="">전체</option>
-      {options.map((option) => (
-        <option key={option.value || option.label} value={option.value || option.label}>
-          {option.label || option.value}
-        </option>
-      ))}
-    </select>
-  </label>
+  <Form.Item
+    className={full ? "signlw-form-item full-grid-field" : "signlw-form-item"}
+    label={label}
+    required={required}
+    colon={false}
+  >
+    <Select
+      allowClear
+      showSearch
+      value={value || undefined}
+      disabled={disabled}
+      placeholder="All"
+      options={toSelectOptions(options)}
+      optionFilterProp="label"
+      onChange={(nextValue) => onChange(nextValue || "")}
+    />
+  </Form.Item>
 );
 
 export const InputField = ({ label, value, required = false, disabled = false, full = false, onChange }) => (
-  <label className={full ? "field signlw-form-item full-grid-field" : "field signlw-form-item"}>
-    <span>{label}{required ? <em className="required-mark">*</em> : null}</span>
-    <input value={value || ""} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
-  </label>
+  <Form.Item
+    className={full ? "signlw-form-item full-grid-field" : "signlw-form-item"}
+    label={label}
+    required={required}
+    colon={false}
+  >
+    <Input value={value || ""} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+  </Form.Item>
 );
 
 export const SwitchField = ({ label, value, onChange }) => (
-  <label className="vc-switch-field spec-switch">
-    <span className="vc-switch-label">{label}</span>
-    <input type="checkbox" checked={value === "Y"} onChange={(event) => onChange(event.target.checked ? "Y" : "N")} />
-    <span className="vc-switch-track" aria-hidden="true">
-      <span className="vc-switch-thumb" />
-    </span>
-    <span className="vc-switch-value">{value === "Y" ? "Y" : "N"}</span>
-  </label>
+  <Form.Item className="signlw-form-item spec-switch" label={label} colon={false}>
+    <Switch checked={value === "Y"} checkedChildren="Y" unCheckedChildren="N" onChange={(checked) => onChange(checked ? "Y" : "N")} />
+  </Form.Item>
 );

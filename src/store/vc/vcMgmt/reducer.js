@@ -48,6 +48,7 @@ const EMPTY_POPUP_FORM = {
 export const initialSpecMasterState = {
   search: { ...DEFAULT_SEARCH },
   options: { ...DEFAULT_OPTIONS },
+  specNameSuggestions: [],
 
   masterRows: [],
   detailRows: [],
@@ -74,6 +75,7 @@ export const initialSpecMasterState = {
     details: false,
     save: false,
     delete: false,
+    specNameSuggestions: false,
   },
   error: null,
   message: "",
@@ -156,6 +158,22 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
       return {
         ...state,
         search: { ...DEFAULT_SEARCH },
+        specNameSuggestions: [],
+      };
+
+    case SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_REQUEST:
+      return setLoading(state, "specNameSuggestions", true);
+
+    case SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_SUCCESS:
+      return {
+        ...setLoading(state, "specNameSuggestions", false),
+        specNameSuggestions: action.payload.items || [],
+      };
+
+    case SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_FAILURE:
+      return {
+        ...setLoading(state, "specNameSuggestions", false),
+        specNameSuggestions: [],
       };
 
     case SPEC_MASTER_ACTION_TYPES.SEARCH_REQUEST:

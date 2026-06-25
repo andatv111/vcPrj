@@ -177,6 +177,22 @@ class DesignPortalDrawingServiceTest {
     }
 
     @Test
+    void specMasterSpecNameSuggestionsUseContainsSearch() throws Exception {
+        mockMvc.perform(get("/api/vc/specmaster/specnames").param("keyword", "ETCH"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.value == 'M16 ETCH General')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.value == 'M16 ETCH Main Chamber')]").isNotEmpty());
+    }
+
+    @Test
+    void specMasterSpecNameSuggestionsReturnInitialCandidatesWithoutKeyword() throws Exception {
+        mockMvc.perform(get("/api/vc/specmaster/specnames"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(10))
+                .andExpect(jsonPath("$[?(@.value == 'M16 ETCH General')]").isNotEmpty());
+    }
+
+    @Test
     void specMasterDetailSaveIsVisibleThroughSearchResponse() throws Exception {
         Map<String, Object> detail = Map.of(
                 "specNm", "M14 LITHO Added Test Chamber",

@@ -69,7 +69,28 @@ public class VcSpecMasterService {
                 .sorted(Comparator
                         .comparing(SpecMaster::fabId, Comparator.nullsLast(String::compareTo))
                         .thenComparing(SpecMaster::setModelNm, Comparator.nullsLast(String::compareTo))
-                        .thenComparing(SpecMaster::specNm, Comparator.nullsLast(String::compareTo)))
+                .thenComparing(SpecMaster::specNm, Comparator.nullsLast(String::compareTo)))
+                .toList();
+    }
+
+    public List<Map<String, String>> searchSpecNameSuggestions(String keyword) {
+        log.info("[SERVICE][SPEC_MASTER][SELECT] business=searchSpecNameSuggestions table={} keyword={}", SPEC_TABLE, keyword);
+
+        return repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+                .filter(row -> isBlank(keyword) || containsText(row.specNm(), keyword))
+                .map(row -> Map.of(
+                        "value", row.specNm(),
+                        "label", displayText(row.fabId()) + " / " + displayText(row.setModelNm())
+                ))
+                .collect(Collectors.toMap(
+                        item -> item.get("value"),
+                        Function.identity(),
+                        (left, ignored) -> left,
+                        LinkedHashMap::new
+                ))
+                .values()
+                .stream()
+                .limit(10)
                 .toList();
     }
 
@@ -279,6 +300,10 @@ public class VcSpecMasterService {
         Object value = payload.get(key);
         if (value == null) return fallback == null ? "" : fallback;
         return String.valueOf(value);
+    }
+
+    private String displayText(String value) {
+        return value == null ? "" : value;
     }
 
     private BigDecimal decimal(Object value) {

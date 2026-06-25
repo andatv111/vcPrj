@@ -1,60 +1,104 @@
-import React, { useState } from "react";
+import React from "react";
+import { Button, Input, Pagination, Space, Table } from "antd";
+import { DownloadOutlined, FilterFilled } from "@ant-design/icons";
 
 import { DETAIL_COLUMNS, getBooleanYn, MASTER_COLUMNS, toDisplayText } from "../core/SpecMgmt.core";
 
-const GridHeaderFilter = ({ column, value, onChange }) => {
-  const [open, setOpen] = useState(false);
-  if (column.key === "select" || column.key === "no") return null;
-  const active = Boolean(value);
+const getColumnText = (row, key, index) => {
+  if (key === "no") return index + 1;
+  if (key === "chgrNm") return row.chgrNm || row.chgrEmpno;
+  if (key === "detSearYn") return getBooleanYn(row.detSearYn);
+  return row[key];
+};
 
-  return (
-    <span className="grid-header-filter">
-      <button
-        type="button"
-        className={active ? "grid-filter-button active" : "grid-filter-button"}
-        aria-label={`${column.label} 필터`}
-        aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
-      >
-        <span className="grid-filter-icon" aria-hidden="true" />
-      </button>
-      {open ? (
-        <span className="grid-filter-popover">
-          <input
-            className="grid-filter-input"
-            value={value || ""}
-            placeholder={`${column.label} 필터`}
-            autoFocus
-            onChange={(event) => onChange(column.key, event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") setOpen(false);
-            }}
-          />
-          <button type="button" className="grid-filter-clear" onClick={() => onChange(column.key, "")}>
-            Clear
-          </button>
-        </span>
-      ) : null}
-    </span>
-  );
+const withFilter = (column, filters, onFilterChange) => {
+  if (column.key === "select" || column.key === "no") return {};
+
+  return {
+    filteredValue: filters[column.key] ? [filters[column.key]] : null,
+    onFilter: (value, record) => toDisplayText(getColumnText(record, column.key)).includes(String(value)),
+    filterIcon: () => <FilterFilled />,
+    filterDropdown: ({ confirm }) => (
+      <div className="filter-pop" onKeyDown={(event) => event.stopPropagation()}>
+        <Input
+          allowClear
+          size="small"
+          value={filters[column.key] || ""}
+          placeholder={`${column.label} filter`}
+          onChange={(event) => {
+            onFilterChange(column.key, event.target.value);
+            confirm({ closeDropdown: false });
+          }}
+        />
+      </div>
+    ),
+  };
 };
 
 const GridPager = ({ page, onPageChange }) => (
-  <div className="spec-pagination signlw-pagination">
-    <button type="button" className="secondary-button btn_small" disabled={page.page <= 0} onClick={() => onPageChange(page.page - 1)}>
-      {"<<"}
-    </button>
-    <span>{page.page + 1} / {page.totalPages || 1}</span>
-    <button
-      type="button"
-      className="secondary-button btn_small"
-      disabled={page.page + 1 >= (page.totalPages || 1)}
-      onClick={() => onPageChange(page.page + 1)}
-    >
-      {">>"}
-    </button>
-  </div>
+  <Pagination
+    className="spec-pagination signlw-pagination"
+    size="small"
+    current={page.page + 1}
+    pageSize={1}
+    total={page.totalPages || 1}
+    showSizeChanger={false}
+    onChange={(nextPage) => onPageChange(nextPage - 1)}
+  />
 );
+
+const createSelectionColumn = ({ selectedId, onSelect, radioName }) => ({
+  title: "",
+  dataIndex: "select",
+  minWidth: 48,
+  width: 48,
+  align: "center",
+  render: (_, row) => (
+    <input
+      className="vc-grid-radio"
+      type="radio"
+      name={radioName}
+      checked={selectedId === row.specId}
+      onChange={() => onSelect(row.specId)}
+    />
+  ),
+});
+
+const buildMasterColumns = ({ filters, selectedSpecId, onFilterChange, onSelect }) =>
+  MASTER_COLUMNS.map((column) => {
+    if (column.key === "select") {
+      return createSelectionColumn({ selectedId: selectedSpecId, onSelect, radioName: "specMasterRadio" });
+    }
+
+    return {
+      title: column.label,
+      dataIndex: column.key,
+      key: column.key,
+      minWidth: column.key === "specNm" ? 160 : 92,
+      width: column.key === "specNm" ? 180 : 110,
+      align: column.key === "no" || column.key === "detSearYn" ? "center" : "left",
+      render: (value, row, index) => toDisplayText(getColumnText(row, column.key, index)),
+      ...withFilter(column, filters, onFilterChange),
+    };
+  });
+
+const buildDetailColumns = ({ filters, selectedDetailSpecId, onFilterChange, onSelect }) =>
+  DETAIL_COLUMNS.map((column) => {
+    if (column.key === "select") {
+      return createSelectionColumn({ selectedId: selectedDetailSpecId, onSelect, radioName: "specDetailRadio" });
+    }
+
+    return {
+      title: column.label,
+      dataIndex: column.key,
+      key: column.key,
+      minWidth: column.key === "specNm" || column.key === "chambModelNm" ? 160 : 92,
+      width: column.key === "specNm" || column.key === "chambModelNm" ? 180 : 112,
+      align: column.key === "no" ? "center" : "left",
+      render: (value, row, index) => toDisplayText(getColumnText(row, column.key, index)),
+      ...withFilter(column, filters, onFilterChange),
+    };
+  });
 
 export const MasterGridPanel = ({
   rows,
@@ -73,44 +117,28 @@ export const MasterGridPanel = ({
 }) => (
   <section className="panel vc-pub-section vcsnofM001Style spec-master-panel">
     <div className="section-header search">
-      <div className="section-title">Master Grid <span className="muted">전체 {totalCount} / 필터 {filteredCount}</span></div>
-      <div className="button-group buttonArea">
-        <button type="button" className="secondary-button btn_small" onClick={onCreate}>신규</button>
-        <button type="button" className="secondary-button btn_small" disabled={!selectedSpecId} onClick={onEdit}>수정</button>
-        <button type="button" className="secondary-button btn_small" disabled={!selectedSpecId || loading.delete} onClick={onDelete}>삭제</button>
+      <div className="section-title">
+        Master Grid <span className="muted">Total {totalCount} / Filtered {filteredCount}</span>
       </div>
+      <Space className="buttonArea">
+        <Button size="small" onClick={onCreate}>New</Button>
+        <Button size="small" disabled={!selectedSpecId} onClick={onEdit}>Edit</Button>
+        <Button size="small" danger disabled={!selectedSpecId || loading.delete} onClick={onDelete}>Delete</Button>
+      </Space>
     </div>
-    <div className="table-wrap tableScrollStyle vcsspecM001_table">
-      <table className="signlw-table">
-        <thead>
-          <tr>{MASTER_COLUMNS.map((column) => (
-            <th key={column.key}>
-              <span className="grid-header-label">{column.label}</span>
-              <GridHeaderFilter column={column} value={filters[column.key]} onChange={onFilterChange} />
-            </th>
-          ))}</tr>
-        </thead>
-        <tbody>
-          {rows.length ? rows.map((row) => (
-            <tr key={row.specId || row.id} className={selectedSpecId === row.specId ? "selected-row" : ""}>
-              <td className="center">
-                <input type="radio" name="specMasterRadio" checked={selectedSpecId === row.specId} onChange={() => onSelect(row.specId)} />
-              </td>
-              <td className="center">{toDisplayText(row.no)}</td>
-              <td>{toDisplayText(row.fabId)}</td>
-              <td>{toDisplayText(row.setModelNm)}</td>
-              <td>{toDisplayText(row.specNm)}</td>
-              <td>{toDisplayText(row.specMinVal)}</td>
-              <td>{toDisplayText(row.specMaxVal)}</td>
-              <td>{toDisplayText(row.chgrNm || row.chgrEmpno)}</td>
-              <td className="center">{getBooleanYn(row.detSearYn)}</td>
-            </tr>
-          )) : (
-            <tr><td className="empty-cell" colSpan={MASTER_COLUMNS.length}>{loading.search ? "조회 중..." : "조회 결과가 없습니다."}</td></tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+    <Table
+      className="signlw-table"
+      columns={buildMasterColumns({ filters, selectedSpecId, onFilterChange, onSelect })}
+      dataSource={rows}
+      rowKey={(row) => row.specId || row.id}
+      pagination={false}
+      loading={loading.search}
+      size="small"
+      scroll={{ x: "max-content", y: 430 }}
+      rowClassName={(row) => (selectedSpecId === row.specId ? "selected-row" : "")}
+      onRow={(row) => ({ onClick: () => onSelect(row.specId) })}
+      locale={{ emptyText: loading.search ? "Searching..." : "No data." }}
+    />
     <GridPager page={page} onPageChange={onPageChange} />
   </section>
 );
@@ -135,51 +163,31 @@ export const DetailGridPanel = ({
   <section className="panel vc-pub-section vcsnofM001Style spec-detail-panel">
     <div className="section-header search">
       <div className="section-title">
-        Detail Grid <span className="muted">{selectedMaster ? `${selectedMaster.specNm} | 전체 ${totalCount} / 필터 ${filteredCount}` : "Master를 선택하세요"}</span>
+        Detail Grid{" "}
+        <span className="muted">
+          {selectedMaster ? `${selectedMaster.specNm} | Total ${totalCount} / Filtered ${filteredCount}` : "Select Master"}
+        </span>
       </div>
-      <div className="button-group buttonArea">
-        <button type="button" className="secondary-button btn_small" disabled={!selectedMaster} onClick={onCreate}>신규</button>
-        <button type="button" className="secondary-button btn_small" disabled={!rows.length} onClick={onEdit}>수정</button>
-        <button type="button" className="secondary-button btn_small" disabled={!rows.length || loading.delete} onClick={onDelete}>삭제</button>
-        <button type="button" className="secondary-button download-button btn_small" disabled={!selectedMaster} onClick={onExcel}>
-          <span className="download-icon" aria-hidden="true" />
-          Excel
-        </button>
-      </div>
+      <Space className="buttonArea">
+        <Button size="small" disabled={!selectedMaster} onClick={onCreate}>New</Button>
+        <Button size="small" disabled={!rows.length} onClick={onEdit}>Edit</Button>
+        <Button size="small" danger disabled={!rows.length || loading.delete} onClick={onDelete}>Delete</Button>
+        <Button size="small" icon={<DownloadOutlined />} disabled={!selectedMaster} onClick={onExcel}>Excel</Button>
+      </Space>
     </div>
-    <div className="table-wrap tableScrollStyle vcsspecM001_table">
-      <table className="signlw-table">
-        <thead>
-          <tr>{DETAIL_COLUMNS.map((column) => (
-            <th key={column.key}>
-              <span className="grid-header-label">{column.label}</span>
-              <GridHeaderFilter column={column} value={filters[column.key]} onChange={onFilterChange} />
-            </th>
-          ))}</tr>
-        </thead>
-        <tbody>
-          {rows.length ? rows.map((row, index) => (
-            <tr key={row.specId || row.id} className={selectedDetailSpecId === row.specId ? "selected-row" : ""}>
-              <td className="center">
-                <input type="radio" name="specDetailRadio" checked={selectedDetailSpecId === row.specId} onChange={() => onSelect(row.specId)} />
-              </td>
-              <td className="center">{index + 1}</td>
-              <td>{toDisplayText(row.fabId)}</td>
-              <td>{toDisplayText(row.setModelNm)}</td>
-              <td>{toDisplayText(row.specNm)}</td>
-              <td>{toDisplayText(row.operLargeCatgVal)}</td>
-              <td>{toDisplayText(row.operMidCatgVal)}</td>
-              <td>{toDisplayText(row.chambModelNm)}</td>
-              <td>{toDisplayText(row.specMinVal)}</td>
-              <td>{toDisplayText(row.specMaxVal)}</td>
-              <td>{toDisplayText(row.chgrNm || row.chgrEmpno)}</td>
-            </tr>
-          )) : (
-            <tr><td className="empty-cell" colSpan={DETAIL_COLUMNS.length}>{loading.details ? "상세 조회 중..." : "상세 데이터가 없습니다."}</td></tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+    <Table
+      className="signlw-table"
+      columns={buildDetailColumns({ filters, selectedDetailSpecId, onFilterChange, onSelect })}
+      dataSource={rows}
+      rowKey={(row) => row.specId || row.id}
+      pagination={false}
+      loading={loading.details}
+      size="small"
+      scroll={{ x: "max-content", y: 430 }}
+      rowClassName={(row) => (selectedDetailSpecId === row.specId ? "selected-row" : "")}
+      onRow={(row) => ({ onClick: () => onSelect(row.specId) })}
+      locale={{ emptyText: loading.details ? "Loading details..." : "No detail data." }}
+    />
     <GridPager page={page} onPageChange={onPageChange} />
   </section>
 );

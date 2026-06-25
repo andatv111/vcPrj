@@ -10,6 +10,9 @@ export const SPEC_MASTER_ACTION_TYPES = {
   // 검색조건 입력 값만 변경하고 실제 조회는 SEARCH_REQUEST에서 수행한다.
   SET_SEARCH_FIELD: `${SPEC_MASTER_ACTION_PREFIX}/SET_SEARCH_FIELD`,
   RESET_SEARCH: `${SPEC_MASTER_ACTION_PREFIX}/RESET_SEARCH`,
+  FETCH_SPEC_NAME_SUGGESTIONS_REQUEST: `${SPEC_MASTER_ACTION_PREFIX}/FETCH_SPEC_NAME_SUGGESTIONS_REQUEST`,
+  FETCH_SPEC_NAME_SUGGESTIONS_SUCCESS: `${SPEC_MASTER_ACTION_PREFIX}/FETCH_SPEC_NAME_SUGGESTIONS_SUCCESS`,
+  FETCH_SPEC_NAME_SUGGESTIONS_FAILURE: `${SPEC_MASTER_ACTION_PREFIX}/FETCH_SPEC_NAME_SUGGESTIONS_FAILURE`,
 
   // GoodDocs POST /api/vc/specmaster/selectcondition 호출 결과를 grid에 반영한다.
   SEARCH_REQUEST: `${SPEC_MASTER_ACTION_PREFIX}/SEARCH_REQUEST`,
@@ -45,6 +48,18 @@ export const specMasterActions = {
     payload: { name, value },
   }),
   resetSearch: () => ({ type: SPEC_MASTER_ACTION_TYPES.RESET_SEARCH }),
+  fetchSpecNameSuggestionsRequest: (keyword) => ({
+    type: SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_REQUEST,
+    payload: { keyword },
+  }),
+  fetchSpecNameSuggestionsSuccess: (items) => ({
+    type: SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_SUCCESS,
+    payload: { items },
+  }),
+  fetchSpecNameSuggestionsFailure: (error) => ({
+    type: SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_FAILURE,
+    payload: { error },
+  }),
 
   searchRequest: ({ selectedSpecId, selectedDetailSpecId } = {}) => ({
     type: SPEC_MASTER_ACTION_TYPES.SEARCH_REQUEST,
