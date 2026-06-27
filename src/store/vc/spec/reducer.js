@@ -1,4 +1,4 @@
-import { SPEC_MASTER_ACTION_TYPES } from "./action";
+import { SPEC_MASTER_ACTION_TYPES } from "@/store/vc/spec/action";
 
 const DEFAULT_SEARCH = {
   fabId: "",
@@ -55,12 +55,6 @@ export const initialSpecMasterState = {
   selectedSpecId: "",
   selectedDetailSpecId: "",
 
-  page: {
-    page: 0,
-    size: 10,
-    totalPages: 1,
-    totalElements: 0,
-  },
 
   popup: {
     visible: false,
@@ -84,16 +78,37 @@ export const initialSpecMasterState = {
 const toFlag = (value, trueValue = "Y", falseValue = "N") =>
   value === true || value === trueValue || value === "1" ? trueValue : falseValue;
 
-const normalizePopupForm = (row = {}, scope = "master", selectedMaster = null) => {
+const getOptionValues = (items = []) => items.map((item) => item.value || item.label || item).filter(Boolean);
+
+const inferMasterHierarchy = (row, options) => {
+  if (!row.fabId) return { area: "", maker: "" };
+
+  const maker = Object.entries(options.modelsByMaker || {}).find(([, models]) =>
+    getOptionValues(models).includes(row.setModelNm)
+  )?.[0];
+  const areas = getOptionValues(options.areasByFab?.[row.fabId]);
+  const area =
+    areas.find((candidate) => getOptionValues(options.makersByArea?.[candidate]).includes(maker)) ||
+    areas[0] ||
+    "";
+
+  return {
+    area,
+    maker: maker || getOptionValues(options.makersByArea?.[area])[0] || "",
+  };
+};
+
+const normalizePopupForm = (row = {}, scope = "master", selectedMaster = null, options = DEFAULT_OPTIONS) => {
   const parent = scope === "detail" ? selectedMaster || {} : {};
+  const hierarchy = scope === "master" ? inferMasterHierarchy(row, options) : {};
 
   return {
     ...EMPTY_POPUP_FORM,
     ...parent,
     ...row,
     fabId: row.fabId || parent.fabId || "",
-    area: row.area || parent.area || "",
-    maker: row.maker || parent.maker || "",
+    area: row.area || parent.area || hierarchy.area || "",
+    maker: row.maker || parent.maker || hierarchy.maker || "",
     setModelNm: row.setModelNm || parent.setModelNm || "",
     upperCd: scope === "detail" ? row.upperCd || parent.specId || "" : row.upperCd || "",
     detSearYn: toFlag(row.detSearYn || parent.detSearYn || "N"),
@@ -189,9 +204,11 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
       const selectedSpecId = rows.some((row) => row.specId === action.payload.selectedSpecId)
         ? action.payload.selectedSpecId
         : rows[0]?.specId || "";
-      const selectedDetailSpecId = detailRows.some((row) => row.specId === action.payload.selectedDetailSpecId)
+      const selectedDetailSpecId = detailRows.some(
+        (row) => row.upperCd === selectedSpecId && row.specId === action.payload.selectedDetailSpecId
+      )
         ? action.payload.selectedDetailSpecId
-        : detailRows[0]?.specId || "";
+        : detailRows.find((row) => row.upperCd === selectedSpecId)?.specId || "";
 
       return {
         ...state,
@@ -204,35 +221,30 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
         detailRows,
         selectedSpecId,
         selectedDetailSpecId,
-        page: {
-          ...state.page,
-          ...(action.payload.page || {}),
-        },
         error: null,
       };
     }
 
     case SPEC_MASTER_ACTION_TYPES.SEARCH_FAILURE:
       return {
-        ...setLoading(state, "search", false),
+        ...state,
+        loading: {
+          ...state.loading,
+          search: false,
+          details: false,
+        },
         error: action.payload.error,
       };
 
-    case SPEC_MASTER_ACTION_TYPES.CHANGE_PAGE:
+    case SPEC_MASTER_ACTION_TYPES.SELECT_MASTER: {
       return {
-        ...state,
-        page: {
-          ...state.page,
-          page: action.payload.page,
-        },
-      };
-
-    case SPEC_MASTER_ACTION_TYPES.SELECT_MASTER:
-      return {
-        ...state,
+        ...setLoading(state, "details", true),
         selectedSpecId: action.payload.specId,
+        selectedDetailSpecId: "",
+        detailRows: [],
         error: null,
       };
+    }
 
     case SPEC_MASTER_ACTION_TYPES.SELECT_DETAIL:
       return {
@@ -247,7 +259,7 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
           visible: true,
           mode: "create",
           scope: action.payload.scope,
-          form: normalizePopupForm({}, action.payload.scope, findSelectedMaster(state)),
+          form: normalizePopupForm({}, action.payload.scope, findSelectedMaster(state), state.options),
         },
         error: null,
       };
@@ -259,7 +271,7 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
           visible: true,
           mode: "edit",
           scope: action.payload.scope,
-          form: normalizePopupForm(action.payload.row, action.payload.scope, findSelectedMaster(state)),
+          form: normalizePopupForm(action.payload.row, action.payload.scope, findSelectedMaster(state), state.options),
         },
         error: null,
       };
@@ -270,7 +282,7 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
         popup: {
           ...state.popup,
           scope: action.payload.scope,
-          form: normalizePopupForm(action.payload.row, action.payload.scope, findSelectedMaster(state)),
+          form: normalizePopupForm(action.payload.row, action.payload.scope, findSelectedMaster(state), state.options),
         },
         error: null,
       };

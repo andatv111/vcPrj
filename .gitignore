@@ -1,1 +1,4 @@
+# 외부망이 없는 사내 PC에서도 checkout 직후 실행할 수 있도록 npm 의존성은 Git에 포함한다.
+# 개발 PC마다 다시 생성되는 Vite 사전 번들 캐시만 제외한다.
+node_modules/.vite/
 node_modules

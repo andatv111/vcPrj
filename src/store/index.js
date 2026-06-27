@@ -2,12 +2,12 @@ import { applyMiddleware, combineReducers, createStore } from "redux";
 import createSagaMiddleware from "redux-saga";
 import { all } from "redux-saga/effects";
 
-import nonBimReducer from "./vc/nonBim/reducer";
-import vcMgmtReducer from "./vc/vcMgmt/reducer";
-import vcCalculatorReducer from "./vc/vcCalculator/reducer";
-import vcResultReducer from "./vc/vcResult/reducer";
-import vcSpecSaga from "../saga/vc/admin/vcSpecSaga";
-import nonBimSaga from "../saga/vc/nonBim/vcSimSaga";
+import nonBimReducer from "@/store/vc/nonBim/reducer";
+import specReducer from "@/store/vc/spec/reducer";
+import vcCalculatorReducer from "@/store/vc/vcCalculator/reducer";
+import vcResultReducer from "@/store/vc/vcResult/reducer";
+import specSaga from "@/saga/vc/admin/specSaga";
+import nonBimSaga from "@/saga/vc/nonBim/vcSimSaga";
 
 const sagaMiddleware = createSagaMiddleware();
 
@@ -16,7 +16,7 @@ const sagaMiddleware = createSagaMiddleware();
 const rootReducer = combineReducers({
   vc: combineReducers({
     nonBim: nonBimReducer,
-    specMaster: vcMgmtReducer,
+    specMaster: specReducer,
     vcCalculator: vcCalculatorReducer,
     vcResult: vcResultReducer,
   }),
@@ -24,7 +24,7 @@ const rootReducer = combineReducers({
 
 function* rootSaga() {
   // 현재는 V/C Simulation 관련 saga만 실행하지만, 이후 기능 saga를 all 배열에 추가할 수 있습니다.
-  yield all([nonBimSaga(), vcSpecSaga()]);
+  yield all([nonBimSaga(), specSaga()]);
 }
 
 export const store = createStore(rootReducer, applyMiddleware(sagaMiddleware));

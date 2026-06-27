@@ -933,10 +933,10 @@ POST /api/vc/specmaster/search
 ## SpecMaster Search API Update
 
 - SpecMaster grid reads through `POST /api/vc/specmaster/search`.
-- This API returns both Master paging rows and the selected Master's Detail rows in one response.
-- request body: `{ page, size, fabId, setModelNm, specNm, selectedSpecId, selectedDetailSpecId }`.
-- response body: `{ content, rows, details, selectedSpecId, page, size, totalPages, totalElements }`.
+- This API returns Master rows only. The first Master is selected automatically.
+- request body: `{ fabId, setModelNm, specNm }`. 빈 값이면 전체 조회한다.
+- response body: `{ rows }`. paging과 radio 선택 상태는 F/E에서 관리한다.
 - Initial load selects the first Master row returned by the response and fills the Detail grid from the same response.
-- After Detail save, the front end searches again with the parent Master `selectedSpecId`, so the Master radio selection and refreshed Detail rows stay visible.
+- Master radio selection calls `GET /api/vc/specmaster/{specId}/children` and refreshes the Detail grid immediately.
 - Old GoodDocs read endpoints are consolidated into `POST /api/vc/specmaster/search`.
-- Detail lookup is no longer a separate HTTP endpoint. `POST /api/vc/specmaster/{specId}/children` is used only for Detail creation.
+- Detail lookup uses `GET /api/vc/specmaster/{specId}/children`; `POST` is used for Detail creation.

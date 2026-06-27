@@ -1,7 +1,13 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
   // React 플러그인은 JSX/React Refresh 처리를 담당합니다.
   plugins: [react()],
   esbuild: {

@@ -6,9 +6,9 @@ import {
   MAX_CHAMBER_COUNT,
   PIPE_COLUMNS,
   PIPE_TYPE,
-} from "../core/NonBim.constant";
-import { isPipeFieldEditable, toDisplayText } from "../core/NonBim.helper";
-import { ReadonlyField } from "./FormFields";
+} from "@/components/vc/nonBim/core/NonBim.constant";
+import { isPipeFieldEditable, toDisplayText } from "@/components/vc/nonBim/core/NonBim.helper";
+import { ReadonlyField } from "@/components/vc/nonBim/ui/FormFields";
 
 const pipeEditableFields = ["inletDiameter", "length", "angle", "outletDiameter", "quantity"];
 
@@ -42,6 +42,7 @@ export const ChamberWorkspace = ({
   removeLabel = "Delete",
   title = "Chamber / Pipe Information",
   emptyMessage = "Select a drawing to edit chamber and pipe information.",
+  addChamberAsTab = false,
   onAddChamber,
   onRemoveChamber,
   onSetActiveChamber,
@@ -56,11 +57,13 @@ export const ChamberWorkspace = ({
     <div className="section-header">
       <div className="section-title">{title}</div>
       <Space className="buttonArea">
-        <Tooltip title={canAddChamber ? `Up to ${MAX_CHAMBER_COUNT} chambers.` : ""}>
-          <Button icon={<PlusOutlined />} disabled={!canAddChamber} onClick={onAddChamber}>
-            {addLabel}
-          </Button>
-        </Tooltip>
+        {!addChamberAsTab ? (
+          <Tooltip title={canAddChamber ? `Up to ${MAX_CHAMBER_COUNT} chambers.` : ""}>
+            <Button icon={<PlusOutlined />} disabled={!canAddChamber} onClick={onAddChamber}>
+              {addLabel}
+            </Button>
+          </Tooltip>
+        ) : null}
         <Button
           icon={<DeleteOutlined />}
           disabled={!canRemoveChamber}
@@ -78,6 +81,9 @@ export const ChamberWorkspace = ({
         <ChamberTabs
           chambers={chambers}
           activeChamberId={activeChamber?.id}
+          canAddChamber={canAddChamber}
+          addChamberAsTab={addChamberAsTab}
+          onAddChamber={onAddChamber}
           onSetActiveChamber={onSetActiveChamber}
         />
         {activeChamber ? (
@@ -102,15 +108,44 @@ export const ChamberWorkspace = ({
   </section>
 );
 
-export const ChamberTabs = ({ chambers, activeChamberId, onSetActiveChamber }) => (
+const ADD_CHAMBER_TAB_KEY = "__ADD_CHAMBER__";
+
+export const ChamberTabs = ({
+  chambers,
+  activeChamberId,
+  canAddChamber,
+  addChamberAsTab,
+  onAddChamber,
+  onSetActiveChamber,
+}) => (
   <Tabs
     className="vcsnofM001_tab"
     activeKey={activeChamberId}
-    onChange={onSetActiveChamber}
-    items={chambers.map((chamber) => ({
-      key: chamber.id,
-      label: `${chamber.chamberName}${chamber.locked ? "" : " *"}`,
-    }))}
+    onChange={(key) => {
+      if (key === ADD_CHAMBER_TAB_KEY) {
+        if (canAddChamber) onAddChamber();
+        return;
+      }
+      onSetActiveChamber(key);
+    }}
+    items={[
+      ...chambers.map((chamber) => ({
+        key: chamber.id,
+        label: `${chamber.chamberName}${chamber.locked ? "" : " *"}`,
+      })),
+      ...(addChamberAsTab
+        ? [{
+            key: ADD_CHAMBER_TAB_KEY,
+            className: "vc-add-chamber-tab",
+            disabled: !canAddChamber,
+            label: (
+              <Tooltip title={canAddChamber ? `Up to ${MAX_CHAMBER_COUNT} chambers.` : "Chamber limit reached."}>
+                <PlusOutlined aria-label="Add Chamber" />
+              </Tooltip>
+            ),
+          }]
+        : []),
+    ]}
   />
 );
 

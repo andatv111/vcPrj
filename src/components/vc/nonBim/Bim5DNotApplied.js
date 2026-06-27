@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Alert, Button, Form, Input, Space } from "antd";
 
-import { Bim5dMainStyle } from "../../../styles/vc/pumpingStyle";
-import nonBimActions from "../../../store/vc/nonBim/action";
+import { Bim5dMainStyle } from "@/styles/vc/pumpingStyle";
+import nonBimActions from "@/store/vc/nonBim/action";
 import {
   selectActiveChamber,
   selectChambers,
@@ -15,14 +15,22 @@ import {
   selectSearch,
   selectSelectedWoId,
   selectSelectedDrawing,
-} from "../../../store/vc/nonBim/vcSimSelector";
-import { MAX_CHAMBER_COUNT } from "./core/NonBim.constant";
-import { isCalculationLockedByDrawingStatus } from "./core/NonBim.helper";
-import VcDraftAttachPopup from "./popup/VcDraftAttachPopup";
-import VcResultPopup from "./popup/VcResultPopup";
-import SuggestInput from "../common/SuggestInput";
-import { ChamberWorkspace } from "./ui/ChamberWorkspace";
-import { DrawingResultTable } from "./ui/DrawingResultTable";
+} from "@/store/vc/nonBim/vcSimSelector";
+import { MAX_CHAMBER_COUNT } from "@/components/vc/nonBim/core/NonBim.constant";
+import { isCalculationLockedByDrawingStatus } from "@/components/vc/nonBim/core/NonBim.helper";
+import {
+  createDrawingFilters,
+  DRAWING_PAGE_SIZE,
+  filterDrawings,
+  getDrawingPage,
+  getDrawingTotalPages,
+  paginateDrawings,
+} from "@/components/vc/nonBim/core/DrawingGrid.core";
+import VcDraftAttachPopup from "@/components/vc/nonBim/popup/VcDraftAttachPopup";
+import VcResultPopup from "@/components/vc/nonBim/popup/VcResultPopup";
+import SuggestInput from "@/components/vc/common/SuggestInput";
+import { ChamberWorkspace } from "@/components/vc/nonBim/ui/ChamberWorkspace";
+import { DrawingResultTable } from "@/components/vc/nonBim/ui/DrawingResultTable";
 
 const Bim5DNotApplied = () => {
   const dispatch = useDispatch();
@@ -39,6 +47,18 @@ const Bim5DNotApplied = () => {
   const user = useSelector((state) => state.userInfo?.user);
   const sessionPrjtCd = user?.prjtCd || "M16";
   const [searchValidationMessage, setSearchValidationMessage] = useState("");
+  const [drawingFilters, setDrawingFilters] = useState(createDrawingFilters);
+  const [drawingPage, setDrawingPage] = useState(0);
+
+  const filteredDrawings = useMemo(
+    () => filterDrawings(drawings, drawingFilters),
+    [drawings, drawingFilters]
+  );
+  const drawingTotalPages = getDrawingTotalPages(filteredDrawings.length);
+  const visibleDrawings = useMemo(
+    () => paginateDrawings(filteredDrawings, Math.min(drawingPage, drawingTotalPages - 1)),
+    [filteredDrawings, drawingPage, drawingTotalPages]
+  );
 
   const canEditPipe = Boolean(selectedDrawing && activeChamber);
   const calculationLocked = isCalculationLockedByDrawingStatus(selectedDrawing?.requestStatus);
@@ -56,6 +76,25 @@ const Bim5DNotApplied = () => {
       dispatch(nonBimActions.setSearchField({ name: "fabCd", value: sessionPrjtCd }));
     }
   }, [dispatch, search.fabCd, sessionPrjtCd]);
+
+  useEffect(() => {
+    setDrawingPage(0);
+  }, [drawings, drawingFilters]);
+
+  useEffect(() => {
+    if (!filteredDrawings.length) return;
+    if (filteredDrawings.some((drawing) => drawing.woId === selectedWoId)) return;
+    dispatch(nonBimActions.selectDrawing(filteredDrawings[0].woId));
+  }, [dispatch, filteredDrawings, selectedWoId]);
+
+  useEffect(() => {
+    const selectedPage = getDrawingPage(filteredDrawings, selectedWoId);
+    if (selectedPage >= 0) setDrawingPage(selectedPage);
+  }, [filteredDrawings, selectedWoId]);
+
+  useEffect(() => {
+    setDrawingPage((page) => Math.min(page, drawingTotalPages - 1));
+  }, [drawingTotalPages]);
 
   const handleSearchChange = (name) => (event) => {
     if (name === "eqId" && event.target.value.trim()) {
@@ -102,14 +141,23 @@ const Bim5DNotApplied = () => {
       />
 
       <DrawingResultsPanel
-        drawings={drawings}
+        drawings={visibleDrawings}
+        totalCount={drawings.length}
+        filteredCount={filteredDrawings.length}
         loading={loading}
         selectedWoId={selectedWoId}
+        filters={drawingFilters}
+        page={{ page: drawingPage, pageSize: DRAWING_PAGE_SIZE, totalPages: drawingTotalPages }}
+        onFilterChange={(key, value) =>
+          setDrawingFilters((previous) => ({ ...previous, [key]: value }))
+        }
+        onPageChange={setDrawingPage}
         onSelectDrawing={(woId) => dispatch(nonBimActions.selectDrawing(woId))}
         onDownload={(woId) => dispatch(nonBimActions.downloadForelineRequest(woId))}
       />
 
       <ChamberWorkspace
+        addChamberAsTab
         activeChamber={activeChamber}
         canAddChamber={Boolean(selectedDrawing) && !loading.chambers && chambers.length < MAX_CHAMBER_COUNT}
         canRemoveChamber={Boolean(activeChamber && !activeChamber.locked)}
@@ -191,16 +239,35 @@ const NonBimSearchPanel = ({
   </section>
 );
 
-const DrawingResultsPanel = ({ drawings, loading, selectedWoId, onSelectDrawing, onDownload }) => (
-  <section className="panel vc-pub-section vcsnofM001Style">
+const DrawingResultsPanel = ({
+  drawings,
+  totalCount,
+  filteredCount,
+  loading,
+  selectedWoId,
+  filters,
+  page,
+  onFilterChange,
+  onPageChange,
+  onSelectDrawing,
+  onDownload,
+}) => (
+  <section className="panel vc-pub-section vcsnofM001Style non-bim-drawing-panel">
     <div className="section-header">
-      <div className="section-title">Manual Drawing Results</div>
+      <div className="section-title">
+        Manual Drawing Results{" "}
+        <span className="muted">Total {totalCount} / Filtered {filteredCount}</span>
+      </div>
       {loading.drawings ? <span className="muted">Searching...</span> : null}
     </div>
     <DrawingResultTable
       drawings={drawings}
       loading={loading}
       selectedWoId={selectedWoId}
+      filters={filters}
+      page={page}
+      onFilterChange={onFilterChange}
+      onPageChange={onPageChange}
       onSelectDrawing={onSelectDrawing}
       onDownload={onDownload}
     />

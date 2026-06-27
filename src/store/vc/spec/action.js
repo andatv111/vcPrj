@@ -19,7 +19,6 @@ export const SPEC_MASTER_ACTION_TYPES = {
   SEARCH_SUCCESS: `${SPEC_MASTER_ACTION_PREFIX}/SEARCH_SUCCESS`,
   SEARCH_FAILURE: `${SPEC_MASTER_ACTION_PREFIX}/SEARCH_FAILURE`,
 
-  CHANGE_PAGE: `${SPEC_MASTER_ACTION_PREFIX}/CHANGE_PAGE`,
   SELECT_MASTER: `${SPEC_MASTER_ACTION_PREFIX}/SELECT_MASTER`,
   SELECT_DETAIL: `${SPEC_MASTER_ACTION_PREFIX}/SELECT_DETAIL`,
 
@@ -65,14 +64,16 @@ export const specMasterActions = {
     type: SPEC_MASTER_ACTION_TYPES.SEARCH_REQUEST,
     payload: { selectedSpecId, selectedDetailSpecId },
   }),
-  searchSuccess: ({ rows, details, page, selectedSpecId, selectedDetailSpecId }) => ({
+  searchSuccess: ({ rows, details, selectedSpecId, selectedDetailSpecId }) => ({
     type: SPEC_MASTER_ACTION_TYPES.SEARCH_SUCCESS,
-    payload: { rows, details, page, selectedSpecId, selectedDetailSpecId },
+    payload: { rows, details, selectedSpecId, selectedDetailSpecId },
   }),
   searchFailure: (error) => ({ type: SPEC_MASTER_ACTION_TYPES.SEARCH_FAILURE, payload: { error } }),
 
-  changePage: (page) => ({ type: SPEC_MASTER_ACTION_TYPES.CHANGE_PAGE, payload: { page } }),
-  selectMaster: (specId) => ({ type: SPEC_MASTER_ACTION_TYPES.SELECT_MASTER, payload: { specId } }),
+  selectMaster: (specId, selectedDetailSpecId = "") => ({
+    type: SPEC_MASTER_ACTION_TYPES.SELECT_MASTER,
+    payload: { specId, selectedDetailSpecId },
+  }),
   selectDetail: (specId) => ({ type: SPEC_MASTER_ACTION_TYPES.SELECT_DETAIL, payload: { specId } }),
 
   openCreatePopup: (scope) => ({ type: SPEC_MASTER_ACTION_TYPES.OPEN_CREATE_POPUP, payload: { scope } }),

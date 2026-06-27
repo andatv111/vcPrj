@@ -148,11 +148,11 @@ STS console에서 아래 prefix로 흐름을 추적합니다.
 - SpecMaster grid reads through `POST /api/vc/specmaster/selectcondition`.
 - SpecMaster combo options read through `GET /api/vc/specmaster/selectfilteroptions`.
 - This API returns all matched Master rows and the selected Master's Detail rows in one response.
-- request body: `{ page, size, fabId, setModelNm, specNm, selectedSpecId, selectedDetailSpecId }`.
-- response body: `{ content, rows, details, selectedSpecId, page, size, totalPages, totalElements }`.
-- Initial load selects the first Master row returned by the response and fills the Detail grid from the same response.
-- Master/Detail grid paging is handled by the front end after this one B/E read.
-- After Detail save, the front end searches again with the parent Master `selectedSpecId`, so the Master radio selection and refreshed Detail rows stay visible.
+- request body: `{ fabId, setModelNm, specNm }`. 빈 값이면 전체 조회한다.
+- response body: `{ rows }`. paging과 radio 선택 상태는 F/E에서 관리한다.
+- Initial load selects the first Master row and then calls `GET /api/vc/specmaster/{specId}/children`.
+- Master radio changes refresh the Detail grid in real time; both grids are paged by the front end.
+- After Detail save, the front end searches again using only the current search conditions and restores the Master/Detail radio selection locally.
 - Old GoodDocs grid read endpoints are consolidated into `POST /api/vc/specmaster/selectcondition`.
 - Combo options are intentionally separated from `selectcondition` so search does not reset option candidates.
 - Detail lookup is also exposed as `GET /api/vc/specmaster/{specId}/children`; `POST /api/vc/specmaster/{specId}/children` is used only for Detail creation.

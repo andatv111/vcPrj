@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Alert, Button, Modal, Space } from "antd";
 
-import { SpecMgmtMainStyle } from "../../../../styles/vc/pumpingStyle";
-import specMasterActions from "../../../../store/vc/vcMgmt/action";
+import { SpecMgmtMainStyle } from "@/styles/vc/pumpingStyle";
+import specMasterActions from "@/store/vc/spec/action";
 import {
-  selectSpecMgmtDetailRows,
+  selectSpecMgmtSelectedDetailRows,
   selectSpecMgmtError,
   selectSpecMgmtLoading,
   selectSpecMgmtMasterRows,
@@ -18,7 +18,7 @@ import {
   selectSpecMgmtSelectedDetailSpecId,
   selectSpecMgmtSelectedMaster,
   selectSpecMgmtSelectedSpecId,
-} from "../../../../store/vc/vcMgmt/vcSpecMgmtSelector";
+} from "@/store/vc/specSelector";
 import {
   createEmptyFilters,
   DETAIL_PAGE_SIZE,
@@ -26,14 +26,15 @@ import {
   filterRows,
   FILTERABLE_DETAIL_COLUMNS,
   FILTERABLE_MASTER_COLUMNS,
+  getPageForRow,
   getTotalPages,
   MASTER_PAGE_SIZE,
   paginateRows,
-} from "./core/SpecMgmt.core";
-import SpecMgmtPopup from "./pop/SpecMgmtPopup";
-import SuggestInput from "../../common/SuggestInput";
-import { SelectField } from "./ui/SpecMgmtFields";
-import { DetailGridPanel, MasterGridPanel } from "./ui/SpecMgmtGrid";
+} from "@/components/vc/admin/spec/core/SpecMgmt.core";
+import SpecMgmtPopup from "@/components/vc/admin/spec/pop/SpecMgmtPopup";
+import SuggestInput from "@/components/vc/common/SuggestInput";
+import { SelectField } from "@/components/vc/admin/spec/ui/SpecMgmtFields";
+import { DetailGridPanel, MasterGridPanel } from "@/components/vc/admin/spec/ui/SpecMgmtGrid";
 
 const SpecMgmt = () => {
   const dispatch = useDispatch();
@@ -41,7 +42,7 @@ const SpecMgmt = () => {
   const options = useSelector(selectSpecMgmtOptions);
   const specNameSuggestions = useSelector(selectSpecMgmtSpecNameSuggestions);
   const masterRows = useSelector(selectSpecMgmtMasterRows);
-  const detailRows = useSelector(selectSpecMgmtDetailRows);
+  const detailRows = useSelector(selectSpecMgmtSelectedDetailRows);
   const selectedSpecId = useSelector(selectSpecMgmtSelectedSpecId);
   const selectedDetailSpecId = useSelector(selectSpecMgmtSelectedDetailSpecId);
   const selectedMaster = useSelector(selectSpecMgmtSelectedMaster);
@@ -84,17 +85,48 @@ const SpecMgmt = () => {
 
   useEffect(() => {
     setMasterPage(0);
-  }, [masterFilters, masterRows]);
+  }, [masterFilters]);
 
   useEffect(() => {
     setDetailPage(0);
-  }, [detailFilters, detailRows, selectedSpecId]);
+  }, [detailFilters, selectedSpecId]);
+
+  // 저장/삭제 후 재조회해도 선택 row가 있는 F/E 페이지로 돌아간다.
+  useEffect(() => {
+    const selectedPage = getPageForRow(filteredMasterRows, selectedSpecId, MASTER_PAGE_SIZE);
+    if (selectedPage >= 0) setMasterPage(selectedPage);
+  }, [filteredMasterRows, selectedSpecId]);
+
+  useEffect(() => {
+    const selectedPage = getPageForRow(filteredDetailRows, selectedDetailSpecId, DETAIL_PAGE_SIZE);
+    if (selectedPage >= 0) setDetailPage(selectedPage);
+  }, [filteredDetailRows, selectedDetailSpecId]);
 
   useEffect(() => {
     if (!filteredMasterRows.length) return;
     if (filteredMasterRows.some((row) => row.specId === selectedSpecId)) return;
     dispatch(specMasterActions.selectMaster(filteredMasterRows[0].specId));
   }, [dispatch, filteredMasterRows, selectedSpecId]);
+
+  useEffect(() => {
+    if (!filteredDetailRows.length) return;
+    if (filteredDetailRows.some((row) => row.specId === selectedDetailSpecId)) return;
+    dispatch(specMasterActions.selectDetail(filteredDetailRows[0].specId));
+  }, [dispatch, filteredDetailRows, selectedDetailSpecId]);
+
+  useEffect(() => {
+    setMasterPage((page) => Math.min(page, masterTotalPages - 1));
+  }, [masterTotalPages]);
+
+  useEffect(() => {
+    setDetailPage((page) => Math.min(page, detailTotalPages - 1));
+  }, [detailTotalPages]);
+
+  useEffect(() => {
+    if (message !== "Spec Master 저장이 완료되었습니다.") return;
+    setMasterFilters(createEmptyFilters(FILTERABLE_MASTER_COLUMNS));
+    setDetailFilters(createEmptyFilters(FILTERABLE_DETAIL_COLUMNS));
+  }, [message]);
 
   const handleDeleteMaster = () => {
     if (!selectedSpecId) return;
@@ -141,7 +173,7 @@ const SpecMgmt = () => {
           filteredCount={filteredMasterRows.length}
           selectedSpecId={selectedSpecId}
           loading={loading}
-          page={{ page: masterPage, totalPages: masterTotalPages }}
+          page={{ page: masterPage, pageSize: MASTER_PAGE_SIZE, totalPages: masterTotalPages }}
           filters={masterFilters}
           onFilterChange={(key, value) => setMasterFilters((prev) => ({ ...prev, [key]: value }))}
           onSelect={(specId) => dispatch(specMasterActions.selectMaster(specId))}
@@ -160,7 +192,7 @@ const SpecMgmt = () => {
           selectedMaster={selectedMaster}
           selectedDetailSpecId={selectedDetailSpecId}
           loading={loading}
-          page={{ page: detailPage, totalPages: detailTotalPages }}
+          page={{ page: detailPage, pageSize: DETAIL_PAGE_SIZE, totalPages: detailTotalPages }}
           filters={detailFilters}
           onFilterChange={(key, value) => setDetailFilters((prev) => ({ ...prev, [key]: value }))}
           onPageChange={setDetailPage}

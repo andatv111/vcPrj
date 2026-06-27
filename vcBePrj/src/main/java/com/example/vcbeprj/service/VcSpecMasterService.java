@@ -128,8 +128,8 @@ public class VcSpecMasterService {
         List<SpecMaster> rows = repository.selectAll(SPEC_TABLE, SpecMaster.class);
         Map<String, Object> result = new LinkedHashMap<>();
         // 콤보 API는 조회 결과와 분리한다. 화면 테스트가 가능한 소수 후보만 내려 과도한 콤보 노출을 막는다.
-        result.put("fabIds", List.of("M16", "M15", "M14"));
-        result.put("areas", List.of("M16A", "M16B", "M15A", "M14A"));
+        result.put("fabIds", List.of("M16", "M15", "M14", "M13", "M12"));
+        result.put("areas", List.of("M16A", "M16B", "M15A", "M15B", "M14A", "M14B", "M13A", "M12A"));
         result.put("makers", List.of("TEL", "AMAT", "LAM", "SEMES"));
         result.put("setModelNms", limitedOptions(rows, SpecMaster::setModelNm, 8));
         result.put("specNms", limitedOptions(rows, SpecMaster::specNm, 8));
@@ -139,7 +139,9 @@ public class VcSpecMasterService {
         result.put("areasByFab", Map.of(
                 "M16", List.of("M16A", "M16B"),
                 "M15", List.of("M15A", "M15B"),
-                "M14", List.of("M14A", "M14B")
+                "M14", List.of("M14A", "M14B"),
+                "M13", List.of("M13A"),
+                "M12", List.of("M12A")
         ));
         result.put("makersByArea", Map.of(
                 "M16A", List.of("TEL", "AMAT"),
@@ -147,17 +149,21 @@ public class VcSpecMasterService {
                 "M15A", List.of("AMAT", "SEMES"),
                 "M15B", List.of("TEL"),
                 "M14A", List.of("LAM", "SEMES"),
-                "M14B", List.of("TEL")
+                "M14B", List.of("TEL"),
+                "M13A", List.of("LAM"),
+                "M12A", List.of("AMAT")
         ));
         result.put("modelsByFab", Map.of(
                 "M16", List.of("VX-ETCH-300", "CV-Pro-12", "Pump Rack 8"),
                 "M15", List.of("PVD-Metal-5", "CMP-Fine-8"),
-                "M14", modelsForFab(rows, "M14")
+                "M14", modelsForFab(rows, "M14"),
+                "M13", modelsForFab(rows, "M13"),
+                "M12", modelsForFab(rows, "M12")
         ));
         result.put("modelsByMaker", Map.of(
-                "TEL", List.of("VX-ETCH-300", "LITHO-Track-4"),
-                "AMAT", List.of("CV-Pro-12", "PVD-Metal-5"),
-                "LAM", List.of("VX-ETCH-200", "Pump Rack 8"),
+                "TEL", List.of("VX-ETCH-300", "LabVC-Mini", "LITHO-Track-4"),
+                "AMAT", List.of("CV-Pro-12", "PVD-Metal-5", "ASH-Pro-70", "DIFF-900", "CVD-Legacy-2"),
+                "LAM", List.of("VX-ETCH-200", "Pump Rack 8", "IMP-X4", "WET-Clean-20", "DRY-Etch-10", "WetBench-6", "PVD-M13-3"),
                 "SEMES", List.of("CMP-Fine-8", "MET-CD-3")
         ));
         result.put("operMidByLarge", Map.of(

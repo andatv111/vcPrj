@@ -1,8 +1,8 @@
 import React from "react";
 import { Alert, Button, Form, Modal, Space } from "antd";
 
-import { toDisplayText } from "../core/SpecMgmt.core";
-import { InputField, SelectField, SwitchField } from "../ui/SpecMgmtFields";
+import { toDisplayText } from "@/components/vc/admin/spec/core/SpecMgmt.core";
+import { InputField, SelectField, SwitchField } from "@/components/vc/admin/spec/ui/SpecMgmtFields";
 
 const getOptionsByKey = (map = {}, key, fallback = []) => (key && map[key] ? map[key] : fallback);
 
@@ -56,6 +56,7 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
           />
           <SelectField
             label="AREA"
+            required={isMaster && !manualModel}
             value={form.area}
             options={areaOptions}
             disabled={isDetail || manualModel || !form.fabId}

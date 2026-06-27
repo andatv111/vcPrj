@@ -2,10 +2,16 @@ import React from "react";
 import { Button, Input, Pagination, Space, Table } from "antd";
 import { DownloadOutlined, FilterFilled } from "@ant-design/icons";
 
-import { DETAIL_COLUMNS, getBooleanYn, MASTER_COLUMNS, toDisplayText } from "../core/SpecMgmt.core";
+import {
+  DETAIL_COLUMNS,
+  getBooleanYn,
+  getPagedRowNumber,
+  MASTER_COLUMNS,
+  toDisplayText,
+} from "@/components/vc/admin/spec/core/SpecMgmt.core";
 
-const getColumnText = (row, key, index) => {
-  if (key === "no") return index + 1;
+const getColumnText = (row, key, index, page = 0, pageSize = 0) => {
+  if (key === "no") return getPagedRowNumber(page, pageSize, index);
   if (key === "chgrNm") return row.chgrNm || row.chgrEmpno;
   if (key === "detSearYn") return getBooleanYn(row.detSearYn);
   return row[key];
@@ -64,7 +70,7 @@ const createSelectionColumn = ({ selectedId, onSelect, radioName }) => ({
   ),
 });
 
-const buildMasterColumns = ({ filters, selectedSpecId, onFilterChange, onSelect }) =>
+const buildMasterColumns = ({ filters, selectedSpecId, onFilterChange, onSelect, page }) =>
   MASTER_COLUMNS.map((column) => {
     if (column.key === "select") {
       return createSelectionColumn({ selectedId: selectedSpecId, onSelect, radioName: "specMasterRadio" });
@@ -77,12 +83,13 @@ const buildMasterColumns = ({ filters, selectedSpecId, onFilterChange, onSelect 
       minWidth: column.key === "specNm" ? 160 : 92,
       width: column.key === "specNm" ? 180 : 110,
       align: column.key === "no" || column.key === "detSearYn" ? "center" : "left",
-      render: (value, row, index) => toDisplayText(getColumnText(row, column.key, index)),
+      render: (value, row, index) =>
+        toDisplayText(getColumnText(row, column.key, index, page.page, page.pageSize)),
       ...withFilter(column, filters, onFilterChange),
     };
   });
 
-const buildDetailColumns = ({ filters, selectedDetailSpecId, onFilterChange, onSelect }) =>
+const buildDetailColumns = ({ filters, selectedDetailSpecId, onFilterChange, onSelect, page }) =>
   DETAIL_COLUMNS.map((column) => {
     if (column.key === "select") {
       return createSelectionColumn({ selectedId: selectedDetailSpecId, onSelect, radioName: "specDetailRadio" });
@@ -95,7 +102,8 @@ const buildDetailColumns = ({ filters, selectedDetailSpecId, onFilterChange, onS
       minWidth: column.key === "specNm" || column.key === "chambModelNm" ? 160 : 92,
       width: column.key === "specNm" || column.key === "chambModelNm" ? 180 : 112,
       align: column.key === "no" ? "center" : "left",
-      render: (value, row, index) => toDisplayText(getColumnText(row, column.key, index)),
+      render: (value, row, index) =>
+        toDisplayText(getColumnText(row, column.key, index, page.page, page.pageSize)),
       ...withFilter(column, filters, onFilterChange),
     };
   });
@@ -128,13 +136,19 @@ export const MasterGridPanel = ({
     </div>
     <Table
       className="signlw-table"
-      columns={buildMasterColumns({ filters, selectedSpecId, onFilterChange, onSelect })}
+      columns={buildMasterColumns({
+        filters,
+        selectedSpecId,
+        onFilterChange,
+        onSelect,
+        page,
+      })}
       dataSource={rows}
       rowKey={(row) => row.specId || row.id}
       pagination={false}
       loading={loading.search}
       size="small"
-      scroll={{ x: "max-content", y: 430 }}
+      scroll={{ x: "max-content", y: 400 }}
       rowClassName={(row) => (selectedSpecId === row.specId ? "selected-row" : "")}
       onRow={(row) => ({ onClick: () => onSelect(row.specId) })}
       locale={{ emptyText: loading.search ? "Searching..." : "No data." }}
@@ -177,13 +191,19 @@ export const DetailGridPanel = ({
     </div>
     <Table
       className="signlw-table"
-      columns={buildDetailColumns({ filters, selectedDetailSpecId, onFilterChange, onSelect })}
+      columns={buildDetailColumns({
+        filters,
+        selectedDetailSpecId,
+        onFilterChange,
+        onSelect,
+        page,
+      })}
       dataSource={rows}
       rowKey={(row) => row.specId || row.id}
       pagination={false}
       loading={loading.details}
       size="small"
-      scroll={{ x: "max-content", y: 430 }}
+      scroll={{ x: "max-content", y: 400 }}
       rowClassName={(row) => (selectedDetailSpecId === row.specId ? "selected-row" : "")}
       onRow={(row) => ({ onClick: () => onSelect(row.specId) })}
       locale={{ emptyText: loading.details ? "Loading details..." : "No detail data." }}

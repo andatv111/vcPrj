@@ -686,24 +686,24 @@ td select {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 560px;
+  min-height: 530px;
 }
 
 .spec-master-panel .table-wrap,
 .spec-detail-panel .table-wrap {
-  max-height: 430px;
+  max-height: 400px;
 }
 
 .spec-master-panel .ant-table-wrapper,
 .spec-detail-panel .ant-table-wrapper {
-  min-height: 486px;
+  min-height: 456px;
 }
 
 .spec-master-panel .ant-spin-nested-loading,
 .spec-detail-panel .ant-spin-nested-loading,
 .spec-master-panel .ant-spin-container,
 .spec-detail-panel .ant-spin-container {
-  min-height: 486px;
+  min-height: 456px;
 }
 
 .spec-pagination {
@@ -720,6 +720,42 @@ td select {
 .spec-master-panel .spec-pagination,
 .spec-detail-panel .spec-pagination {
   margin-top: auto;
+}
+
+.non-bim-drawing-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 310px;
+}
+
+.non-bim-drawing-panel .ant-table-wrapper,
+.non-bim-drawing-panel .ant-spin-nested-loading,
+.non-bim-drawing-panel .ant-spin-container {
+  min-height: 236px;
+}
+
+.non-bim-drawing-panel .spec-pagination {
+  margin-top: auto;
+}
+
+.vcsnofM001_tab .vc-add-chamber-tab {
+  min-width: 34px;
+  max-width: 34px;
+  padding-inline: 0;
+}
+
+.vcsnofM001_tab .vc-add-chamber-tab .ant-tabs-tab-btn {
+  align-items: center;
+  color: #1677ff;
+  display: flex;
+  font-size: 16px;
+  font-weight: 700;
+  justify-content: center;
+  width: 22px;
+}
+
+.vcsnofM001_tab .vc-add-chamber-tab.ant-tabs-tab-disabled .ant-tabs-tab-btn {
+  color: #94a3b8;
 }
 
 .spec-master-modal {

@@ -75,7 +75,7 @@ const requestJson = async (url, { method = "GET", params, body } = {}) => {
   return unwrapResponse(payload);
 };
 
-export const vcSpecApi = {
+export const specApi = {
   selectFilterOptions() {
     return requestJson(VC_SPEC_ENDPOINTS.selectFilterOptions);
   },
@@ -86,7 +86,7 @@ export const vcSpecApi = {
     });
   },
 
-  selectCondition({ search, selectedSpecId, selectedDetailSpecId }) {
+  selectCondition({ search }) {
     return requestJson(VC_SPEC_ENDPOINTS.selectCondition, {
       method: "POST",
       body: {
@@ -94,8 +94,6 @@ export const vcSpecApi = {
         fabId: search.fabId,
         setModelNm: search.setModelNm,
         specNm: search.specNm,
-        selectedSpecId,
-        selectedDetailSpecId,
       },
     });
   },
@@ -137,4 +135,4 @@ export const vcSpecApi = {
   },
 };
 
-export default vcSpecApi;
+export default specApi;
