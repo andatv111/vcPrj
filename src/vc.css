@@ -16,6 +16,14 @@
   align-items: flex-end;
 }
 
+.vc-search-actions-row {
+  width: 100%;
+}
+
+.vc-search-actions {
+  margin-left: auto;
+}
+
 .vc-pub-popup {
   display: flex;
   flex-direction: column;
@@ -137,7 +145,7 @@
 }
 
 .signlw-form-item {
-  min-width: 180px;
+  min-width: 220px;
 }
 
 .signlw-pagination {
@@ -196,7 +204,7 @@ select:disabled {
   opacity: 0.55;
 }
 
-input,
+input:not([type="radio"]):not([type="checkbox"]),
 select,
 textarea {
   width: 100%;
@@ -207,7 +215,7 @@ textarea {
   padding: 0 8px;
 }
 
-input,
+input:not([type="radio"]):not([type="checkbox"]),
 select {
   height: 34px;
 }
@@ -407,7 +415,7 @@ th {
   text-align: center;
 }
 
-td input,
+td input:not([type="radio"]):not([type="checkbox"]),
 td select {
   min-width: 92px;
   height: 30px;
@@ -675,112 +683,27 @@ td select {
 
 .spec-master-panel,
 .spec-detail-panel {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 530px;
 }
 
 .spec-master-panel .table-wrap,
 .spec-detail-panel .table-wrap {
-  max-height: 430px;
+  max-height: 400px;
 }
 
-.spec-master-panel th,
-.spec-detail-panel th {
-  position: relative;
+.spec-master-panel .ant-table-wrapper,
+.spec-detail-panel .ant-table-wrapper {
+  min-height: 456px;
 }
 
-.grid-header-label {
-  vertical-align: middle;
-}
-
-.grid-header-filter {
-  display: inline-flex;
-  margin-left: 5px;
-  position: relative;
-  vertical-align: middle;
-}
-
-.grid-filter-button {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: 3px;
-  color: #64748b;
-  cursor: pointer;
-  display: inline-flex;
-  height: 18px;
-  justify-content: center;
-  padding: 0;
-  width: 18px;
-}
-
-.grid-filter-button:hover,
-.grid-filter-button.active {
-  background: #e2e8f0;
-  color: #1d4ed8;
-}
-
-.grid-filter-icon {
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 7px solid currentColor;
-  display: block;
-  height: 0;
-  position: relative;
-  width: 0;
-}
-
-.grid-filter-icon::after {
-  background: currentColor;
-  content: "";
-  height: 5px;
-  left: -1px;
-  position: absolute;
-  top: -1px;
-  width: 2px;
-}
-
-.grid-filter-popover {
-  align-items: center;
-  background: #fff;
-  border: 1px solid #94a3b8;
-  border-radius: 4px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
-  display: flex;
-  gap: 6px;
-  left: 0;
-  min-width: 180px;
-  padding: 8px;
-  position: absolute;
-  top: 22px;
-  z-index: 20;
-}
-
-.grid-filter-input {
-  border: 1px solid #cbd5e1;
-  border-radius: 3px;
-  box-sizing: border-box;
-  color: #0f172a;
-  font-size: 12px;
-  height: 26px;
-  min-width: 105px;
-  padding: 3px 6px;
-}
-
-.grid-filter-input:focus {
-  border-color: #2563eb;
-  outline: 2px solid rgba(37, 99, 235, 0.16);
-  outline-offset: 0;
-}
-
-.grid-filter-clear {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  border-radius: 3px;
-  color: #475569;
-  cursor: pointer;
-  font-size: 12px;
-  height: 26px;
-  padding: 0 7px;
+.spec-master-panel .ant-spin-nested-loading,
+.spec-detail-panel .ant-spin-nested-loading,
+.spec-master-panel .ant-spin-container,
+.spec-detail-panel .ant-spin-container {
+  min-height: 456px;
 }
 
 .spec-pagination {
@@ -789,8 +712,50 @@ td select {
   justify-content: center;
   gap: 10px;
   margin-top: 12px;
+  margin-bottom: 0;
   color: #475569;
   font-size: 13px;
+}
+
+.spec-master-panel .spec-pagination,
+.spec-detail-panel .spec-pagination {
+  margin-top: auto;
+}
+
+.non-bim-drawing-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 310px;
+}
+
+.non-bim-drawing-panel .ant-table-wrapper,
+.non-bim-drawing-panel .ant-spin-nested-loading,
+.non-bim-drawing-panel .ant-spin-container {
+  min-height: 236px;
+}
+
+.non-bim-drawing-panel .spec-pagination {
+  margin-top: auto;
+}
+
+.vcsnofM001_tab .vc-add-chamber-tab {
+  min-width: 34px;
+  max-width: 34px;
+  padding-inline: 0;
+}
+
+.vcsnofM001_tab .vc-add-chamber-tab .ant-tabs-tab-btn {
+  align-items: center;
+  color: #1677ff;
+  display: flex;
+  font-size: 16px;
+  font-weight: 700;
+  justify-content: center;
+  width: 22px;
+}
+
+.vcsnofM001_tab .vc-add-chamber-tab.ant-tabs-tab-disabled .ant-tabs-tab-btn {
+  color: #94a3b8;
 }
 
 .spec-master-modal {
@@ -874,6 +839,63 @@ td select {
 
 .judge-badge.none {
   background: #eef1f4;
+  color: #667085;
+}
+
+.vc-pub-screen .ant-form-item {
+  margin-bottom: 0;
+}
+
+.vc-pub-screen .ant-select .ant-select-selector {
+  background: #fff;
+  border-color: #c9d1dc;
+  color: #20242a;
+}
+
+.vc-grid-radio {
+  cursor: pointer;
+}
+
+.filter-pop {
+  width: 180px;
+  padding: 8px;
+}
+
+.vc-suggest-field {
+  position: relative;
+  min-width: 260px;
+}
+
+.vc-suggest-list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid #c9d1dc;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+}
+
+.vc-suggest-item {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: #fff;
+  color: #20242a;
+  cursor: pointer;
+  padding: 7px 10px;
+  text-align: left;
+}
+
+.vc-suggest-item:hover,
+.vc-suggest-item:focus {
+  background: #f3f5f7;
+}
+
+.vc-suggest-item small {
   color: #667085;
 }
 

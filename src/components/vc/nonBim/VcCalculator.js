@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { Alert, Form } from "antd";
 
 import vcCalculatorActions from "../../../store/vc/vcCalculator/action";
 import {
@@ -87,7 +88,7 @@ const VcCalculator = () => {
         onCalculate={() => dispatch(vcCalculatorActions.calculateRequest())}
       />
 
-      {error ? <div className="error-box">{error}</div> : null}
+      {error ? <Alert className="error-box" type="error" message={error} /> : null}
       <VcResultPopup />
       <VcDraftAttachPopup />
     </main>
@@ -97,7 +98,7 @@ const VcCalculator = () => {
 const CalculatorSearchPanel = ({ equipment, options, onFieldChange }) => (
   <section className="panel vc-pub-section searchStyle">
     <div className="section-title">Search Conditions</div>
-    <div className="search-row vc-pub-search-row">
+    <Form layout="vertical" className="search-row vc-pub-search-row">
       <SelectField
         label="FAB"
         placeholder="All"
@@ -113,7 +114,7 @@ const CalculatorSearchPanel = ({ equipment, options, onFieldChange }) => (
         options={options.models}
         onChange={(value) => onFieldChange("model", value)}
       />
-    </div>
+    </Form>
   </section>
 );
 

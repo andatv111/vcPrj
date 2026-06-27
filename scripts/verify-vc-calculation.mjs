@@ -13,7 +13,11 @@ import { createServer } from "vite";
  * The project uses Vite/ES modules, so this script uses native Node ESM and Vite's
  * `ssrLoadModule` to load the same `.js` source files that the screen uses.
  */
-const vite = await createServer({ server: { middlewareMode: true }, appType: "custom" });
+const vite = await createServer({
+  server: { middlewareMode: true },
+  appType: "custom",
+  optimizeDeps: { noDiscovery: true },
+});
 
 try {
   // Load real helper/reducer/action modules through Vite so JSX/ESM imports behave like the app.
@@ -22,6 +26,110 @@ try {
   const nonBimActionModule = await vite.ssrLoadModule("/src/store/vc/nonBim/action.js");
   const calculatorModule = await vite.ssrLoadModule("/src/store/vc/vcCalculator/reducer.js");
   const calculatorActionModule = await vite.ssrLoadModule("/src/store/vc/vcCalculator/action.js");
+  const specModule = await vite.ssrLoadModule("/src/store/vc/spec/reducer.js");
+  const specActionModule = await vite.ssrLoadModule("/src/store/vc/spec/action.js");
+  const specSelectorModule = await vite.ssrLoadModule("/src/store/vc/specSelector.js");
+  const specCoreModule = await vite.ssrLoadModule("/src/components/vc/admin/spec/core/SpecMgmt.core.js");
+  const drawingGridModule = await vite.ssrLoadModule("/src/components/vc/nonBim/core/DrawingGrid.core.js");
+
+  // SpecMaster radio와 paging은 서버 계약과 분리한다.
+  const specMasters = Array.from({ length: 32 }, (_, index) => ({
+    specId: `MASTER-${index + 1}`,
+    upperCd: "",
+  }));
+  const specDetails = specMasters.flatMap((master, index) => [
+    { specId: `DETAIL-${index + 1}-1`, upperCd: master.specId },
+    { specId: `DETAIL-${index + 1}-2`, upperCd: master.specId },
+  ]);
+  let specState = specModule.default(
+    specModule.initialSpecMasterState,
+    specActionModule.default.searchSuccess({
+      rows: specMasters,
+      details: specDetails,
+      selectedSpecId: "MASTER-11",
+      selectedDetailSpecId: "DETAIL-11-2",
+    })
+  );
+  assert.equal(specState.selectedSpecId, "MASTER-11");
+  assert.equal(specState.selectedDetailSpecId, "DETAIL-11-2");
+  specState = specModule.default(specState, specActionModule.default.selectMaster("MASTER-12"));
+  assert.equal(specState.selectedSpecId, "MASTER-12");
+  assert.equal(specState.selectedDetailSpecId, "");
+  assert.deepEqual(specState.detailRows, []);
+  specState = specModule.default(
+    specState,
+    specActionModule.default.searchSuccess({
+      rows: specMasters,
+      details: specDetails.filter((row) => row.upperCd === "MASTER-12"),
+      selectedSpecId: "MASTER-12",
+      selectedDetailSpecId: "",
+    })
+  );
+  assert.equal(specState.selectedDetailSpecId, "DETAIL-12-1");
+  const restoreDetailAction = specActionModule.default.selectMaster("MASTER-12", "DETAIL-12-2");
+  assert.equal(restoreDetailAction.payload.selectedDetailSpecId, "DETAIL-12-2");
+  specState = specModule.default(
+    specState,
+    specActionModule.default.searchSuccess({
+      rows: specMasters,
+      details: specDetails.filter((row) => row.upperCd === "MASTER-12"),
+      selectedSpecId: restoreDetailAction.payload.specId,
+      selectedDetailSpecId: restoreDetailAction.payload.selectedDetailSpecId,
+    })
+  );
+  assert.equal(specState.selectedDetailSpecId, "DETAIL-12-2");
+  assert.deepEqual(
+    specSelectorModule.selectSpecMgmtSelectedDetailRows({ vc: { specMaster: specState } }).map((row) => row.specId),
+    ["DETAIL-12-1", "DETAIL-12-2"]
+  );
+  assert.equal(specCoreModule.MASTER_PAGE_SIZE, 10);
+  assert.equal(specCoreModule.DETAIL_PAGE_SIZE, 10);
+  assert.equal(specCoreModule.getPagedRowNumber(0, 10, 0), 1);
+  assert.equal(specCoreModule.getPagedRowNumber(1, 10, 0), 11);
+  assert.equal(specCoreModule.getPagedRowNumber(3, 10, 1), 32);
+  assert.equal(specCoreModule.getPageForRow(specMasters, "MASTER-16", 10), 1);
+  assert.equal(specCoreModule.getPageForRow(specMasters, "MASTER-32", 10), 3);
+
+  // 기존 첫 Master도 수정 팝업에서 AREA/MAKER/MODEL 의존값이 즉시 채워져야 한다.
+  specState = specModule.default(
+    specState,
+    specActionModule.default.initSuccess({
+      areasByFab: { M12: [{ value: "M12A", label: "M12A" }] },
+      makersByArea: { M12A: [{ value: "AMAT", label: "AMAT" }] },
+      modelsByMaker: { AMAT: [{ value: "CVD-Legacy-2", label: "CVD-Legacy-2" }] },
+    })
+  );
+  specState = specModule.default(
+    { ...specState, masterRows: [{ specId: "MASTER-M12", fabId: "M12", setModelNm: "CVD-Legacy-2" }], selectedSpecId: "MASTER-M12" },
+    specActionModule.default.openEditPopup({
+      scope: "master",
+      row: { specId: "MASTER-M12", fabId: "M12", setModelNm: "CVD-Legacy-2" },
+    })
+  );
+  assert.equal(specState.popup.form.area, "M12A");
+  assert.equal(specState.popup.form.maker, "AMAT");
+
+  // Manual Drawing Results는 전체 조회 결과를 5행 paging과 컬럼 필터로 처리한다.
+  const drawingGridRows = Array.from({ length: 11 }, (_, index) => ({
+    woId: `WO-${String(index + 1).padStart(2, "0")}`,
+    eqId: index < 7 ? "EQ-ETCH" : "EQ-CVD",
+    fabCd: index % 2 === 0 ? "M16" : "M15",
+    requestStatus: index % 3 === 0 ? "Ready" : "In Review",
+  }));
+  assert.equal(drawingGridModule.DRAWING_PAGE_SIZE, 4);
+  assert.equal(drawingGridModule.getDrawingTotalPages(drawingGridRows.length), 3);
+  assert.equal(drawingGridModule.getDrawingRowNumber(1, 0), 5);
+  assert.equal(drawingGridModule.getDrawingRowNumber(2, 2), 11);
+  assert.equal(drawingGridModule.getDrawingPage(drawingGridRows, "WO-11"), 2);
+  const drawingFilters = drawingGridModule.createDrawingFilters();
+  drawingFilters.eqId = "etch";
+  const filteredDrawingGridRows = drawingGridModule.filterDrawings(drawingGridRows, drawingFilters);
+  assert.equal(filteredDrawingGridRows.length, 7);
+  assert.equal(drawingGridModule.getDrawingTotalPages(filteredDrawingGridRows.length), 2);
+  assert.deepEqual(
+    drawingGridModule.paginateDrawings(filteredDrawingGridRows, 1).map((row) => row.woId),
+    ["WO-05", "WO-06", "WO-07"]
+  );
 
   // Reuse the B/E mock design-portal table so F/E tests follow the same WO_ID-based fixture.
   const drawings = fs
@@ -73,6 +181,9 @@ try {
     const payload = helper.buildNonBimCalculatePayload(state);
     assert.ok(payload.chambers.every((chamber) => chamber.calculationTarget));
     assert.ok(payload.chambers.every((chamber) => chamber.minSpec || chamber.maxSpec));
+    const stateAfterAddChamber = nonBimModule.default(state, nonBimActionModule.default.addChamber());
+    assert.equal(stateAfterAddChamber.chambers.length, state.chambers.length + 1);
+    assert.equal(stateAfterAddChamber.activeChamberId, stateAfterAddChamber.chambers.at(-1).id);
 
     const activeChamberId = state.activeChamberId;
     state = nonBimModule.default(

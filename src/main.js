@@ -4,10 +4,11 @@ import { Provider } from "react-redux";
 
 import Footer from "./components/organisms/Footer";
 import Header from "./components/organisms/Header";
-import SpecMgmt from "./components/vc/admin/specMaster/SpecMgmt";
+import SpecMgmt from "@/components/vc/admin/spec/SpecMgmt";
 import Bim5DNotApplied from "./components/vc/nonBim/Bim5DNotApplied";
 import VcCalculator from "./components/vc/nonBim/VcCalculator";
 import { store } from "./store";
+import "antd/dist/reset.css";
 import "./vc.css";
 
 const h = React.createElement;

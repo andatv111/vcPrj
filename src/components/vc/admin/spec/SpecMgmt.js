@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { Alert, Button, Modal, Space } from "antd";
 
-import { SpecMgmtMainStyle } from "../../../../styles/vc/pumpingStyle";
-import specMasterActions from "../../../../store/vc/vcMgmt/action";
+import { SpecMgmtMainStyle } from "@/styles/vc/pumpingStyle";
+import specMasterActions from "@/store/vc/spec/action";
 import {
-  selectSpecMgmtDetailRows,
+  selectSpecMgmtSelectedDetailRows,
   selectSpecMgmtError,
   selectSpecMgmtLoading,
   selectSpecMgmtMasterRows,
@@ -12,11 +13,12 @@ import {
   selectSpecMgmtOptions,
   selectSpecMgmtPopup,
   selectSpecMgmtSearch,
+  selectSpecMgmtSpecNameSuggestions,
   selectSpecMgmtSelectedDetail,
   selectSpecMgmtSelectedDetailSpecId,
   selectSpecMgmtSelectedMaster,
   selectSpecMgmtSelectedSpecId,
-} from "../../../../store/vc/vcMgmt/vcSpecMgmtSelector";
+} from "@/store/vc/specSelector";
 import {
   createEmptyFilters,
   DETAIL_PAGE_SIZE,
@@ -24,20 +26,23 @@ import {
   filterRows,
   FILTERABLE_DETAIL_COLUMNS,
   FILTERABLE_MASTER_COLUMNS,
+  getPageForRow,
   getTotalPages,
   MASTER_PAGE_SIZE,
   paginateRows,
-} from "./core/SpecMgmt.core";
-import SpecMgmtPopup from "./pop/SpecMgmtPopup";
-import { SelectField } from "./ui/SpecMgmtFields";
-import { DetailGridPanel, MasterGridPanel } from "./ui/SpecMgmtGrid";
+} from "@/components/vc/admin/spec/core/SpecMgmt.core";
+import SpecMgmtPopup from "@/components/vc/admin/spec/pop/SpecMgmtPopup";
+import SuggestInput from "@/components/vc/common/SuggestInput";
+import { SelectField } from "@/components/vc/admin/spec/ui/SpecMgmtFields";
+import { DetailGridPanel, MasterGridPanel } from "@/components/vc/admin/spec/ui/SpecMgmtGrid";
 
 const SpecMgmt = () => {
   const dispatch = useDispatch();
   const search = useSelector(selectSpecMgmtSearch);
   const options = useSelector(selectSpecMgmtOptions);
+  const specNameSuggestions = useSelector(selectSpecMgmtSpecNameSuggestions);
   const masterRows = useSelector(selectSpecMgmtMasterRows);
-  const detailRows = useSelector(selectSpecMgmtDetailRows);
+  const detailRows = useSelector(selectSpecMgmtSelectedDetailRows);
   const selectedSpecId = useSelector(selectSpecMgmtSelectedSpecId);
   const selectedDetailSpecId = useSelector(selectSpecMgmtSelectedDetailSpecId);
   const selectedMaster = useSelector(selectSpecMgmtSelectedMaster);
@@ -71,17 +76,31 @@ const SpecMgmt = () => {
   );
 
   useEffect(() => {
-    // 최초 진입 시 콤보 후보 API와 grid 조회 API를 분리 호출한다.
     dispatch(specMasterActions.initRequest());
   }, [dispatch]);
 
   useEffect(() => {
+    dispatch(specMasterActions.fetchSpecNameSuggestionsRequest(search.specNm));
+  }, [dispatch, search.specNm]);
+
+  useEffect(() => {
     setMasterPage(0);
-  }, [masterFilters, masterRows]);
+  }, [masterFilters]);
 
   useEffect(() => {
     setDetailPage(0);
-  }, [detailFilters, detailRows, selectedSpecId]);
+  }, [detailFilters, selectedSpecId]);
+
+  // 저장/삭제 후 재조회해도 선택 row가 있는 F/E 페이지로 돌아간다.
+  useEffect(() => {
+    const selectedPage = getPageForRow(filteredMasterRows, selectedSpecId, MASTER_PAGE_SIZE);
+    if (selectedPage >= 0) setMasterPage(selectedPage);
+  }, [filteredMasterRows, selectedSpecId]);
+
+  useEffect(() => {
+    const selectedPage = getPageForRow(filteredDetailRows, selectedDetailSpecId, DETAIL_PAGE_SIZE);
+    if (selectedPage >= 0) setDetailPage(selectedPage);
+  }, [filteredDetailRows, selectedDetailSpecId]);
 
   useEffect(() => {
     if (!filteredMasterRows.length) return;
@@ -89,20 +108,50 @@ const SpecMgmt = () => {
     dispatch(specMasterActions.selectMaster(filteredMasterRows[0].specId));
   }, [dispatch, filteredMasterRows, selectedSpecId]);
 
+  useEffect(() => {
+    if (!filteredDetailRows.length) return;
+    if (filteredDetailRows.some((row) => row.specId === selectedDetailSpecId)) return;
+    dispatch(specMasterActions.selectDetail(filteredDetailRows[0].specId));
+  }, [dispatch, filteredDetailRows, selectedDetailSpecId]);
+
+  useEffect(() => {
+    setMasterPage((page) => Math.min(page, masterTotalPages - 1));
+  }, [masterTotalPages]);
+
+  useEffect(() => {
+    setDetailPage((page) => Math.min(page, detailTotalPages - 1));
+  }, [detailTotalPages]);
+
+  useEffect(() => {
+    if (message !== "Spec Master 저장이 완료되었습니다.") return;
+    setMasterFilters(createEmptyFilters(FILTERABLE_MASTER_COLUMNS));
+    setDetailFilters(createEmptyFilters(FILTERABLE_DETAIL_COLUMNS));
+  }, [message]);
+
   const handleDeleteMaster = () => {
     if (!selectedSpecId) return;
     const targetName = selectedMaster?.specNm || selectedSpecId;
-    if (window.confirm(`선택한 Master "${targetName}"를 삭제하시겠습니까?\n하위 Detail 데이터도 함께 삭제될 수 있습니다.`)) {
-      dispatch(specMasterActions.deleteRequest({ scope: "master", specId: selectedSpecId }));
-    }
+    Modal.confirm({
+      title: "Delete Master",
+      content: `Delete master "${targetName}" and its detail rows?`,
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      cancelText: "Cancel",
+      onOk: () => dispatch(specMasterActions.deleteRequest({ scope: "master", specId: selectedSpecId })),
+    });
   };
 
   const handleDeleteDetail = () => {
     if (!selectedDetail) return;
     const targetName = selectedDetail.specNm || selectedDetail.specId;
-    if (window.confirm(`선택한 Detail "${targetName}"를 삭제하시겠습니까?`)) {
-      dispatch(specMasterActions.deleteRequest({ scope: "detail", specId: selectedDetail.specId }));
-    }
+    Modal.confirm({
+      title: "Delete Detail",
+      content: `Delete detail "${targetName}"?`,
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      cancelText: "Cancel",
+      onOk: () => dispatch(specMasterActions.deleteRequest({ scope: "detail", specId: selectedDetail.specId })),
+    });
   };
 
   return (
@@ -110,6 +159,7 @@ const SpecMgmt = () => {
       <SearchPanel
         search={search}
         options={options}
+        specNameSuggestions={specNameSuggestions}
         loading={loading}
         onChange={(name, value) => dispatch(specMasterActions.setSearchField({ name, value }))}
         onReset={() => dispatch(specMasterActions.resetSearch())}
@@ -123,7 +173,7 @@ const SpecMgmt = () => {
           filteredCount={filteredMasterRows.length}
           selectedSpecId={selectedSpecId}
           loading={loading}
-          page={{ page: masterPage, totalPages: masterTotalPages }}
+          page={{ page: masterPage, pageSize: MASTER_PAGE_SIZE, totalPages: masterTotalPages }}
           filters={masterFilters}
           onFilterChange={(key, value) => setMasterFilters((prev) => ({ ...prev, [key]: value }))}
           onSelect={(specId) => dispatch(specMasterActions.selectMaster(specId))}
@@ -142,7 +192,7 @@ const SpecMgmt = () => {
           selectedMaster={selectedMaster}
           selectedDetailSpecId={selectedDetailSpecId}
           loading={loading}
-          page={{ page: detailPage, totalPages: detailTotalPages }}
+          page={{ page: detailPage, pageSize: DETAIL_PAGE_SIZE, totalPages: detailTotalPages }}
           filters={detailFilters}
           onFilterChange={(key, value) => setDetailFilters((prev) => ({ ...prev, [key]: value }))}
           onPageChange={setDetailPage}
@@ -156,8 +206,8 @@ const SpecMgmt = () => {
         />
       </div>
 
-      {message ? <div className="notice-box success">{message}</div> : null}
-      {error ? <div className="error-box">{error}</div> : null}
+      {message ? <Alert className="notice-box success" type="success" message={message} /> : null}
+      {error ? <Alert className="error-box" type="error" message={error} /> : null}
 
       <SpecMgmtPopup
         popup={popup}
@@ -171,22 +221,32 @@ const SpecMgmt = () => {
   );
 };
 
-const SearchPanel = ({ search, options, loading, onChange, onReset, onSearch }) => {
-  const modelOptions = search.fabId && options.modelsByFab[search.fabId] ? options.modelsByFab[search.fabId] : options.setModelNms;
+const SearchPanel = ({ search, options, specNameSuggestions, loading, onChange, onReset, onSearch }) => {
+  const modelOptions =
+    search.fabId && options.modelsByFab[search.fabId] ? options.modelsByFab[search.fabId] : options.setModelNms;
+  const specNameItems = specNameSuggestions.length ? specNameSuggestions : options.specNms;
 
   return (
     <section className="panel vc-pub-section searchStyle search_area">
       <div className="section-title">Search Conditions</div>
-      <div className="search-row vc-pub-search-row">
+      <div className="search-row vc-pub-search-row vc-search-actions-row">
         <SelectField label="FAB" value={search.fabId} options={options.fabIds} onChange={(value) => onChange("fabId", value)} />
         <SelectField label="MODEL" value={search.setModelNm} options={modelOptions} onChange={(value) => onChange("setModelNm", value)} />
-        <SelectField label="모델관리기준명" value={search.specNm} options={options.specNms} onChange={(value) => onChange("specNm", value)} />
-        <button type="button" className="secondary-button signlw-btn" disabled={loading.search} onClick={onReset}>
-          초기화
-        </button>
-        <button type="button" className="primary-button signlw-btn" disabled={loading.search} onClick={onSearch}>
-          {loading.search ? "조회 중..." : "조회"}
-        </button>
+        <SuggestInput
+          label="Spec Name"
+          value={search.specNm}
+          placeholder="Spec Name"
+          items={specNameItems}
+          onChange={(value) => onChange("specNm", value)}
+        />
+        <Space className="vc-search-actions">
+          <Button disabled={loading.search} onClick={onReset}>
+            Reset
+          </Button>
+          <Button type="primary" loading={loading.search} onClick={onSearch}>
+            Search
+          </Button>
+        </Space>
       </div>
     </section>
   );

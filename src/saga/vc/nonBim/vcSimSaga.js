@@ -78,7 +78,7 @@ function* fetchEqSuggestionsFlow(action) {
 
     yield delay(250);
 
-    if (!keyword || keyword.length < 2) {
+    if (!keyword.trim()) {
       yield put(nonBimActions.fetchEqSuggestionsSuccess([]));
       return;
     }

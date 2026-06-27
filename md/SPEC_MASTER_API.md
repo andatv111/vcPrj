@@ -2,9 +2,9 @@
 
 구분: SPEC 마스터  
 테스트: B/E  
-기준 F/E: `src/components/vc/admin/specMaster/SpecMgmt.js`  
-기준 API adapter: `src/service/api/vc/admin/vcSpecApi.js`  
-기준 saga: `src/saga/vc/admin/vcSpecSaga.js`
+기준 F/E: `src/components/vc/admin/spec/SpecMgmt.js`
+기준 API adapter: `src/service/api/vc/admin/specApi.js`
+기준 saga: `src/saga/vc/admin/specSaga.js`
 
 ## GoodDocs 기준 API
 
@@ -16,7 +16,7 @@
 | 4 | DELETE | `/api/vc/specmaster/{specId}?chgchgrempno=` | specId와 일치하는 데이터삭제 | path `specId`, query `chgchgrempno` |
 | 5 | POST | `/api/vc/specmaster/{specId}/children` | 마스터그리드에서 선택한 데이터의 상세정보등록 | path 부모 `specId`, body Detail 필드 |
 | 6 | GET | `/api/vc/specmaster/{specId}/children` | 상위 스펙 ID와 일치하는 상세스펙조회 | path 부모 `specId` |
-| 7 | POST | `/api/vc/specmaster/selectcondition` | 데이터전체조회 또는 조회조건 선택 후 조회 | `tabId`, `fabId`, `setModelNm`, `specNm`, `selectedSpecId`, `selectedDetailSpecId` |
+| 7 | POST | `/api/vc/specmaster/selectcondition` | 조회조건에 맞는 Master/Detail 전체 조회 | `tabId`, `fabId`, `setModelNm`, `specNm` |
 
 GoodDocs 초안의 `selectcondition` 표기는 GET/query였지만 현재 개발 기준은 POST body 방식이다.
 
@@ -52,9 +52,9 @@ Response sample:
 1. 화면 진입 시 `GET /api/vc/specmaster/selectfilteroptions`로 콤보 후보를 먼저 받는다.
 2. 이어서 `POST /api/vc/specmaster/selectcondition`으로 Master Grid와 초기 Detail Grid를 조회한다.
 3. 조회 버튼은 `selectcondition`만 호출한다. 콤보 후보는 리셋하지 않는다.
-4. Master radio 변경은 Master 목록을 다시 받지 않고 `GET /api/vc/specmaster/{specId}/children`로 Detail만 갱신한다.
+4. Master 첫 행을 자동 선택하고, 이후 Master radio 변경마다 `GET /api/vc/specmaster/{specId}/children`로 우측 Detail을 즉시 갱신한다.
 5. 수정 팝업은 grid row로 먼저 열고 `GET /api/vc/specmaster/{specId}` 결과로 form을 다시 보정한다.
-6. 저장/삭제 후에는 콤보 후보를 갱신한 뒤 선택 row를 유지해서 `selectcondition`을 다시 호출한다.
+6. 저장 후에는 콤보와 전체 목록을 갱신하고 저장된 Master/Detail ID가 속한 10행 단위 페이지로 이동해 radio를 자동 선택한다.
 
 ## 1. Master/Detail 조회
 
@@ -68,9 +68,7 @@ Request:
   "tabId": "SPEC_MASTER",
   "fabId": "M14",
   "setModelNm": "LITHO-Track-4",
-  "specNm": "Litho",
-  "selectedSpecId": "SPEC-M14-LITHO-A",
-  "selectedDetailSpecId": "SPEC-M14-LITHO-A-CH03"
+  "specNm": "Litho"
 }
 ```
 
@@ -89,22 +87,7 @@ Response:
       "specMaxVal": 90,
       "chgrNm": "S. Choi"
     }
-  ],
-  "selectedSpecId": "SPEC-M14-LITHO-A",
-  "details": [
-    {
-      "specId": "SPEC-M14-LITHO-A-CH03",
-      "specNm": "M14 Litho Develop Chamber",
-      "upperCd": "SPEC-M14-LITHO-A",
-      "operLargeCatgVal": "LITHO",
-      "operMidCatgVal": "Developer",
-      "chambModelNm": "LITHO-DEV-03",
-      "specMinVal": 41,
-      "specMaxVal": 89
-    }
-  ],
-  "totalElements": 1,
-  "totalPages": 1
+  ]
 }
 ```
 

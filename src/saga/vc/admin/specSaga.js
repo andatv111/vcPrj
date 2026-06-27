@@ -1,12 +1,12 @@
-import { all, call, put, select, takeLatest } from "redux-saga/effects";
+import { all, call, delay, put, select, takeLatest } from "redux-saga/effects";
 
-import { SPEC_MASTER_ACTION_TYPES, specMasterActions } from "../../../store/vc/vcMgmt/action";
+import { SPEC_MASTER_ACTION_TYPES, specMasterActions } from "@/store/vc/spec/action";
 import {
   selectSpecMgmtPopup,
   selectSpecMgmtSearch,
   selectSpecMgmtState,
-} from "../../../store/vc/vcMgmt/vcSpecMgmtSelector";
-import vcSpecApi from "../../../service/api/vc/admin/vcSpecApi";
+} from "@/store/vc/specSelector";
+import specApi from "@/service/api/vc/admin/specApi";
 
 const toArray = (value) => {
   if (Array.isArray(value)) return value;
@@ -124,6 +124,7 @@ const sanitizeSpecPayload = (form = {}, user = {}) => ({
 
 const validatePopup = (scope, form) => {
   if (scope === "master" && !form.fabId) return "FAB은 필수입니다.";
+  if (scope === "master" && !form.area && form.manualRegYn !== "Y") return "AREA는 필수입니다.";
   if (scope === "master" && !form.maker && form.manualRegYn !== "Y") return "MAKER는 필수입니다.";
   if (scope === "master" && !form.setModelNm) return "MODEL은 필수입니다.";
   if (scope === "master" && form.detSearYn !== "Y" && !form.specNm) return "모델관리기준명은 필수입니다.";
@@ -138,7 +139,7 @@ const validatePopup = (scope, form) => {
 
 function* loadFilterOptionsFlow() {
   // 콤보 후보는 grid 조회 결과와 분리된 전용 API에서 받는다.
-  const response = yield call(vcSpecApi.selectFilterOptions);
+  const response = yield call(specApi.selectFilterOptions);
   yield put(specMasterActions.initSuccess(normalizeOptions(response)));
 }
 
@@ -150,30 +151,41 @@ function* loadSpecConditionFlow(action = {}) {
     const requestedDetailSpecId = action.payload?.selectedDetailSpecId ?? state.selectedDetailSpecId;
 
     // GoodDocs selectcondition API: 조회조건과 현재 선택 Master를 넘겨 Master/Detail을 함께 받는다.
-    const response = yield call(vcSpecApi.selectCondition, {
+    const response = yield call(specApi.selectCondition, {
       search,
-      selectedSpecId: requestedSpecId,
-      selectedDetailSpecId: requestedDetailSpecId,
     });
 
     const allRows = toArray(response.rows || response.content || response);
     const rows = allRows.map(normalizeSpecRow).filter((row) => !row.upperCd);
-    const details = toArray(response.details).map(normalizeSpecRow);
+    const selectedSpecId = rows.some((row) => row.specId === requestedSpecId)
+      ? requestedSpecId
+      : rows[0]?.specId || "";
 
     yield put(specMasterActions.searchSuccess({
       rows,
-      details,
-      page: {
-        page: 0,
-        size: rows.length || 10,
-        totalPages: 1,
-        totalElements: rows.length,
-      },
-      selectedSpecId: response.selectedSpecId || requestedSpecId,
-      selectedDetailSpecId: response.selectedDetailSpecId || requestedDetailSpecId,
+      details: [],
+      selectedSpecId,
+      selectedDetailSpecId: requestedDetailSpecId,
     }));
+    if (selectedSpecId) {
+      yield put(specMasterActions.selectMaster(selectedSpecId, requestedDetailSpecId));
+    }
   } catch (error) {
     yield put(specMasterActions.searchFailure(getErrorMessage(error)));
+  }
+}
+
+function* fetchSpecNameSuggestionsFlow(action) {
+  try {
+    const keyword = action.payload?.keyword || "";
+
+    yield delay(200);
+
+    const response = yield call(specApi.searchSpecNameSuggestions, keyword);
+    const items = toArray(response).map(normalizeOption).filter((item) => item.value);
+    yield put(specMasterActions.fetchSpecNameSuggestionsSuccess(items));
+  } catch (error) {
+    yield put(specMasterActions.fetchSpecNameSuggestionsFailure(getErrorMessage(error)));
   }
 }
 
@@ -207,22 +219,24 @@ function* saveSpecMasterFlow() {
       if (!parentSpecId) throw new Error("상세 Spec을 등록할 상위 Master를 선택해 주세요.");
 
       if (popup.mode === "edit" && popup.form.specId) {
-        savedRow = yield call(vcSpecApi.updateSpec, popup.form.specId, payload);
+        savedRow = yield call(specApi.updateSpec, popup.form.specId, payload);
       } else {
-        savedRow = yield call(vcSpecApi.createChild, parentSpecId, payload);
+        savedRow = yield call(specApi.createChild, parentSpecId, payload);
       }
       nextSelectedSpecId = parentSpecId;
       nextSelectedDetailSpecId = savedRow?.specId || popup.form.specId || "";
     } else if (popup.mode === "edit" && popup.form.specId) {
-      savedRow = yield call(vcSpecApi.updateSpec, popup.form.specId, payload);
+      savedRow = yield call(specApi.updateSpec, popup.form.specId, payload);
       nextSelectedSpecId = savedRow?.specId || popup.form.specId;
     } else {
-      savedRow = yield call(vcSpecApi.createMaster, payload);
+      savedRow = yield call(specApi.createMaster, payload);
       nextSelectedSpecId = savedRow?.specId || "";
     }
 
     yield call(loadFilterOptionsFlow);
     yield put(specMasterActions.saveSuccess("Spec Master 저장이 완료되었습니다."));
+    // 저장한 값이 기존 검색조건에서 벗어나도 정확한 row와 페이지를 다시 찾을 수 있게 전체 목록으로 복귀한다.
+    yield put(specMasterActions.resetSearch());
     yield put(specMasterActions.searchRequest({
       selectedSpecId: nextSelectedSpecId,
       selectedDetailSpecId: nextSelectedDetailSpecId,
@@ -236,34 +250,25 @@ function* deleteSpecMasterFlow(action) {
   try {
     const state = yield select(selectSpecMgmtState);
     const specId = action.payload.specId;
+    const scope = action.payload.scope;
     const user = yield select((rootState) => rootState.userInfo?.user || {});
     if (!specId) throw new Error("삭제할 Spec을 선택해 주세요.");
 
-    yield call(vcSpecApi.deleteSpec, specId, user?.empNo || user?.empno || "");
+    const sourceRows = scope === "detail" ? state.detailRows : state.masterRows;
+    const deletedIndex = sourceRows.findIndex((row) => row.specId === specId);
+    const nextRow = sourceRows[deletedIndex + 1] || sourceRows[deletedIndex - 1] || null;
+    const nextSelectedSpecId = scope === "master" ? nextRow?.specId || "" : state.selectedSpecId;
+    const nextSelectedDetailSpecId = scope === "detail" ? nextRow?.specId || "" : "";
+
+    yield call(specApi.deleteSpec, specId, user?.empNo || user?.empno || "");
     yield call(loadFilterOptionsFlow);
     yield put(specMasterActions.deleteSuccess("Spec Master 삭제가 완료되었습니다."));
-    yield put(specMasterActions.searchRequest({ selectedSpecId: state.selectedSpecId }));
+    yield put(specMasterActions.searchRequest({
+      selectedSpecId: nextSelectedSpecId,
+      selectedDetailSpecId: nextSelectedDetailSpecId,
+    }));
   } catch (error) {
     yield put(specMasterActions.deleteFailure(getErrorMessage(error)));
-  }
-}
-
-function* selectMasterFlow(action) {
-  if (action.payload.specId) {
-    try {
-      const state = yield select(selectSpecMgmtState);
-      // Master radio 변경은 Master 목록/검색 콤보를 다시 받지 않고 우측 Detail Grid만 갱신한다.
-      const details = yield call(vcSpecApi.getChildren, action.payload.specId);
-      yield put(specMasterActions.searchSuccess({
-        rows: state.masterRows,
-        details: toArray(details).map(normalizeSpecRow),
-        page: state.page,
-        selectedSpecId: action.payload.specId,
-        selectedDetailSpecId: "",
-      }));
-    } catch (error) {
-      yield put(specMasterActions.searchFailure(getErrorMessage(error)));
-    }
   }
 }
 
@@ -274,23 +279,41 @@ function* openEditPopupFlow(action) {
     if (!row?.specId) return;
 
     // 수정 팝업은 grid row로 먼저 열고, 단건 조회 결과로 form 값을 다시 보정한다.
-    const latestRow = yield call(vcSpecApi.getSpec, row.specId);
+    const latestRow = yield call(specApi.getSpec, row.specId);
     yield put(specMasterActions.hydratePopupForm({ scope, row: normalizeSpecRow(latestRow) }));
   } catch (error) {
     yield put(specMasterActions.saveFailure(getErrorMessage(error)));
   }
 }
 
+function* selectMasterFlow(action) {
+  try {
+    const specId = action.payload?.specId;
+    if (!specId) return;
+    const state = yield select(selectSpecMgmtState);
+    const details = toArray(yield call(specApi.getChildren, specId)).map(normalizeSpecRow);
+
+    yield put(specMasterActions.searchSuccess({
+      rows: state.masterRows,
+      details,
+      selectedSpecId: specId,
+      selectedDetailSpecId: action.payload?.selectedDetailSpecId || "",
+    }));
+  } catch (error) {
+    yield put(specMasterActions.searchFailure(getErrorMessage(error)));
+  }
+}
+
 export function* watchSpecSaga() {
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.INIT_REQUEST, initSpecMasterFlow);
+  yield takeLatest(SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_REQUEST, fetchSpecNameSuggestionsFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.SEARCH_REQUEST, loadSpecConditionFlow);
-  yield takeLatest(SPEC_MASTER_ACTION_TYPES.CHANGE_PAGE, loadSpecConditionFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.SELECT_MASTER, selectMasterFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.OPEN_EDIT_POPUP, openEditPopupFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.SAVE_REQUEST, saveSpecMasterFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.DELETE_REQUEST, deleteSpecMasterFlow);
 }
 
-export default function* vcSpecSaga() {
+export default function* specSaga() {
   yield all([watchSpecSaga()]);
 }

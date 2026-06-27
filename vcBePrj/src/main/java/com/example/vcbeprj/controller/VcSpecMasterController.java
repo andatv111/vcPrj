@@ -34,28 +34,15 @@ public class VcSpecMasterController {
     @PostMapping("/selectcondition")
     public Map<String, Object> selectCondition(@RequestBody(required = false) Map<String, Object> payload) {
         Map<String, Object> body = payload == null ? Map.of() : payload;
-        int page = number(body, "page", 0);
-        int size = number(body, "size", 10);
-        log.info("[API][POST /api/vc/specmaster/selectcondition] page={} size={} body={}", page, size, body);
+        log.info("[API][POST /api/vc/specmaster/selectcondition] body={}", body);
 
         List<SpecMaster> searchedMasters = specMasterService.searchMasters(
                 text(body, "fabId"),
                 text(body, "setModelNm"),
                 text(body, "specNm")
         );
-        Map<String, Object> result = allRows(searchedMasters, page, size);
-
-        @SuppressWarnings("unchecked")
-        List<SpecMaster> masterRows = (List<SpecMaster>) result.get("rows");
-        String requestedSpecId = text(body, "selectedSpecId");
-        String selectedSpecId = masterRows.stream()
-                .filter(row -> equalsText(row.specId(), requestedSpecId))
-                .findFirst()
-                .map(SpecMaster::specId)
-                .orElse(masterRows.isEmpty() ? "" : masterRows.get(0).specId());
-
-        result.put("selectedSpecId", selectedSpecId);
-        result.put("details", selectedSpecId.isBlank() ? List.of() : specMasterService.getChildren(selectedSpecId));
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("rows", searchedMasters);
         return result;
     }
 
@@ -63,6 +50,12 @@ public class VcSpecMasterController {
     public Map<String, Object> selectFilterOptions() {
         log.info("[API][GET /api/vc/specmaster/selectfilteroptions]");
         return specMasterService.filterOptions();
+    }
+
+    @GetMapping("/specnames")
+    public List<Map<String, String>> specNameSuggestions(@RequestParam(required = false) String keyword) {
+        log.info("[API][GET /api/vc/specmaster/specnames] keyword={}", keyword);
+        return specMasterService.searchSpecNameSuggestions(keyword);
     }
 
     @PostMapping
@@ -116,18 +109,6 @@ public class VcSpecMasterController {
         return specMasterService.createChild(specId, payload);
     }
 
-    private Map<String, Object> allRows(List<SpecMaster> rows, int page, int size) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("content", rows);
-        result.put("rows", rows);
-        result.put("number", Math.max(page, 0));
-        result.put("page", Math.max(page, 0));
-        result.put("size", Math.max(size, rows.size()));
-        result.put("totalPages", 1);
-        result.put("totalElements", rows.size());
-        return result;
-    }
-
     @GetMapping("/selectcondition")
     public void selectConditionGetNotSupported() {
         throw new ResponseStatusException(HttpStatus.METHOD_NOT_ALLOWED, "Use POST /api/vc/specmaster/selectcondition");
@@ -143,18 +124,4 @@ public class VcSpecMasterController {
         return value == null ? "" : String.valueOf(value);
     }
 
-    private int number(Map<String, Object> payload, String key, int fallback) {
-        Object value = payload.get(key);
-        if (value == null) return fallback;
-        if (value instanceof Number number) return number.intValue();
-        try {
-            return Integer.parseInt(String.valueOf(value));
-        } catch (NumberFormatException ignored) {
-            return fallback;
-        }
-    }
-
-    private boolean equalsText(String left, String right) {
-        return left != null && right != null && left.equalsIgnoreCase(right);
-    }
 }

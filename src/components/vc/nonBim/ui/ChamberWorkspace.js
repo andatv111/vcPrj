@@ -1,12 +1,14 @@
 import React from "react";
+import { Button, Form, Input, Select, Space, Switch, Table, Tabs, Tooltip } from "antd";
+import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 
 import {
   MAX_CHAMBER_COUNT,
   PIPE_COLUMNS,
   PIPE_TYPE,
-} from "../core/NonBim.constant";
-import { isPipeFieldEditable, toDisplayText } from "../core/NonBim.helper";
-import { ReadonlyField } from "./FormFields";
+} from "@/components/vc/nonBim/core/NonBim.constant";
+import { isPipeFieldEditable, toDisplayText } from "@/components/vc/nonBim/core/NonBim.helper";
+import { ReadonlyField } from "@/components/vc/nonBim/ui/FormFields";
 
 const pipeEditableFields = ["inletDiameter", "length", "angle", "outletDiameter", "quantity"];
 
@@ -17,6 +19,12 @@ const PIPE_TYPE_ICON_CLASS = {
 };
 
 const getPipeTypeIconClass = (type) => PIPE_TYPE_ICON_CLASS[type] || PIPE_TYPE_ICON_CLASS[PIPE_TYPE.PIPE];
+
+const toSelectOptions = (options = []) =>
+  options.map((option) => ({
+    label: option.label || option.value,
+    value: option.value || option.label,
+  }));
 
 export const ChamberWorkspace = ({
   activeChamber,
@@ -34,6 +42,7 @@ export const ChamberWorkspace = ({
   removeLabel = "Delete",
   title = "Chamber / Pipe Information",
   emptyMessage = "Select a drawing to edit chamber and pipe information.",
+  addChamberAsTab = false,
   onAddChamber,
   onRemoveChamber,
   onSetActiveChamber,
@@ -47,25 +56,22 @@ export const ChamberWorkspace = ({
   <section className="panel vc-pub-section vcsnofM001Style">
     <div className="section-header">
       <div className="section-title">{title}</div>
-      <div className="button-group buttonArea">
-        <button
-          type="button"
-          className="secondary-button"
-          disabled={!canAddChamber}
-          title={canAddChamber ? `Up to ${MAX_CHAMBER_COUNT} chambers.` : ""}
-          onClick={onAddChamber}
-        >
-          {addLabel}
-        </button>
-        <button
-          type="button"
-          className="secondary-button"
+      <Space className="buttonArea">
+        {!addChamberAsTab ? (
+          <Tooltip title={canAddChamber ? `Up to ${MAX_CHAMBER_COUNT} chambers.` : ""}>
+            <Button icon={<PlusOutlined />} disabled={!canAddChamber} onClick={onAddChamber}>
+              {addLabel}
+            </Button>
+          </Tooltip>
+        ) : null}
+        <Button
+          icon={<DeleteOutlined />}
           disabled={!canRemoveChamber}
           onClick={() => activeChamber && onRemoveChamber(activeChamber.id)}
         >
           {removeLabel}
-        </button>
-      </div>
+        </Button>
+      </Space>
     </div>
 
     {!selectedDrawing ? (
@@ -75,6 +81,9 @@ export const ChamberWorkspace = ({
         <ChamberTabs
           chambers={chambers}
           activeChamberId={activeChamber?.id}
+          canAddChamber={canAddChamber}
+          addChamberAsTab={addChamberAsTab}
+          onAddChamber={onAddChamber}
           onSetActiveChamber={onSetActiveChamber}
         />
         {activeChamber ? (
@@ -99,20 +108,45 @@ export const ChamberWorkspace = ({
   </section>
 );
 
-export const ChamberTabs = ({ chambers, activeChamberId, onSetActiveChamber }) => (
-  <div className="tab-bar">
-    {chambers.map((chamber) => (
-      <button
-        key={chamber.id}
-        type="button"
-        className={activeChamberId === chamber.id ? "tab active" : "tab"}
-        onClick={() => onSetActiveChamber(chamber.id)}
-      >
-        {chamber.chamberName}
-        {chamber.locked ? "" : " *"}
-      </button>
-    ))}
-  </div>
+const ADD_CHAMBER_TAB_KEY = "__ADD_CHAMBER__";
+
+export const ChamberTabs = ({
+  chambers,
+  activeChamberId,
+  canAddChamber,
+  addChamberAsTab,
+  onAddChamber,
+  onSetActiveChamber,
+}) => (
+  <Tabs
+    className="vcsnofM001_tab"
+    activeKey={activeChamberId}
+    onChange={(key) => {
+      if (key === ADD_CHAMBER_TAB_KEY) {
+        if (canAddChamber) onAddChamber();
+        return;
+      }
+      onSetActiveChamber(key);
+    }}
+    items={[
+      ...chambers.map((chamber) => ({
+        key: chamber.id,
+        label: `${chamber.chamberName}${chamber.locked ? "" : " *"}`,
+      })),
+      ...(addChamberAsTab
+        ? [{
+            key: ADD_CHAMBER_TAB_KEY,
+            className: "vc-add-chamber-tab",
+            disabled: !canAddChamber,
+            label: (
+              <Tooltip title={canAddChamber ? `Up to ${MAX_CHAMBER_COUNT} chambers.` : "Chamber limit reached."}>
+                <PlusOutlined aria-label="Add Chamber" />
+              </Tooltip>
+            ),
+          }]
+        : []),
+    ]}
+  />
 );
 
 export const ChamberEditor = ({
@@ -139,19 +173,14 @@ export const ChamberEditor = ({
 
     <div className="section-header compact">
       <div className="section-title small">Pipe Rows</div>
-      <div className="button-group buttonArea">
-        <button type="button" className="secondary-button" disabled={!canEditPipe} onClick={onAddPipeRow}>
+      <Space className="buttonArea">
+        <Button icon={<PlusOutlined />} disabled={!canEditPipe} onClick={onAddPipeRow}>
           Add
-        </button>
-        <button
-          type="button"
-          className="secondary-button"
-          disabled={!activeChamber.selectedPipeRowId}
-          onClick={onRemovePipeRow}
-        >
+        </Button>
+        <Button icon={<DeleteOutlined />} disabled={!activeChamber.selectedPipeRowId} onClick={onRemovePipeRow}>
           Delete
-        </button>
-      </div>
+        </Button>
+      </Space>
     </div>
 
     <PipeRowsTable
@@ -165,113 +194,103 @@ export const ChamberEditor = ({
       {calculationLocked ? (
         <span className="muted">Status: {toDisplayText(selectedDrawingStatus)}</span>
       ) : (
-        <button type="button" className="primary-button" disabled={loading.calculate} onClick={onCalculate}>
-          {loading.calculate ? "Calculating..." : "Calculate"}
-        </button>
+        <Button type="primary" loading={loading.calculate} onClick={onCalculate}>
+          Calculate
+        </Button>
       )}
     </div>
   </div>
 );
 
 export const ChamberSpecForm = ({ activeChamber, allowSpeclessCalculate, onChamberChange }) => (
-  <div className="form-grid">
-    <label className="field">
-      <span>Model Standard</span>
-      <select
-        value={activeChamber.modelStandard}
-        onChange={(event) => onChamberChange("modelStandard", event.target.value)}
-      >
-        <option value="">-</option>
-        {activeChamber.specOptions.map((option) => (
-          <option key={option.value || option.label} value={option.value || option.label}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+  <Form layout="vertical" className="form-grid">
+    <Form.Item className="signlw-form-item" label="Model Standard" colon={false}>
+      <Select
+        allowClear
+        showSearch
+        value={activeChamber.modelStandard || undefined}
+        placeholder="-"
+        options={toSelectOptions(activeChamber.specOptions)}
+        optionFilterProp="label"
+        onChange={(value) => onChamberChange("modelStandard", value || "")}
+      />
+    </Form.Item>
     <ReadonlyField label="Min Spec" value={activeChamber.minSpec} />
     <ReadonlyField label="Max Spec" value={activeChamber.maxSpec} />
-    <SwitchField
-      label="Calculation Target"
-      checked={Boolean(activeChamber.calculationTarget)}
-      disabled={!allowSpeclessCalculate && !activeChamber.modelStandard}
-      onChange={(checked) => onChamberChange("calculationTarget", checked)}
-    />
-  </div>
-);
-
-const SwitchField = ({ label, checked, disabled = false, onChange }) => (
-  <label className={`vc-switch-field${disabled ? " disabled" : ""}`}>
-    <span className="vc-switch-label">{label}</span>
-    <input
-      type="checkbox"
-      checked={checked}
-      disabled={disabled}
-      onChange={(event) => onChange(event.target.checked)}
-    />
-    <span className="vc-switch-track" aria-hidden="true">
-      <span className="vc-switch-thumb" />
-    </span>
-    <span className="vc-switch-value">{checked ? "Y" : "N"}</span>
-  </label>
-);
-
-export const PipeRowsTable = ({ activeChamber, pipeTypeOptions, onSelectPipeRow, onPipeRowChange }) => (
-  <div className="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          {PIPE_COLUMNS.map((column) => (
-            <th key={column.key}>{column.label}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {activeChamber.pipeList.map((row) => (
-          <PipeRowsTableRow
-            key={row.id}
-            activeChamber={activeChamber}
-            pipeTypeOptions={pipeTypeOptions}
-            row={row}
-            onSelectPipeRow={onSelectPipeRow}
-            onPipeRowChange={onPipeRowChange}
-          />
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
-
-export const PipeRowsTableRow = ({ activeChamber, pipeTypeOptions, row, onSelectPipeRow, onPipeRowChange }) => (
-  <tr>
-    <td className="center">
-      <input
-        type="radio"
-        name={`pipeRow_${activeChamber.id}`}
-        checked={activeChamber.selectedPipeRowId === row.id}
-        onChange={() => onSelectPipeRow(row.id)}
+    <Form.Item className="signlw-form-item" label="Calculation Target" colon={false}>
+      <Switch
+        checked={Boolean(activeChamber.calculationTarget)}
+        disabled={!allowSpeclessCalculate && !activeChamber.modelStandard}
+        checkedChildren="Y"
+        unCheckedChildren="N"
+        onChange={(checked) => onChamberChange("calculationTarget", checked)}
       />
-    </td>
-    <td>
-      <div className="pipe-type-cell">
-        <span className={`pipe-type-icon ${getPipeTypeIconClass(row.type)}`} aria-hidden="true" />
-        <select value={row.type} onChange={(event) => onPipeRowChange(row.id, "type", event.target.value)}>
-          {pipeTypeOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-    </td>
-    {pipeEditableFields.map((fieldName) => (
-      <td key={fieldName}>
-        <input
-          value={row[fieldName]}
-          disabled={!isPipeFieldEditable(row.type, fieldName)}
-          onChange={(event) => onPipeRowChange(row.id, fieldName, event.target.value)}
-        />
-      </td>
-    ))}
-  </tr>
+    </Form.Item>
+  </Form>
 );
+
+export const PipeRowsTable = ({ activeChamber, pipeTypeOptions, onSelectPipeRow, onPipeRowChange }) => {
+  const columns = PIPE_COLUMNS.map((column) => {
+    if (column.key === "select") {
+      return {
+        title: "",
+        dataIndex: "select",
+        width: 48,
+        align: "center",
+        render: (_, row) => (
+          <input
+            className="vc-grid-radio"
+            type="radio"
+            name={`pipeRow_${activeChamber.id}`}
+            checked={activeChamber.selectedPipeRowId === row.id}
+            onChange={() => onSelectPipeRow(row.id)}
+          />
+        ),
+      };
+    }
+
+    if (column.key === "type") {
+      return {
+        title: column.label,
+        dataIndex: "type",
+        width: 210,
+        render: (value, row) => (
+          <Space className="pipe-type-cell">
+            <span className={`pipe-type-icon ${getPipeTypeIconClass(value)}`} aria-hidden="true" />
+            <Select
+              value={value}
+              options={toSelectOptions(pipeTypeOptions)}
+              onChange={(nextValue) => onPipeRowChange(row.id, "type", nextValue)}
+            />
+          </Space>
+        ),
+      };
+    }
+
+    return {
+      title: column.label,
+      dataIndex: column.key,
+      render: (value, row) => (
+        <Input
+          value={value}
+          disabled={!isPipeFieldEditable(row.type, column.key)}
+          onChange={(event) => onPipeRowChange(row.id, column.key, event.target.value)}
+        />
+      ),
+    };
+  });
+
+  return (
+    <Table
+      className="signlw-table"
+      columns={columns}
+      dataSource={activeChamber.pipeList}
+      rowKey={(row) => row.id}
+      pagination={false}
+      size="small"
+      scroll={{ x: "max-content" }}
+      rowClassName={(row) => (activeChamber.selectedPipeRowId === row.id ? "selected-row" : "")}
+      onRow={(row) => ({ onClick: () => onSelectPipeRow(row.id) })}
+    />
+  );
+};

@@ -38,7 +38,7 @@
 4. 팝업도 메인 화면과 같이 반영한다.
    - 결과 팝업: `src/components/vc/nonBim/popup/VcResultPopup.js`
    - 기안 첨부 팝업: `src/components/vc/nonBim/popup/VcDraftAttachPopup.js`
-   - SpecMaster 등록/수정 팝업: `src/components/vc/admin/specMaster/pop/SpecMgmtPopup.js`
+   - SpecMaster 등록/수정 팝업: `src/components/vc/admin/spec/pop/SpecMgmtPopup.js`
    - 팝업 안의 table은 `tableScrollStyle`, 버튼 영역은 `buttonArea`, 본문 묶음은 `partArea`를 우선 사용한다.
    - 팝업 안에서 Y/N 값을 switch로 표현할 때는 실제 값 변환은 기존 handler에 맡기고, 퍼블은 `vc-switch-field`, `vc-switch-track`, `vc-switch-thumb`, `vc-switch-value` class만 맞춘다.
 

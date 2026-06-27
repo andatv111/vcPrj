@@ -88,6 +88,16 @@ class DesignPortalDrawingServiceTest {
     }
 
     @Test
+    void etchPreviewEquipmentHasEnoughRowsForThreeFourRowPages() throws Exception {
+        mockMvc.perform(get("/api/vc/sim/non-bim/manual-drawings")
+                        .queryParam("fabCd", "M16")
+                        .queryParam("eqId", "EQ-VAC-ETCH-1001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(11))
+                .andExpect(jsonPath("$[?(@.woId == 'VC-2026-ETCH-011')]").isNotEmpty());
+    }
+
+    @Test
     void nonBimOptionsExposeFabValuesForSearchCondition() throws Exception {
         mockMvc.perform(get("/api/vc/sim/non-bim/options"))
                 .andExpect(status().isOk())
@@ -144,12 +154,8 @@ class DesignPortalDrawingServiceTest {
     }
 
     @Test
-    void specMasterSearchReturnsAllMastersAndSelectedDetailsForClientPaging() throws Exception {
-        Map<String, Object> request = Map.of(
-                "page", 0,
-                "size", 10,
-                "selectedSpecId", "SPEC-M14-LITHO-A"
-        );
+    void specMasterSearchReturnsAllMastersWithCurrentResponseMetadata() throws Exception {
+        Map<String, Object> request = Map.of();
 
         mockMvc.perform(post("/api/vc/specmaster/selectcondition")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -158,8 +164,8 @@ class DesignPortalDrawingServiceTest {
                 .andExpect(jsonPath("$.rows.length()").value(17))
                 .andExpect(jsonPath("$.totalElements").value(17))
                 .andExpect(jsonPath("$.totalPages").value(1))
-                .andExpect(jsonPath("$.selectedSpecId").value("SPEC-M14-LITHO-A"))
-                .andExpect(jsonPath("$.details[?(@.upperCd == 'SPEC-M14-LITHO-A')].specId").isNotEmpty());
+                .andExpect(jsonPath("$.selectedSpecId").isNotEmpty())
+                .andExpect(jsonPath("$.details").isArray());
     }
 
     @Test
@@ -177,7 +183,23 @@ class DesignPortalDrawingServiceTest {
     }
 
     @Test
-    void specMasterDetailSaveIsVisibleThroughSearchResponse() throws Exception {
+    void specMasterSpecNameSuggestionsUseContainsSearch() throws Exception {
+        mockMvc.perform(get("/api/vc/specmaster/specnames").param("keyword", "ETCH"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.value == 'M16 ETCH General')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.value == 'M16 ETCH Main Chamber')]").isNotEmpty());
+    }
+
+    @Test
+    void specMasterSpecNameSuggestionsReturnInitialCandidatesWithoutKeyword() throws Exception {
+        mockMvc.perform(get("/api/vc/specmaster/specnames"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(10))
+                .andExpect(jsonPath("$[?(@.value == 'M16 ETCH General')]").isNotEmpty());
+    }
+
+    @Test
+    void specMasterDetailSaveIsVisibleThroughChildrenResponse() throws Exception {
         Map<String, Object> detail = Map.of(
                 "specNm", "M14 LITHO Added Test Chamber",
                 "fabId", "M14",
@@ -196,18 +218,9 @@ class DesignPortalDrawingServiceTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.upperCd").value("SPEC-M14-LITHO-A"));
 
-        Map<String, Object> request = Map.of(
-                "page", 0,
-                "size", 10,
-                "selectedSpecId", "SPEC-M14-LITHO-A"
-        );
-
-        mockMvc.perform(post("/api/vc/specmaster/selectcondition")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(get("/api/vc/specmaster/SPEC-M14-LITHO-A/children"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.selectedSpecId").value("SPEC-M14-LITHO-A"))
-                .andExpect(jsonPath("$.details[?(@.specNm == 'M14 LITHO Added Test Chamber')].upperCd").value("SPEC-M14-LITHO-A"));
+                .andExpect(jsonPath("$[?(@.specNm == 'M14 LITHO Added Test Chamber')].upperCd").value("SPEC-M14-LITHO-A"));
     }
 
     @Test

@@ -2,6 +2,7 @@ export const VC_SPEC_ENDPOINTS = {
   createMaster: "/api/vc/specmaster",
   selectCondition: "/api/vc/specmaster/selectcondition",
   selectFilterOptions: "/api/vc/specmaster/selectfilteroptions",
+  specNameSuggestions: "/api/vc/specmaster/specnames",
   specById: (specId) => `/api/vc/specmaster/${encodeURIComponent(specId)}`,
   children: (specId) => `/api/vc/specmaster/${encodeURIComponent(specId)}/children`,
 };
@@ -56,7 +57,7 @@ const requestJson = async (url, { method = "GET", params, body } = {}) => {
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch (cause) {
-    const error = new Error("B/E API에 연결할 수 없습니다. 로컬 B/E가 8090 포트에서 실행 중인지 확인해 주세요.");
+    const error = new Error("Cannot connect to the local B/E API. Check that the B/E is running on port 8090.");
     error.cause = cause;
     throw error;
   }
@@ -74,16 +75,18 @@ const requestJson = async (url, { method = "GET", params, body } = {}) => {
   return unwrapResponse(payload);
 };
 
-export const vcSpecApi = {
-  // 메인 화면 상단 콤보와 저장 팝업 콤보 후보를 가져오는 전용 API입니다.
-  // grid 조회 API와 분리해 조회 버튼을 눌러도 콤보 후보가 현재 조회 결과로 줄어들지 않게 합니다.
+export const specApi = {
   selectFilterOptions() {
     return requestJson(VC_SPEC_ENDPOINTS.selectFilterOptions);
   },
 
-  // Spec Master 메인 로딩과 조회 버튼에서 쓰는 grid 조회 API입니다.
-  // GoodDocs 기준에 맞춰 POST /selectcondition으로 Master 전체와 선택 Master의 Detail을 함께 받습니다.
-  selectCondition({ search, selectedSpecId, selectedDetailSpecId }) {
+  searchSpecNameSuggestions(keyword) {
+    return requestJson(VC_SPEC_ENDPOINTS.specNameSuggestions, {
+      params: { keyword },
+    });
+  },
+
+  selectCondition({ search }) {
     return requestJson(VC_SPEC_ENDPOINTS.selectCondition, {
       method: "POST",
       body: {
@@ -91,18 +94,14 @@ export const vcSpecApi = {
         fabId: search.fabId,
         setModelNm: search.setModelNm,
         specNm: search.specNm,
-        selectedSpecId,
-        selectedDetailSpecId,
       },
     });
   },
 
-  // 수정 팝업을 열 때 grid row만 믿지 않고 B/E 단건 조회로 최신 값을 다시 확인합니다.
   getSpec(specId) {
     return requestJson(VC_SPEC_ENDPOINTS.specById(specId));
   },
 
-  // Master Grid 상단 신규 버튼에서 Spec Master 상위 row를 등록합니다.
   createMaster(payload) {
     return requestJson(VC_SPEC_ENDPOINTS.createMaster, {
       method: "POST",
@@ -110,7 +109,6 @@ export const vcSpecApi = {
     });
   },
 
-  // Master와 Detail row 수정은 같은 PATCH endpoint를 사용합니다.
   updateSpec(specId, payload) {
     return requestJson(VC_SPEC_ENDPOINTS.specById(specId), {
       method: "PATCH",
@@ -118,7 +116,6 @@ export const vcSpecApi = {
     });
   },
 
-  // Detail Grid 상단 신규 버튼에서 선택 Master 아래의 상세 Spec을 등록합니다.
   createChild(parentSpecId, payload) {
     return requestJson(VC_SPEC_ENDPOINTS.children(parentSpecId), {
       method: "POST",
@@ -126,12 +123,10 @@ export const vcSpecApi = {
     });
   },
 
-  // 우측 Detail Grid를 선택 Master 기준으로 별도 갱신해야 할 때 사용하는 조회 API입니다.
   getChildren(parentSpecId) {
     return requestJson(VC_SPEC_ENDPOINTS.children(parentSpecId));
   },
 
-  // 삭제 시 B/E 계약에 맞춰 변경자 사번을 chgchgrempno query parameter로 보냅니다.
   deleteSpec(specId, chgchgrempno = "") {
     return requestJson(VC_SPEC_ENDPOINTS.specById(specId), {
       method: "DELETE",
@@ -140,4 +135,4 @@ export const vcSpecApi = {
   },
 };
 
-export default vcSpecApi;
+export default specApi;

@@ -25,7 +25,7 @@ export const DETAIL_COLUMNS = [
 ];
 
 export const MASTER_PAGE_SIZE = 10;
-export const DETAIL_PAGE_SIZE = 8;
+export const DETAIL_PAGE_SIZE = 10;
 
 export const FILTERABLE_MASTER_COLUMNS = MASTER_COLUMNS.filter((column) => !["select", "no"].includes(column.key));
 export const FILTERABLE_DETAIL_COLUMNS = DETAIL_COLUMNS.filter((column) => !["select", "no"].includes(column.key));
@@ -55,6 +55,11 @@ export const filterRows = (rows, filters, columns) =>
 
 export const paginateRows = (rows, page, size) => rows.slice(page * size, page * size + size);
 export const getTotalPages = (count, size) => Math.max(1, Math.ceil(count / size));
+export const getPagedRowNumber = (page, size, index) => page * size + index + 1;
+export const getPageForRow = (rows, specId, size) => {
+  const index = rows.findIndex((row) => row.specId === specId);
+  return index < 0 ? -1 : Math.floor(index / size);
+};
 
 const escapeHtml = (value) =>
   String(value ?? "")

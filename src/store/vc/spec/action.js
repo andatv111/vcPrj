@@ -10,13 +10,15 @@ export const SPEC_MASTER_ACTION_TYPES = {
   // 검색조건 입력 값만 변경하고 실제 조회는 SEARCH_REQUEST에서 수행한다.
   SET_SEARCH_FIELD: `${SPEC_MASTER_ACTION_PREFIX}/SET_SEARCH_FIELD`,
   RESET_SEARCH: `${SPEC_MASTER_ACTION_PREFIX}/RESET_SEARCH`,
+  FETCH_SPEC_NAME_SUGGESTIONS_REQUEST: `${SPEC_MASTER_ACTION_PREFIX}/FETCH_SPEC_NAME_SUGGESTIONS_REQUEST`,
+  FETCH_SPEC_NAME_SUGGESTIONS_SUCCESS: `${SPEC_MASTER_ACTION_PREFIX}/FETCH_SPEC_NAME_SUGGESTIONS_SUCCESS`,
+  FETCH_SPEC_NAME_SUGGESTIONS_FAILURE: `${SPEC_MASTER_ACTION_PREFIX}/FETCH_SPEC_NAME_SUGGESTIONS_FAILURE`,
 
   // GoodDocs POST /api/vc/specmaster/selectcondition 호출 결과를 grid에 반영한다.
   SEARCH_REQUEST: `${SPEC_MASTER_ACTION_PREFIX}/SEARCH_REQUEST`,
   SEARCH_SUCCESS: `${SPEC_MASTER_ACTION_PREFIX}/SEARCH_SUCCESS`,
   SEARCH_FAILURE: `${SPEC_MASTER_ACTION_PREFIX}/SEARCH_FAILURE`,
 
-  CHANGE_PAGE: `${SPEC_MASTER_ACTION_PREFIX}/CHANGE_PAGE`,
   SELECT_MASTER: `${SPEC_MASTER_ACTION_PREFIX}/SELECT_MASTER`,
   SELECT_DETAIL: `${SPEC_MASTER_ACTION_PREFIX}/SELECT_DETAIL`,
 
@@ -45,19 +47,33 @@ export const specMasterActions = {
     payload: { name, value },
   }),
   resetSearch: () => ({ type: SPEC_MASTER_ACTION_TYPES.RESET_SEARCH }),
+  fetchSpecNameSuggestionsRequest: (keyword) => ({
+    type: SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_REQUEST,
+    payload: { keyword },
+  }),
+  fetchSpecNameSuggestionsSuccess: (items) => ({
+    type: SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_SUCCESS,
+    payload: { items },
+  }),
+  fetchSpecNameSuggestionsFailure: (error) => ({
+    type: SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_FAILURE,
+    payload: { error },
+  }),
 
   searchRequest: ({ selectedSpecId, selectedDetailSpecId } = {}) => ({
     type: SPEC_MASTER_ACTION_TYPES.SEARCH_REQUEST,
     payload: { selectedSpecId, selectedDetailSpecId },
   }),
-  searchSuccess: ({ rows, details, page, selectedSpecId, selectedDetailSpecId }) => ({
+  searchSuccess: ({ rows, details, selectedSpecId, selectedDetailSpecId }) => ({
     type: SPEC_MASTER_ACTION_TYPES.SEARCH_SUCCESS,
-    payload: { rows, details, page, selectedSpecId, selectedDetailSpecId },
+    payload: { rows, details, selectedSpecId, selectedDetailSpecId },
   }),
   searchFailure: (error) => ({ type: SPEC_MASTER_ACTION_TYPES.SEARCH_FAILURE, payload: { error } }),
 
-  changePage: (page) => ({ type: SPEC_MASTER_ACTION_TYPES.CHANGE_PAGE, payload: { page } }),
-  selectMaster: (specId) => ({ type: SPEC_MASTER_ACTION_TYPES.SELECT_MASTER, payload: { specId } }),
+  selectMaster: (specId, selectedDetailSpecId = "") => ({
+    type: SPEC_MASTER_ACTION_TYPES.SELECT_MASTER,
+    payload: { specId, selectedDetailSpecId },
+  }),
   selectDetail: (specId) => ({ type: SPEC_MASTER_ACTION_TYPES.SELECT_DETAIL, payload: { specId } }),
 
   openCreatePopup: (scope) => ({ type: SPEC_MASTER_ACTION_TYPES.OPEN_CREATE_POPUP, payload: { scope } }),
