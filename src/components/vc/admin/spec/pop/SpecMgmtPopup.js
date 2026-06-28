@@ -1,12 +1,14 @@
-import React from "react";
-import { Alert, Button, Form, Modal, Space } from "antd";
+import React, { useState } from "react";
+import { Alert, Button, Form, Input, Modal, Space } from "antd";
 
 import { toDisplayText } from "@/components/vc/admin/spec/core/SpecMgmt.core";
+import OrganizationChartPopup from "@/components/vc/admin/spec/pop/OrganizationChartPopup";
 import { InputField, SelectField, SwitchField } from "@/components/vc/admin/spec/ui/SpecMgmtFields";
 
 const getOptionsByKey = (map = {}, key, fallback = []) => (key && map[key] ? map[key] : fallback);
 
 const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) => {
+  const [organizationChartOpen, setOrganizationChartOpen] = useState(false);
   const form = popup.form;
   const isDetail = popup.scope === "detail";
   const isMaster = popup.scope === "master";
@@ -18,6 +20,18 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
   const fabModelOptions = getOptionsByKey(options.modelsByFab, form.fabId, options.setModelNms);
   const modelOptions = getOptionsByKey(options.modelsByMaker, form.maker, fabModelOptions);
   const midProcessOptions = getOptionsByKey(options.operMidByLarge, form.operLargeCatgVal, options.operMidCatgVals);
+  const selectedManagerEmpNos = form.chgrEmpno ? form.chgrEmpno.split(",").map((value) => value.trim()).filter(Boolean) : [];
+
+  const handleManagerConfirm = (managers) => {
+    onChange("chgrEmpno", managers.map((manager) => manager.empNo).join(", "));
+    onChange("chgrNm", managers.map((manager) => manager.name).join(", "));
+    setOrganizationChartOpen(false);
+  };
+
+  const handleClose = () => {
+    setOrganizationChartOpen(false);
+    onClose();
+  };
 
   return (
     <Modal
@@ -26,13 +40,13 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
       open={popup.visible}
       width={900}
       destroyOnClose
-      onCancel={onClose}
+      onCancel={handleClose}
       footer={
         <Space>
           <Button type="primary" loading={loading.save} onClick={onSave}>
             저장
           </Button>
-          <Button onClick={onClose}>취소</Button>
+          <Button onClick={handleClose}>취소</Button>
         </Space>
       }
     >
@@ -133,8 +147,21 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
             disabled={!detailSpecEnabled}
             onChange={(value) => onChange("specMaxVal", value)}
           />
-          <InputField label="담당자 사번" full value={form.chgrEmpno} onChange={(value) => onChange("chgrEmpno", value)} />
-          <InputField label="담당자" required full value={form.chgrNm} onChange={(value) => onChange("chgrNm", value)} />
+          <Form.Item
+            className="signlw-form-item full-grid-field"
+            label="장비담당자"
+            required
+            colon={false}
+          >
+            <Space.Compact block>
+              <Input
+                readOnly
+                value={form.chgrNm || ""}
+                placeholder="조직도에서 장비담당자를 선택하세요."
+              />
+              <Button onClick={() => setOrganizationChartOpen(true)}>조직도</Button>
+            </Space.Compact>
+          </Form.Item>
           <InputField label="비고" full value={form.specDesc} onChange={(value) => onChange("specDesc", value)} />
         </div>
 
@@ -144,6 +171,12 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
           <SwitchField label="사용여부" value={form.mgmtTgtYn} onChange={(value) => onChange("mgmtTgtYn", value)} />
         </div>
       </Form>
+      <OrganizationChartPopup
+        open={organizationChartOpen}
+        selectedEmpNos={selectedManagerEmpNos}
+        onCancel={() => setOrganizationChartOpen(false)}
+        onConfirm={handleManagerConfirm}
+      />
     </Modal>
   );
 };
