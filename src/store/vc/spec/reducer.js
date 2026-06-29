@@ -6,6 +6,11 @@ const DEFAULT_SEARCH = {
   specNm: "",
 };
 
+const DEFAULT_SEARCH_OPTIONS = {
+  fabIds: [],
+  setModelNms: [],
+};
+
 const DEFAULT_OPTIONS = {
   fabIds: [],
   areas: [],
@@ -47,6 +52,8 @@ const EMPTY_POPUP_FORM = {
 
 export const initialSpecMasterState = {
   search: { ...DEFAULT_SEARCH },
+  searchOptions: { ...DEFAULT_SEARCH_OPTIONS },
+  // options는 팝업 form에서만 사용한다. 상단 검색 콤보는 searchOptions를 사용한다.
   options: { ...DEFAULT_OPTIONS },
   specNameSuggestions: [],
 
@@ -69,7 +76,10 @@ export const initialSpecMasterState = {
     details: false,
     save: false,
     delete: false,
+    fabOptions: false,
+    modelOptions: false,
     specNameSuggestions: false,
+    popupOptions: false,
   },
   error: null,
   message: "",
@@ -134,17 +144,17 @@ const findSelectedMaster = (state) => state.masterRows.find((row) => row.specId 
 const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
   switch (action.type) {
     case SPEC_MASTER_ACTION_TYPES.INIT_REQUEST:
-      return setLoading(state, "init", true);
+      return {
+        ...state,
+        loading: {
+          ...state.loading,
+          init: true,
+          fabOptions: true,
+        },
+      };
 
     case SPEC_MASTER_ACTION_TYPES.INIT_SUCCESS:
-      return {
-        ...setLoading(state, "init", false),
-        options: {
-          ...DEFAULT_OPTIONS,
-          ...(action.payload.options || {}),
-        },
-        error: null,
-      };
+      return setLoading(state, "init", false);
 
     case SPEC_MASTER_ACTION_TYPES.INIT_FAILURE:
       return {
@@ -161,6 +171,21 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
 
       if (name === "fabId") {
         nextSearch.setModelNm = "";
+        nextSearch.specNm = "";
+        return {
+          ...state,
+          search: nextSearch,
+          searchOptions: {
+            ...state.searchOptions,
+            setModelNms: [],
+          },
+          specNameSuggestions: [],
+          loading: {
+            ...state.loading,
+            modelOptions: false,
+            specNameSuggestions: false,
+          },
+        };
       }
 
       return {
@@ -173,13 +198,84 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
       return {
         ...state,
         search: { ...DEFAULT_SEARCH },
+        searchOptions: {
+          ...state.searchOptions,
+          setModelNms: [],
+        },
         specNameSuggestions: [],
+        loading: {
+          ...state.loading,
+          modelOptions: false,
+          specNameSuggestions: false,
+        },
+      };
+
+    case SPEC_MASTER_ACTION_TYPES.FETCH_FAB_OPTIONS_REQUEST:
+      return setLoading(state, "fabOptions", true);
+
+    case SPEC_MASTER_ACTION_TYPES.FETCH_FAB_OPTIONS_SUCCESS:
+      return {
+        ...setLoading(state, "fabOptions", false),
+        searchOptions: {
+          ...state.searchOptions,
+          fabIds: action.payload.items || [],
+        },
+      };
+
+    case SPEC_MASTER_ACTION_TYPES.FETCH_FAB_OPTIONS_FAILURE:
+      return {
+        ...setLoading(state, "fabOptions", false),
+        searchOptions: {
+          ...state.searchOptions,
+          fabIds: [],
+        },
+        error: action.payload.error,
+      };
+
+    case SPEC_MASTER_ACTION_TYPES.FETCH_MODEL_OPTIONS_REQUEST:
+      return setLoading(state, "modelOptions", true);
+
+    case SPEC_MASTER_ACTION_TYPES.FETCH_MODEL_OPTIONS_SUCCESS:
+      // FAB을 빠르게 바꾼 동안 도착한 이전 요청의 응답은 현재 MODEL 콤보에 반영하지 않는다.
+      if (action.payload.fabId !== state.search.fabId) return state;
+      return {
+        ...setLoading(state, "modelOptions", false),
+        searchOptions: {
+          ...state.searchOptions,
+          setModelNms: action.payload.items || [],
+        },
+      };
+
+    case SPEC_MASTER_ACTION_TYPES.FETCH_MODEL_OPTIONS_FAILURE:
+      if (action.payload.fabId !== state.search.fabId) return state;
+      return {
+        ...setLoading(state, "modelOptions", false),
+        searchOptions: {
+          ...state.searchOptions,
+          setModelNms: [],
+        },
+        error: action.payload.error,
+      };
+
+    case SPEC_MASTER_ACTION_TYPES.CLEAR_MODEL_OPTIONS:
+      return {
+        ...setLoading(state, "modelOptions", false),
+        searchOptions: {
+          ...state.searchOptions,
+          setModelNms: [],
+        },
       };
 
     case SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_REQUEST:
       return setLoading(state, "specNameSuggestions", true);
 
     case SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_SUCCESS:
+      if (
+        action.payload.fabId !== state.search.fabId ||
+        action.payload.specNm !== String(state.search.specNm || "").trim()
+      ) {
+        return state;
+      }
       return {
         ...setLoading(state, "specNameSuggestions", false),
         specNameSuggestions: action.payload.items || [],
@@ -189,6 +285,44 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
       return {
         ...setLoading(state, "specNameSuggestions", false),
         specNameSuggestions: [],
+      };
+
+    case SPEC_MASTER_ACTION_TYPES.CLEAR_SPEC_NAME_SUGGESTIONS:
+      return {
+        ...setLoading(state, "specNameSuggestions", false),
+        specNameSuggestions: [],
+      };
+
+    case SPEC_MASTER_ACTION_TYPES.FETCH_POPUP_OPTIONS_REQUEST:
+      return setLoading(state, "popupOptions", true);
+
+    case SPEC_MASTER_ACTION_TYPES.FETCH_POPUP_OPTIONS_SUCCESS: {
+      const options = {
+        ...DEFAULT_OPTIONS,
+        ...(action.payload.options || {}),
+      };
+      return {
+        ...setLoading(state, "popupOptions", false),
+        options,
+        popup: state.popup.visible
+          ? {
+              ...state.popup,
+              form: normalizePopupForm(
+                state.popup.form,
+                state.popup.scope,
+                findSelectedMaster(state),
+                options
+              ),
+            }
+          : state.popup,
+        error: null,
+      };
+    }
+
+    case SPEC_MASTER_ACTION_TYPES.FETCH_POPUP_OPTIONS_FAILURE:
+      return {
+        ...setLoading(state, "popupOptions", false),
+        error: action.payload.error,
       };
 
     case SPEC_MASTER_ACTION_TYPES.SEARCH_REQUEST:
@@ -237,11 +371,17 @@ const specMasterReducer = (state = initialSpecMasterState, action = {}) => {
       };
 
     case SPEC_MASTER_ACTION_TYPES.SELECT_MASTER: {
+      const selectedSpecId = action.payload.specId;
+      const selectedDetails = state.detailRows.filter((row) => row.upperCd === selectedSpecId);
+      const requestedDetailSpecId = action.payload.selectedDetailSpecId || "";
+      const selectedDetailSpecId = selectedDetails.some((row) => row.specId === requestedDetailSpecId)
+        ? requestedDetailSpecId
+        : selectedDetails[0]?.specId || "";
+
       return {
-        ...setLoading(state, "details", true),
-        selectedSpecId: action.payload.specId,
-        selectedDetailSpecId: "",
-        detailRows: [],
+        ...setLoading(state, "details", false),
+        selectedSpecId,
+        selectedDetailSpecId,
         error: null,
       };
     }

@@ -43,6 +43,10 @@ public class VcSpecMasterController {
         );
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("rows", searchedMasters);
+        result.put("details", specMasterService.getChildrenForMasters(searchedMasters));
+        result.put("totalElements", searchedMasters.size());
+        result.put("totalPages", searchedMasters.isEmpty() ? 0 : 1);
+        result.put("selectedSpecId", searchedMasters.isEmpty() ? "" : searchedMasters.get(0).specId());
         return result;
     }
 

@@ -22,13 +22,16 @@ GoodDocs 초안의 `selectcondition` 표기는 GET/query였지만 현재 개발 
 
 ## Combo API
 
-GoodDocs 표에는 없지만 화면 상단 조회조건 콤보와 저장 팝업 콤보는 grid 조회 API와 분리한다.
+GoodDocs 표에는 없지만 화면 상단 조회조건 콤보와 저장 팝업 콤보는 서로 다른 state/API로 분리한다.
 
 | METHOD | API Name(URL) | 기능설명 | 사용처 |
 | --- | --- | --- | --- |
-| GET | `/api/vc/specmaster/selectfilteroptions` | SpecMaster 화면/팝업 콤보 후보 조회 | Search Conditions, Master/Detail popup |
+| GET | `/api/vc/code/getFabOptions` | 검색조건 FAB 후보 조회 | Search Conditions 최초 진입 |
+| GET | `/api/vc/code/getSpecMModelOptions?fabId={fabId}` | 선택 FAB의 MODEL 후보 조회 | Search Conditions FAB 변경 |
+| GET | `/api/vc/code/getMSpecNMs?fabId={fabId}&specNm={specNm}` | 선택 FAB 안에서 Spec Name 포함 검색 | Search Conditions Spec Name 입력 |
+| GET | `/api/vc/specmaster/selectfilteroptions` | AREA/MAKER/공정 등 팝업 후보 조회 | Master/Detail popup open |
 
-`selectfilteroptions`는 조회 결과와 합치지 않는다. 조회 버튼을 눌러도 콤보 후보가 현재 검색 결과 기준으로 줄어들지 않게 하기 위함이다. 화면 테스트 편의를 위해 후보는 소수만 내려주며, `areasByFab`, `makersByArea`, `modelsByFab`, `modelsByMaker`, `operMidByLarge`로 종속 콤보를 구성한다.
+검색조건은 `searchOptions.fabIds`, `searchOptions.setModelNms`를 사용하고 팝업은 기존 `options`를 사용한다. `getMSpecNMs`의 query 이름은 `keyword`가 아니라 반드시 `fabId`, `specNm`이다. `selectfilteroptions`는 팝업을 열 때만 조회하며 `areasByFab`, `makersByArea`, `modelsByFab`, `modelsByMaker`, `operMidByLarge`로 종속 콤보를 구성한다.
 
 현재 `VCW_VC_SPEC_MST` mock table에는 AREA/MAKER 컬럼이 없어 `areas`, `makers`는 빈 배열로 내려간다. 운영 DB 컬럼이 확정되면 같은 response key에 값을 채우면 된다.
 
@@ -49,12 +52,13 @@ Response sample:
 
 ## Current F/E Flow
 
-1. 화면 진입 시 `GET /api/vc/specmaster/selectfilteroptions`로 콤보 후보를 먼저 받는다.
-2. 이어서 `POST /api/vc/specmaster/selectcondition`으로 Master Grid와 초기 Detail Grid를 조회한다.
-3. 조회 버튼은 `selectcondition`만 호출한다. 콤보 후보는 리셋하지 않는다.
-4. Master 첫 행을 자동 선택하고, 이후 Master radio 변경마다 `GET /api/vc/specmaster/{specId}/children`로 우측 Detail을 즉시 갱신한다.
-5. 수정 팝업은 grid row로 먼저 열고 `GET /api/vc/specmaster/{specId}` 결과로 form을 다시 보정한다.
-6. 저장 후에는 콤보와 전체 목록을 갱신하고 저장된 Master/Detail ID가 속한 10행 단위 페이지로 이동해 radio를 자동 선택한다.
+1. 화면 진입 시 `GET /api/vc/code/getFabOptions`와 `POST /api/vc/specmaster/selectcondition`을 병렬 호출한다.
+2. `selectcondition`의 `rows`, `details`를 저장하고 Master radio 변경은 F/E state 안에서 처리한다.
+3. FAB 선택 시에만 `getSpecMModelOptions?fabId=...`를 호출하고, FAB 변경 시 MODEL/Spec Name을 비운다.
+4. FAB와 Spec Name이 모두 있을 때만 `getMSpecNMs?fabId=...&specNm=...`를 호출한다.
+5. 신규/수정 팝업을 열 때 `selectfilteroptions`로 팝업 전용 후보를 조회한다.
+6. 수정 팝업은 grid row로 먼저 열고 `GET /api/vc/specmaster/{specId}` 결과로 form을 다시 보정한다.
+7. 저장/삭제 후 전체 목록을 재조회하고 대상 Master/Detail ID가 속한 10행 단위 페이지로 이동해 radio를 자동 선택한다.
 
 ## 1. Master/Detail 조회
 
@@ -86,6 +90,13 @@ Response:
       "specMinVal": 36,
       "specMaxVal": 90,
       "chgrNm": "S. Choi"
+    }
+  ],
+  "details": [
+    {
+      "specId": "SPEC-M14-LITHO-A-CH01",
+      "upperCd": "SPEC-M14-LITHO-A",
+      "specNm": "M14 Litho Chamber"
     }
   ]
 }

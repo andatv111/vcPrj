@@ -43,7 +43,12 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
       onCancel={handleClose}
       footer={
         <Space>
-          <Button type="primary" loading={loading.save} onClick={onSave}>
+          <Button
+            type="primary"
+            loading={loading.save || loading.popupOptions}
+            disabled={loading.popupOptions}
+            onClick={onSave}
+          >
             저장
           </Button>
           <Button onClick={handleClose}>취소</Button>

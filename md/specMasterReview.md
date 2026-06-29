@@ -26,7 +26,7 @@ SpecMaster는 V/C 계산에 쓰는 Spec 기준 데이터를 Master/Detail 구조
 | `src/components/vc/admin/spec/core/SpecMgmt.core.js` | column 정의, filter, paging, Excel helper. |
 | `src/store/vc/spec/action.js` | SpecMaster action type과 action creator. |
 | `src/store/vc/spec/reducer.js` | 조회, 선택, 팝업, 저장/삭제 loading state. |
-| `src/store/vc/specSelector.js` | 화면에서 읽는 selector. |
+| `src/store/vc/spec/specSelector.js` | 화면에서 읽는 selector. |
 | `src/saga/vc/admin/specSaga.js` | API 호출 흐름과 response normalize. |
 | `src/service/api/vc/admin/specApi.js` | GoodDocs 기준 HTTP API adapter. |
 
@@ -34,23 +34,26 @@ SpecMaster는 V/C 계산에 쓰는 Spec 기준 데이터를 Master/Detail 구조
 
 | 화면 동작 | 호출 API | 갱신하는 state |
 | --- | --- | --- |
-| 화면 최초 로딩 | `GET /api/vc/specmaster/selectfilteroptions` | `options` |
-| 화면 최초 로딩 | `POST /api/vc/specmaster/selectcondition` | `masterRows`, `detailRows`, 선택 row |
+| 화면 최초 로딩 | `GET /api/vc/code/getFabOptions` | `searchOptions.fabIds` |
+| 화면 최초 로딩 | `POST /api/vc/specmaster/selectcondition` | 전체 `masterRows`, `detailRows`, 선택 row |
+| FAB 선택 | `GET /api/vc/code/getSpecMModelOptions?fabId=` | `searchOptions.setModelNms` |
+| Spec Name 입력 | `GET /api/vc/code/getMSpecNMs?fabId=&specNm=` | `specNameSuggestions` |
 | 조회 버튼 | `POST /api/vc/specmaster/selectcondition` | grid 데이터만 갱신, 콤보 유지 |
-| Master radio 선택 | `GET /api/vc/specmaster/{specId}/children` | 선택 즉시 우측 Detail 갱신 |
+| Master radio 선택 | API 없음 | 이미 받은 `detailRows`를 F/E에서 필터 |
+| 신규/수정 팝업 열기 | `GET /api/vc/specmaster/selectfilteroptions` | 팝업 `options` |
 | 수정 팝업 열기 | `GET /api/vc/specmaster/{specId}` | popup form 보정 |
-| Master 신규 | `POST /api/vc/specmaster` | 저장 후 콤보 갱신, grid 재조회 |
-| Master/Detail 수정 | `PATCH /api/vc/specmaster/{specId}` | 저장 후 콤보 갱신, grid 재조회 |
-| Detail 신규 | `POST /api/vc/specmaster/{specId}/children` | 저장 후 콤보 갱신, grid 재조회 |
-| 삭제 | `DELETE /api/vc/specmaster/{specId}?chgchgrempno=` | 삭제 후 콤보 갱신, grid 재조회 |
+| Master 신규 | `POST /api/vc/specmaster` | 팝업 종료 후 grid 재조회 |
+| Master/Detail 수정 | `PATCH /api/vc/specmaster/{specId}` | 팝업 종료 후 grid 재조회 |
+| Detail 신규 | `POST /api/vc/specmaster/{specId}/children` | 팝업 종료 후 grid 재조회 |
+| 삭제 | `DELETE /api/vc/specmaster/{specId}?chgchgrempno=` | grid 재조회 |
 
-`selectfilteroptions`는 콤보 전용이다. `selectcondition`과 합치지 않는다. 조회 버튼을 눌렀을 때 콤보 후보가 조회 결과 기준으로 줄어들거나 전체 화면이 리셋되는 것을 막기 위해 분리한다.
+상단 검색 콤보는 `searchOptions`, 팝업 콤보는 `options`로 분리한다. 최초 진입에는 FAB와 grid API만 호출하고 팝업 후보는 팝업을 열 때 조회한다.
 
 ## 4. 조회 시 리셋 방지 규칙
 
 `specSaga.js`의 `loadSpecConditionFlow`는 B/E에 선택값을 보내지 않는다. 조회 전 선택 ID를 F/E state에서 기억하고, 새 전체 결과에 해당 ID가 남아 있으면 reducer가 선택을 복원한다.
 
-콤보 후보는 `INIT_REQUEST`, 저장 성공, 삭제 성공 때만 `selectfilteroptions`로 갱신한다. 일반 조회는 `selectcondition`만 호출한다.
+FAB 변경 시 MODEL/Spec Name 후보를 초기화한다. MODEL 응답의 요청 `fabId`가 현재 검색 `fabId`와 다르면 stale 응답으로 보고 버린다.
 
 콤보 후보는 테스트 가능한 소수 데이터로 제한한다. Master popup은 `FAB -> AREA -> MAKER -> MODEL`, Detail popup은 `공정대분류 -> 공정중분류` 순서로 하위 후보를 좁힌다.
 

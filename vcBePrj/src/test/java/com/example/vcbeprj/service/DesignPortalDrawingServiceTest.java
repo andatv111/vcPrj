@@ -183,6 +183,39 @@ class DesignPortalDrawingServiceTest {
     }
 
     @Test
+    void specMasterSearchCombosUseDedicatedCodeApis() throws Exception {
+        mockMvc.perform(get("/api/vc/code/getFabOptions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.value == 'M16')]").isNotEmpty());
+
+        mockMvc.perform(get("/api/vc/code/getSpecMModelOptions").param("fabId", "M16"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.value == 'VX-ETCH-300')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.value == 'LITHO-Track-4')]").isEmpty());
+
+        mockMvc.perform(get("/api/vc/code/getMSpecNMs")
+                        .param("fabId", "M16")
+                        .param("specNm", "ETCH"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.value == 'M16 ETCH General')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.value == 'M15 ETCH General')]").isEmpty());
+    }
+
+    @Test
+    void specNameSearchRequiresFabIdAndSpecNmParameters() throws Exception {
+        mockMvc.perform(get("/api/vc/code/getMSpecNMs").param("fabId", "M16"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/vc/code/getMSpecNMs").param("specNm", "ETCH"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/vc/code/getMSpecNMs")
+                        .param("fabId", " ")
+                        .param("specNm", " "))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void specMasterSpecNameSuggestionsUseContainsSearch() throws Exception {
         mockMvc.perform(get("/api/vc/specmaster/specnames").param("keyword", "ETCH"))
                 .andExpect(status().isOk())

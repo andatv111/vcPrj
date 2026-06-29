@@ -73,6 +73,49 @@ public class VcSpecMasterService {
                 .toList();
     }
 
+    public List<Map<String, String>> getFabOptions() {
+        log.info("[SERVICE][SPEC_MASTER][SELECT] business=getFabOptions table={}", SPEC_TABLE);
+        return toOptions(distinctOptions(repository.selectAll(SPEC_TABLE, SpecMaster.class), SpecMaster::fabId));
+    }
+
+    public List<Map<String, String>> getSpecModelOptions(String fabId) {
+        log.info("[SERVICE][SPEC_MASTER][SELECT] business=getSpecModelOptions table={} fabId={}", SPEC_TABLE, fabId);
+        if (isBlank(fabId)) return List.of();
+
+        List<String> models = repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+                .filter(row -> equalsText(row.fabId(), fabId))
+                .map(SpecMaster::setModelNm)
+                .filter(value -> !isBlank(value))
+                .distinct()
+                .sorted()
+                .toList();
+        return toOptions(models);
+    }
+
+    public List<Map<String, String>> searchSpecNameSuggestions(String fabId, String specNm) {
+        log.info("[SERVICE][SPEC_MASTER][SELECT] business=searchSpecNameSuggestions table={} fabId={} specNm={}",
+                SPEC_TABLE, fabId, specNm);
+        if (isBlank(fabId) || isBlank(specNm)) return List.of();
+
+        return repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+                .filter(row -> equalsText(row.fabId(), fabId))
+                .filter(row -> containsText(row.specNm(), specNm))
+                .map(row -> Map.of(
+                        "value", row.specNm(),
+                        "label", displayText(row.setModelNm())
+                ))
+                .collect(Collectors.toMap(
+                        item -> item.get("value"),
+                        Function.identity(),
+                        (left, ignored) -> left,
+                        LinkedHashMap::new
+                ))
+                .values()
+                .stream()
+                .limit(10)
+                .toList();
+    }
+
     public List<Map<String, String>> searchSpecNameSuggestions(String keyword) {
         log.info("[SERVICE][SPEC_MASTER][SELECT] business=searchSpecNameSuggestions table={} keyword={}", SPEC_TABLE, keyword);
 
@@ -119,6 +162,20 @@ public class VcSpecMasterService {
                 .filter(row -> equalsText(row.upperCd(), parentSpecId))
                 .sorted(Comparator
                         .comparing(SpecMaster::operLargeCatgVal, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(SpecMaster::operMidCatgVal, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(SpecMaster::chambModelNm, Comparator.nullsLast(String::compareTo)))
+                .toList();
+    }
+
+    public List<SpecMaster> getChildrenForMasters(List<SpecMaster> masters) {
+        List<String> masterSpecIds = masters.stream().map(SpecMaster::specId).toList();
+        if (masterSpecIds.isEmpty()) return List.of();
+
+        return repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+                .filter(row -> masterSpecIds.contains(row.upperCd()))
+                .sorted(Comparator
+                        .comparing(SpecMaster::upperCd, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(SpecMaster::operLargeCatgVal, Comparator.nullsLast(String::compareTo))
                         .thenComparing(SpecMaster::operMidCatgVal, Comparator.nullsLast(String::compareTo))
                         .thenComparing(SpecMaster::chambModelNm, Comparator.nullsLast(String::compareTo)))
                 .toList();
@@ -279,6 +336,12 @@ public class VcSpecMasterService {
                 .distinct()
                 .sorted()
                 .collect(Collectors.toList());
+    }
+
+    private List<Map<String, String>> toOptions(List<String> values) {
+        return values.stream()
+                .map(value -> Map.of("value", value, "label", value))
+                .toList();
     }
 
     private List<String> limitedOptions(List<SpecMaster> rows, Function<SpecMaster, String> mapper, int limit) {
