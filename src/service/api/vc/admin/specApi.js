@@ -139,10 +139,10 @@ export const specApi = {
     return requestJson(VC_SPEC_ENDPOINTS.children(parentSpecId));
   },
 
-  deleteSpec(specId, chgchgrempno = "") {
+  markSpecDeleted(specId, chgChgrEmpno = "") {
     return requestJson(VC_SPEC_ENDPOINTS.specById(specId), {
-      method: "DELETE",
-      params: { chgchgrempno },
+      method: "PATCH",
+      body: { delYn: "Y", chgChgrEmpno },
     });
   },
 };

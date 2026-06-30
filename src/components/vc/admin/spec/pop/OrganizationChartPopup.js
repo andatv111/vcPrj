@@ -37,7 +37,7 @@ const OrganizationChartPopup = ({ open, selectedEmpNos = [], onCancel, onConfirm
         <Space direction="vertical">
           {MOCK_MANAGERS.map((manager) => (
             <Checkbox key={manager.empNo} value={manager.empNo}>
-              {manager.name} ({manager.department})
+              {manager.name} ({manager.empNo}) · {manager.department}
             </Checkbox>
           ))}
         </Space>

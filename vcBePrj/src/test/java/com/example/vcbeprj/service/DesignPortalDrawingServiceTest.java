@@ -21,6 +21,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -254,6 +255,90 @@ class DesignPortalDrawingServiceTest {
         mockMvc.perform(get("/api/vc/specmaster/SPEC-M14-LITHO-A/children"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.specNm == 'M14 LITHO Added Test Chamber')].upperCd").value("SPEC-M14-LITHO-A"));
+    }
+
+    @Test
+    void specMasterAndDetailDeleteAreHiddenWithoutRemovingStoredData() throws Exception {
+        String specId = "SPEC-SOFT-DELETE-MASTER";
+        String detailSpecId = "SPEC-SOFT-DELETE-DETAIL";
+        Map<String, Object> master = Map.of(
+                "specId", specId,
+                "specNm", "Soft Delete Master Test",
+                "fabId", "M16",
+                "setModelNm", "VX-ETCH-300",
+                "chgrNm", "Test Owner"
+        );
+
+        mockMvc.perform(post("/api/vc/specmaster")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(master)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.delYn").value("N"));
+
+        Map<String, Object> detail = Map.of(
+                "specId", detailSpecId,
+                "specNm", "Soft Delete Detail Test",
+                "fabId", "M16",
+                "setModelNm", "VX-ETCH-300",
+                "operLargeCatgVal", "ETCH",
+                "operMidCatgVal", "Process",
+                "chambModelNm", "SOFT-DELETE-CHAMBER",
+                "chgrNm", "Test Owner"
+        );
+        mockMvc.perform(post("/api/vc/specmaster/{specId}/children", specId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(detail)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.specId").value(detailSpecId))
+                .andExpect(jsonPath("$.delYn").value("N"));
+
+        // Detail 삭제는 Detail의 DEL_YN만 Y로 바꾸고 Master는 조회 목록에 유지한다.
+        mockMvc.perform(patch("/api/vc/specmaster/{specId}", detailSpecId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"delYn":"Y","chgChgrEmpno":"100310"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.specId").value(detailSpecId))
+                .andExpect(jsonPath("$.delYn").value("Y"));
+
+        mockMvc.perform(post("/api/vc/specmaster/selectcondition")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fabId":"M16","setModelNm":"VX-ETCH-300","specNm":"Soft Delete Master Test"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rows[?(@.specId == 'SPEC-SOFT-DELETE-MASTER')]").isNotEmpty())
+                .andExpect(jsonPath("$.details[?(@.specId == 'SPEC-SOFT-DELETE-DETAIL')]").isEmpty());
+
+        // Master 삭제는 Master의 DEL_YN을 Y로 바꾸며 이후 Master/Detail 조회 목록에서 모두 보이지 않는다.
+        mockMvc.perform(patch("/api/vc/specmaster/{specId}", specId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"delYn":"Y","chgChgrEmpno":"100310"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.specId").value(specId))
+                .andExpect(jsonPath("$.delYn").value("Y"))
+                .andExpect(jsonPath("$.chgChgrEmpno").value("100310"));
+
+        mockMvc.perform(get("/api/vc/specmaster/{specId}", specId))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/vc/specmaster/selectcondition")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fabId":"M16","setModelNm":"VX-ETCH-300","specNm":"Soft Delete Master Test"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rows[?(@.specId == 'SPEC-SOFT-DELETE-MASTER')]").isEmpty())
+                .andExpect(jsonPath("$.details[?(@.specId == 'SPEC-SOFT-DELETE-DETAIL')]").isEmpty());
+
+        String storedRows = Files.readString(TEST_DATA_PATH.resolve("VCW_VC_SPEC_MST.txt"));
+        assertThat(storedRows)
+                .contains(specId)
+                .contains(detailSpecId)
+                .contains("\"delYn\":\"Y\"");
     }
 
     @Test

@@ -94,6 +94,7 @@ const normalizeSpecRow = (row = {}, index = 0) => ({
   chgrEmpno: row.chgrEmpno || "",
   chgrNm: row.chgrNm || "",
   specDesc: row.specDesc || "",
+  delYn: row.delYn || "N",
   raw: row,
 });
 
@@ -190,8 +191,11 @@ function* loadSpecConditionFlow(action = {}) {
     });
 
     const allRows = toArray(response.rows || response.content || response);
-    const rows = allRows.map(normalizeSpecRow).filter((row) => !row.upperCd);
-    const details = toArray(response.details).map(normalizeSpecRow).filter((row) => row.upperCd);
+    // B/E 조회조건이 기본이지만, 삭제 데이터가 섞여 와도 grid에는 노출하지 않는다.
+    const rows = allRows.map(normalizeSpecRow).filter((row) => row.delYn !== "Y" && !row.upperCd);
+    const details = toArray(response.details)
+      .map(normalizeSpecRow)
+      .filter((row) => row.delYn !== "Y" && row.upperCd);
     const selectedSpecId = rows.some((row) => row.specId === requestedSpecId)
       ? requestedSpecId
       : rows[0]?.specId || "";
@@ -301,8 +305,8 @@ function* deleteSpecMasterFlow(action) {
     const nextSelectedSpecId = scope === "master" ? nextRow?.specId || "" : state.selectedSpecId;
     const nextSelectedDetailSpecId = scope === "detail" ? nextRow?.specId || "" : "";
 
-    yield call(specApi.deleteSpec, specId, user?.empNo || user?.empno || "");
-    yield put(specMasterActions.deleteSuccess("Spec Master 삭제가 완료되었습니다."));
+    yield call(specApi.markSpecDeleted, specId, user?.empNo || user?.empno || "");
+    yield put(specMasterActions.deleteSuccess("Spec Master 삭제 처리가 완료되었습니다."));
     yield put(specMasterActions.searchRequest({
       selectedSpecId: nextSelectedSpecId,
       selectedDetailSpecId: nextSelectedDetailSpecId,

@@ -159,7 +159,7 @@ public class VcCalculationService {
                 "", "Request Spec Snapshot", request.fabId(), request.setModelNm(),
                 chamber.operLargeCatgVal(), chamber.operMidCatgVal(), chamber.chamberModelName(),
                 "0", "U", "N", "", "Y", chamber.specMinVal(), chamber.specMaxVal(), "", "",
-                "Request snapshot fallback", "", "", "", ""
+                "Request snapshot fallback", "N", "", "", "", ""
         );
     }
 

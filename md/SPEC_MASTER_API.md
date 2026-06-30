@@ -13,7 +13,7 @@
 | 1 | POST | `/api/vc/specmaster` | SPEC마스터데이터추가 | `specNm`, `fabId`, `setModelNm`, `operLargeCatgVal`, `operMidCatgVal`, `srcGbnCd`, `detSearYn`, `chgrEmpno`, `chgrNm`, `specDesc`, `regEmpno` |
 | 2 | GET | `/api/vc/specmaster/{specId}` | specId와 일치하는 데이터 조회 | path `specId` |
 | 3 | PATCH | `/api/vc/specmaster/{specId}` | specId와 일치하는 데이터 변경 | path `specId`, body 변경 필드 |
-| 4 | DELETE | `/api/vc/specmaster/{specId}?chgchgrempno=` | specId와 일치하는 데이터삭제 | path `specId`, query `chgchgrempno` |
+| 4 | PATCH | `/api/vc/specmaster/{specId}` | specId와 일치하는 데이터의 `DEL_YN`을 `Y`로 변경 | path `specId`, body `delYn`, `chgChgrEmpno` |
 | 5 | POST | `/api/vc/specmaster/{specId}/children` | 마스터그리드에서 선택한 데이터의 상세정보등록 | path 부모 `specId`, body Detail 필드 |
 | 6 | GET | `/api/vc/specmaster/{specId}/children` | 상위 스펙 ID와 일치하는 상세스펙조회 | path 부모 `specId` |
 | 7 | POST | `/api/vc/specmaster/selectcondition` | 조회조건에 맞는 Master/Detail 전체 조회 | `tabId`, `fabId`, `setModelNm`, `specNm` |
@@ -186,14 +186,20 @@ API Name(URL): `/api/vc/specmaster/{specId}`
 }
 ```
 
-## 7. Master/Detail 삭제
+## 7. Master/Detail 논리삭제
 
-METHOD: `DELETE`  
-API Name(URL): `/api/vc/specmaster/{specId}?chgchgrempno=`
+METHOD: `PATCH`
+API Name(URL): `/api/vc/specmaster/{specId}`
 
-```txt
-DELETE /api/vc/specmaster/SPEC-M14-LITHO-A-CH10?chgchgrempno=100310
+```json
+{
+  "delYn": "Y",
+  "chgChgrEmpno": "100310"
+}
 ```
+
+실제 데이터를 제거하지 않으며, 선택한 Master 또는 Detail 한 건의 `DEL_YN`만 `Y`로 변경한다.
+조회 API와 콤보 API는 `DEL_YN = Y` 데이터를 제외한다.
 
 ## 사용하지 않는 API
 

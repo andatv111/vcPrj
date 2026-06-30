@@ -45,7 +45,7 @@ SpecMaster는 V/C 계산에 쓰는 Spec 기준 데이터를 Master/Detail 구조
 | Master 신규 | `POST /api/vc/specmaster` | 팝업 종료 후 grid 재조회 |
 | Master/Detail 수정 | `PATCH /api/vc/specmaster/{specId}` | 팝업 종료 후 grid 재조회 |
 | Detail 신규 | `POST /api/vc/specmaster/{specId}/children` | 팝업 종료 후 grid 재조회 |
-| 삭제 | `DELETE /api/vc/specmaster/{specId}?chgchgrempno=` | grid 재조회 |
+| 논리삭제 | `PATCH /api/vc/specmaster/{specId}` | `DEL_YN=Y` 갱신 후 grid 재조회 |
 
 상단 검색 콤보는 `searchOptions`, 팝업 콤보는 `options`로 분리한다. 최초 진입에는 FAB와 grid API만 호출하고 팝업 후보는 팝업을 열 때 조회한다.
 
