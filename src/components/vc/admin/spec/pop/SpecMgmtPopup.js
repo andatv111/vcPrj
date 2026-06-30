@@ -12,6 +12,7 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
   const form = popup.form;
   const isDetail = popup.scope === "detail";
   const isMaster = popup.scope === "master";
+  const isEdit = popup.mode === "edit";
   const detailSpecEnabled = isDetail || form.detSearYn !== "Y";
   const manualModel = isMaster && form.manualRegYn === "Y";
   const title = `${isDetail ? "Spec Detail" : "Spec Master"} ${popup.mode === "edit" ? "수정" : "신규"}`;
@@ -21,6 +22,12 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
   const modelOptions = getOptionsByKey(options.modelsByMaker, form.maker, fabModelOptions);
   const midProcessOptions = getOptionsByKey(options.operMidByLarge, form.operLargeCatgVal, options.operMidCatgVals);
   const selectedManagerEmpNos = form.chgrEmpno ? form.chgrEmpno.split(",").map((value) => value.trim()).filter(Boolean) : [];
+  const selectedManagerNames = form.chgrNm ? form.chgrNm.split(",").map((value) => value.trim()).filter(Boolean) : [];
+  const selectedManagerDisplay = selectedManagerNames.length
+    ? selectedManagerNames
+        .map((name, index) => selectedManagerEmpNos[index] ? `${name} (${selectedManagerEmpNos[index]})` : name)
+        .join(", ")
+    : selectedManagerEmpNos.join(", ");
 
   const handleManagerConfirm = (managers) => {
     onChange("chgrEmpno", managers.map((manager) => manager.empNo).join(", "));
@@ -43,7 +50,12 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
       onCancel={handleClose}
       footer={
         <Space>
-          <Button type="primary" loading={loading.save} onClick={onSave}>
+          <Button
+            type="primary"
+            loading={loading.save || loading.popupOptions}
+            disabled={loading.popupOptions}
+            onClick={onSave}
+          >
             저장
           </Button>
           <Button onClick={handleClose}>취소</Button>
@@ -65,7 +77,8 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
             required={isMaster}
             value={form.fabId}
             options={options.fabIds}
-            disabled={isDetail}
+            disabled={isDetail || (isMaster && isEdit)}
+            placeholder=""
             onChange={(value) => onChange("fabId", value)}
           />
           <SelectField
@@ -73,7 +86,8 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
             required={isMaster && !manualModel}
             value={form.area}
             options={areaOptions}
-            disabled={isDetail || manualModel || !form.fabId}
+            disabled={isDetail || (isMaster && isEdit) || manualModel || !form.fabId}
+            placeholder=""
             onChange={(value) => onChange("area", value)}
           />
           <SelectField
@@ -81,18 +95,26 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
             required={isMaster && !manualModel}
             value={form.maker}
             options={makerOptions}
-            disabled={isDetail || manualModel || !form.area}
+            disabled={isDetail || (isMaster && isEdit) || manualModel || !form.area}
+            placeholder=""
             onChange={(value) => onChange("maker", value)}
           />
           {manualModel ? (
-            <InputField label="MODEL" required value={form.setModelNm} onChange={(value) => onChange("setModelNm", value)} />
+            <InputField
+              label="MODEL"
+              required
+              value={form.setModelNm}
+              disabled={isEdit}
+              onChange={(value) => onChange("setModelNm", value)}
+            />
           ) : (
             <SelectField
               label="MODEL"
               required={isMaster}
               value={form.setModelNm}
               options={modelOptions}
-              disabled={isDetail || !form.maker}
+              disabled={isDetail || (isMaster && isEdit) || !form.maker}
+              placeholder=""
               onChange={(value) => onChange("setModelNm", value)}
             />
           )}
@@ -104,6 +126,7 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
                 required
                 value={form.operLargeCatgVal}
                 options={options.operLargeCatgVals}
+                placeholder=""
                 onChange={(value) => onChange("operLargeCatgVal", value)}
               />
               <SelectField
@@ -112,6 +135,7 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
                 value={form.operMidCatgVal}
                 options={midProcessOptions}
                 disabled={!form.operLargeCatgVal}
+                placeholder=""
                 onChange={(value) => onChange("operMidCatgVal", value)}
               />
               <SelectField
@@ -120,6 +144,7 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
                 full
                 value={form.chambModelNm}
                 options={options.chambModelNms}
+                placeholder=""
                 onChange={(value) => onChange("chambModelNm", value)}
               />
             </>
@@ -156,7 +181,7 @@ const SpecMgmtPopup = ({ popup, options, loading, onChange, onClose, onSave }) =
             <Space.Compact block>
               <Input
                 readOnly
-                value={form.chgrNm || ""}
+                value={selectedManagerDisplay}
                 placeholder="조직도에서 장비담당자를 선택하세요."
               />
               <Button onClick={() => setOrganizationChartOpen(true)}>조직도</Button>

@@ -4,7 +4,6 @@ import com.example.vcbeprj.domain.SpecMaster;
 import com.example.vcbeprj.service.VcSpecMasterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,6 +42,10 @@ public class VcSpecMasterController {
         );
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("rows", searchedMasters);
+        result.put("details", specMasterService.getChildrenForMasters(searchedMasters));
+        result.put("totalElements", searchedMasters.size());
+        result.put("totalPages", searchedMasters.isEmpty() ? 0 : 1);
+        result.put("selectedSpecId", searchedMasters.isEmpty() ? "" : searchedMasters.get(0).specId());
         return result;
     }
 
@@ -88,13 +91,6 @@ public class VcSpecMasterController {
     public SpecMaster update(@PathVariable String specId, @RequestBody Map<String, Object> payload) {
         log.info("[API][PATCH /api/vc/specmaster/{}]", specId);
         return specMasterService.update(specId, payload);
-    }
-
-    @DeleteMapping("/{specId}")
-    public Map<String, Object> delete(@PathVariable String specId, @RequestParam(required = false) String chgchgrempno) {
-        log.info("[API][DELETE /api/vc/specmaster/{}] chgchgrempno={}", specId, chgchgrempno);
-        int deletedCount = specMasterService.delete(specId);
-        return Map.of("deletedCount", deletedCount);
     }
 
     @GetMapping("/{specId}/children")

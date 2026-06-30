@@ -29,7 +29,7 @@ public class VcSpecMasterService {
 
     public List<SpecMaster> getSpecByEquipmentCondition(String fabId, String setModelNm) {
         log.info("[SERVICE][SPEC_MASTER][SELECT] business=getSpecByEquipmentCondition table={} fabId={} setModelNm={}", SPEC_TABLE, fabId, setModelNm);
-        List<SpecMaster> result = repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+        List<SpecMaster> result = activeRows().stream()
                 .filter(row -> row.fabId().equals(fabId))
                 .filter(row -> setModelNm == null || setModelNm.isBlank() || row.setModelNm().equals(setModelNm))
                 .filter(row -> "0".equals(row.modelSpecUseYn()))
@@ -40,7 +40,7 @@ public class VcSpecMasterService {
 
     public Optional<SpecMaster> getSpecForJudge(String fabId, String setModelNm, String chamberModelNm) {
         log.info("[SERVICE][SPEC_MASTER][SELECT] business=getSpecForJudge table={} fabId={} setModelNm={} chamberModelNm={}", SPEC_TABLE, fabId, setModelNm, chamberModelNm);
-        Optional<SpecMaster> result = repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+        Optional<SpecMaster> result = activeRows().stream()
                 .filter(row -> row.fabId().equals(fabId))
                 .filter(row -> row.setModelNm().equals(setModelNm))
                 .filter(row -> row.chambModelNm().equals(chamberModelNm))
@@ -52,7 +52,7 @@ public class VcSpecMasterService {
 
     public List<SpecMaster> getAllUsableSpecs() {
         log.info("[SERVICE][SPEC_MASTER][SELECT] business=getAllUsableSpecs table={}", SPEC_TABLE);
-        return repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+        return activeRows().stream()
                 .filter(this::validateSpecUsable)
                 .toList();
     }
@@ -60,7 +60,7 @@ public class VcSpecMasterService {
     public List<SpecMaster> searchMasters(String fabId, String setModelNm, String specNm) {
         log.info("[SERVICE][SPEC_MASTER][SELECT] business=searchMasters table={} fabId={} setModelNm={} specNm={}",
                 SPEC_TABLE, fabId, setModelNm, specNm);
-        return repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+        return activeRows().stream()
                 // SpecMaster 화면의 좌측 grid는 Master만 보여야 하므로 upperCd가 비어 있는 row만 사용합니다.
                 .filter(row -> isBlank(row.upperCd()))
                 .filter(row -> isBlank(fabId) || equalsText(row.fabId(), fabId))
@@ -73,10 +73,53 @@ public class VcSpecMasterService {
                 .toList();
     }
 
+    public List<Map<String, String>> getFabOptions() {
+        log.info("[SERVICE][SPEC_MASTER][SELECT] business=getFabOptions table={}", SPEC_TABLE);
+        return toOptions(distinctOptions(activeRows(), SpecMaster::fabId));
+    }
+
+    public List<Map<String, String>> getSpecModelOptions(String fabId) {
+        log.info("[SERVICE][SPEC_MASTER][SELECT] business=getSpecModelOptions table={} fabId={}", SPEC_TABLE, fabId);
+        if (isBlank(fabId)) return List.of();
+
+        List<String> models = activeRows().stream()
+                .filter(row -> equalsText(row.fabId(), fabId))
+                .map(SpecMaster::setModelNm)
+                .filter(value -> !isBlank(value))
+                .distinct()
+                .sorted()
+                .toList();
+        return toOptions(models);
+    }
+
+    public List<Map<String, String>> searchSpecNameSuggestions(String fabId, String specNm) {
+        log.info("[SERVICE][SPEC_MASTER][SELECT] business=searchSpecNameSuggestions table={} fabId={} specNm={}",
+                SPEC_TABLE, fabId, specNm);
+        if (isBlank(fabId) || isBlank(specNm)) return List.of();
+
+        return activeRows().stream()
+                .filter(row -> equalsText(row.fabId(), fabId))
+                .filter(row -> containsText(row.specNm(), specNm))
+                .map(row -> Map.of(
+                        "value", row.specNm(),
+                        "label", displayText(row.setModelNm())
+                ))
+                .collect(Collectors.toMap(
+                        item -> item.get("value"),
+                        Function.identity(),
+                        (left, ignored) -> left,
+                        LinkedHashMap::new
+                ))
+                .values()
+                .stream()
+                .limit(10)
+                .toList();
+    }
+
     public List<Map<String, String>> searchSpecNameSuggestions(String keyword) {
         log.info("[SERVICE][SPEC_MASTER][SELECT] business=searchSpecNameSuggestions table={} keyword={}", SPEC_TABLE, keyword);
 
-        return repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+        return activeRows().stream()
                 .filter(row -> isBlank(keyword) || containsText(row.specNm(), keyword))
                 .map(row -> Map.of(
                         "value", row.specNm(),
@@ -97,7 +140,7 @@ public class VcSpecMasterService {
     public List<SpecMaster> searchAll(String fabId, String setModelNm, String operLargeCatgVal, String operMidCatgVal, String chambModelNm) {
         log.info("[SERVICE][SPEC_MASTER][SELECT] business=searchAll table={} fabId={} setModelNm={} operLarge={} operMid={} chamber={}",
                 SPEC_TABLE, fabId, setModelNm, operLargeCatgVal, operMidCatgVal, chambModelNm);
-        return repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+        return activeRows().stream()
                 .filter(row -> isBlank(fabId) || equalsText(row.fabId(), fabId))
                 .filter(row -> isBlank(setModelNm) || equalsText(row.setModelNm(), setModelNm))
                 .filter(row -> isBlank(operLargeCatgVal) || equalsText(row.operLargeCatgVal(), operLargeCatgVal))
@@ -107,14 +150,14 @@ public class VcSpecMasterService {
     }
 
     public Optional<SpecMaster> getById(String specId) {
-        return repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+        return activeRows().stream()
                 .filter(row -> equalsText(row.specId(), specId))
                 .findFirst();
     }
 
     public List<SpecMaster> getChildren(String parentSpecId) {
         log.info("[SERVICE][SPEC_MASTER][SELECT] business=getChildren table={} parentSpecId={}", SPEC_TABLE, parentSpecId);
-        return repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+        return activeRows().stream()
                 // Detail row는 upperCd에 상위 Master의 specId를 저장합니다.
                 .filter(row -> equalsText(row.upperCd(), parentSpecId))
                 .sorted(Comparator
@@ -124,8 +167,22 @@ public class VcSpecMasterService {
                 .toList();
     }
 
+    public List<SpecMaster> getChildrenForMasters(List<SpecMaster> masters) {
+        List<String> masterSpecIds = masters.stream().map(SpecMaster::specId).toList();
+        if (masterSpecIds.isEmpty()) return List.of();
+
+        return activeRows().stream()
+                .filter(row -> masterSpecIds.contains(row.upperCd()))
+                .sorted(Comparator
+                        .comparing(SpecMaster::upperCd, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(SpecMaster::operLargeCatgVal, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(SpecMaster::operMidCatgVal, Comparator.nullsLast(String::compareTo))
+                        .thenComparing(SpecMaster::chambModelNm, Comparator.nullsLast(String::compareTo)))
+                .toList();
+    }
+
     public Map<String, Object> filterOptions() {
-        List<SpecMaster> rows = repository.selectAll(SPEC_TABLE, SpecMaster.class);
+        List<SpecMaster> rows = activeRows();
         Map<String, Object> result = new LinkedHashMap<>();
         // 콤보 API는 조회 결과와 분리한다. 화면 테스트가 가능한 소수 후보만 내려 과도한 콤보 노출을 막는다.
         result.put("fabIds", List.of("M16", "M15", "M14", "M13", "M12"));
@@ -198,16 +255,8 @@ public class VcSpecMasterService {
         return updated;
     }
 
-    public int delete(String specId) {
-        // 현재 preview 정책은 Master 삭제 시 하위 Detail도 함께 삭제입니다.
-        // 운영 정책이 "하위 Detail이 있으면 삭제 불가"로 바뀌면 이 경계만 조정하면 됩니다.
-        int deletedChildren = repository.deleteWhere(SPEC_TABLE, SpecMaster.class, row -> equalsText(row.upperCd(), specId));
-        int deletedSelf = repository.deleteWhere(SPEC_TABLE, SpecMaster.class, row -> equalsText(row.specId(), specId));
-        return deletedChildren + deletedSelf;
-    }
-
     public boolean validateSpecUsable(SpecMaster spec) {
-        return spec != null && "0".equals(spec.modelSpecUseYn());
+        return isActive(spec) && "0".equals(spec.modelSpecUseYn());
     }
 
     public String getSpecManager(String specId) {
@@ -239,6 +288,7 @@ public class VcSpecMasterService {
                 value(payload, "chgrEmpno", ""),
                 value(payload, "chgrNm", ""),
                 value(payload, "specDesc", ""),
+                value(payload, "delYn", "N"),
                 now,
                 value(payload, "regEmpno", ""),
                 now,
@@ -265,6 +315,7 @@ public class VcSpecMasterService {
                 value(payload, "chgrEmpno", current.chgrEmpno()),
                 value(payload, "chgrNm", current.chgrNm()),
                 value(payload, "specDesc", current.specDesc()),
+                value(payload, "delYn", current.delYn()),
                 current.regTm(),
                 current.regEmpno(),
                 OffsetDateTime.now().toString(),
@@ -279,6 +330,22 @@ public class VcSpecMasterService {
                 .distinct()
                 .sorted()
                 .collect(Collectors.toList());
+    }
+
+    private List<SpecMaster> activeRows() {
+        return repository.selectAll(SPEC_TABLE, SpecMaster.class).stream()
+                .filter(this::isActive)
+                .toList();
+    }
+
+    private boolean isActive(SpecMaster row) {
+        return row != null && !"Y".equalsIgnoreCase(row.delYn());
+    }
+
+    private List<Map<String, String>> toOptions(List<String> values) {
+        return values.stream()
+                .map(value -> Map.of("value", value, "label", value))
+                .toList();
     }
 
     private List<String> limitedOptions(List<SpecMaster> rows, Function<SpecMaster, String> mapper, int limit) {

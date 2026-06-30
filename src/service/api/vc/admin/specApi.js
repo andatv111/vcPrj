@@ -2,7 +2,9 @@ export const VC_SPEC_ENDPOINTS = {
   createMaster: "/api/vc/specmaster",
   selectCondition: "/api/vc/specmaster/selectcondition",
   selectFilterOptions: "/api/vc/specmaster/selectfilteroptions",
-  specNameSuggestions: "/api/vc/specmaster/specnames",
+  getFabOptions: "/api/vc/code/getFabOptions",
+  getSpecMModelOptions: "/api/vc/code/getSpecMModelOptions",
+  getMSpecNMs: "/api/vc/code/getMSpecNMs",
   specById: (specId) => `/api/vc/specmaster/${encodeURIComponent(specId)}`,
   children: (specId) => `/api/vc/specmaster/${encodeURIComponent(specId)}/children`,
 };
@@ -76,14 +78,24 @@ const requestJson = async (url, { method = "GET", params, body } = {}) => {
 };
 
 export const specApi = {
-  selectFilterOptions() {
-    return requestJson(VC_SPEC_ENDPOINTS.selectFilterOptions);
+  getFabOptions() {
+    return requestJson(VC_SPEC_ENDPOINTS.getFabOptions);
   },
 
-  searchSpecNameSuggestions(keyword) {
-    return requestJson(VC_SPEC_ENDPOINTS.specNameSuggestions, {
-      params: { keyword },
+  getSpecModelOptions(fabId) {
+    return requestJson(VC_SPEC_ENDPOINTS.getSpecMModelOptions, {
+      params: { fabId },
     });
+  },
+
+  searchSpecNameSuggestions({ fabId, specNm }) {
+    return requestJson(VC_SPEC_ENDPOINTS.getMSpecNMs, {
+      params: { fabId, specNm },
+    });
+  },
+
+  selectFilterOptions() {
+    return requestJson(VC_SPEC_ENDPOINTS.selectFilterOptions);
   },
 
   selectCondition({ search }) {
@@ -127,10 +139,10 @@ export const specApi = {
     return requestJson(VC_SPEC_ENDPOINTS.children(parentSpecId));
   },
 
-  deleteSpec(specId, chgchgrempno = "") {
+  markSpecDeleted(specId, chgChgrEmpno = "") {
     return requestJson(VC_SPEC_ENDPOINTS.specById(specId), {
-      method: "DELETE",
-      params: { chgchgrempno },
+      method: "PATCH",
+      body: { delYn: "Y", chgChgrEmpno },
     });
   },
 };

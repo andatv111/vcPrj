@@ -13,12 +13,13 @@ import {
   selectSpecMgmtOptions,
   selectSpecMgmtPopup,
   selectSpecMgmtSearch,
+  selectSpecMgmtSearchOptions,
   selectSpecMgmtSpecNameSuggestions,
   selectSpecMgmtSelectedDetail,
   selectSpecMgmtSelectedDetailSpecId,
   selectSpecMgmtSelectedMaster,
   selectSpecMgmtSelectedSpecId,
-} from "@/store/vc/specSelector";
+} from "@/store/vc/spec/specSelector";
 import {
   createEmptyFilters,
   DETAIL_PAGE_SIZE,
@@ -39,7 +40,8 @@ import { DetailGridPanel, MasterGridPanel } from "@/components/vc/admin/spec/ui/
 const SpecMgmt = () => {
   const dispatch = useDispatch();
   const search = useSelector(selectSpecMgmtSearch);
-  const options = useSelector(selectSpecMgmtOptions);
+  const searchOptions = useSelector(selectSpecMgmtSearchOptions);
+  const popupOptions = useSelector(selectSpecMgmtOptions);
   const specNameSuggestions = useSelector(selectSpecMgmtSpecNameSuggestions);
   const masterRows = useSelector(selectSpecMgmtMasterRows);
   const detailRows = useSelector(selectSpecMgmtSelectedDetailRows);
@@ -80,8 +82,27 @@ const SpecMgmt = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    dispatch(specMasterActions.fetchSpecNameSuggestionsRequest(search.specNm));
-  }, [dispatch, search.specNm]);
+    if (!search.fabId) {
+      dispatch(specMasterActions.clearModelOptions());
+      return;
+    }
+
+    dispatch(specMasterActions.fetchModelOptionsRequest(search.fabId));
+  }, [dispatch, search.fabId]);
+
+  useEffect(() => {
+    const specNm = String(search.specNm || "").trim();
+
+    if (!search.fabId || !specNm) {
+      dispatch(specMasterActions.clearSpecNameSuggestions());
+      return;
+    }
+
+    dispatch(specMasterActions.fetchSpecNameSuggestionsRequest({
+      fabId: search.fabId,
+      specNm,
+    }));
+  }, [dispatch, search.fabId, search.specNm]);
 
   useEffect(() => {
     setMasterPage(0);
@@ -158,7 +179,7 @@ const SpecMgmt = () => {
     <SpecMgmtMainStyle className="page embedded-page vc-pub-screen spec-master-screen">
       <SearchPanel
         search={search}
-        options={options}
+        searchOptions={searchOptions}
         specNameSuggestions={specNameSuggestions}
         loading={loading}
         onChange={(name, value) => dispatch(specMasterActions.setSearchField({ name, value }))}
@@ -211,7 +232,7 @@ const SpecMgmt = () => {
 
       <SpecMgmtPopup
         popup={popup}
-        options={options}
+        options={popupOptions}
         loading={loading}
         onChange={(name, value) => dispatch(specMasterActions.setPopupField({ name, value }))}
         onClose={() => dispatch(specMasterActions.closePopup())}
@@ -221,22 +242,31 @@ const SpecMgmt = () => {
   );
 };
 
-const SearchPanel = ({ search, options, specNameSuggestions, loading, onChange, onReset, onSearch }) => {
-  const modelOptions =
-    search.fabId && options.modelsByFab[search.fabId] ? options.modelsByFab[search.fabId] : options.setModelNms;
-  const specNameItems = specNameSuggestions.length ? specNameSuggestions : options.specNms;
-
+const SearchPanel = ({ search, searchOptions, specNameSuggestions, loading, onChange, onReset, onSearch }) => {
   return (
     <section className="panel vc-pub-section searchStyle search_area">
       <div className="section-title">Search Conditions</div>
       <div className="search-row vc-pub-search-row vc-search-actions-row">
-        <SelectField label="FAB" value={search.fabId} options={options.fabIds} onChange={(value) => onChange("fabId", value)} />
-        <SelectField label="MODEL" value={search.setModelNm} options={modelOptions} onChange={(value) => onChange("setModelNm", value)} />
+        <SelectField
+          label="FAB"
+          value={search.fabId}
+          options={searchOptions.fabIds}
+          disabled={loading.fabOptions}
+          onChange={(value) => onChange("fabId", value)}
+        />
+        <SelectField
+          label="MODEL"
+          value={search.setModelNm}
+          options={searchOptions.setModelNms}
+          disabled={!search.fabId || loading.modelOptions}
+          onChange={(value) => onChange("setModelNm", value)}
+        />
         <SuggestInput
           label="Spec Name"
           value={search.specNm}
           placeholder="Spec Name"
-          items={specNameItems}
+          items={specNameSuggestions}
+          disabled={!search.fabId}
           onChange={(value) => onChange("specNm", value)}
         />
         <Space className="vc-search-actions">

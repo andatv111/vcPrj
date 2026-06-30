@@ -7,7 +7,16 @@ const toSelectOptions = (options = []) =>
     value: option.value || option.label,
   }));
 
-export const SelectField = ({ label, value, options = [], required = false, disabled = false, full = false, onChange }) => (
+export const SelectField = ({
+  label,
+  value,
+  options = [],
+  required = false,
+  disabled = false,
+  full = false,
+  placeholder = "All",
+  onChange,
+}) => (
   <Form.Item
     className={full ? "signlw-form-item full-grid-field" : "signlw-form-item"}
     label={label}
@@ -19,7 +28,7 @@ export const SelectField = ({ label, value, options = [], required = false, disa
       showSearch
       value={value || undefined}
       disabled={disabled}
-      placeholder="All"
+      placeholder={placeholder}
       options={toSelectOptions(options)}
       optionFilterProp="label"
       onChange={(nextValue) => onChange(nextValue || "")}

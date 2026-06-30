@@ -87,7 +87,8 @@ npm run test:vc
 ### Spec Master
 
 - 메뉴 경로는 `V/C Administration > Spec Master`입니다.
-- FAB 콤보는 회사 공통코드 API `/api/commcode/comm-code-list?mstCd=VC_FAB_ID&sysId=VC`를 원천으로 사용합니다.
+- 검색조건 FAB 콤보는 `/api/vc/code/getFabOptions`, 선택 FAB의 MODEL 콤보는 `/api/vc/code/getSpecMModelOptions?fabId=`를 사용합니다.
+- Spec Name 자동완성은 FAB 선택 후 `/api/vc/code/getMSpecNMs?fabId=&specNm=`를 호출합니다.
 - 좌측 Master Grid는 `upperCd`가 빈 상위 Spec만 보여줍니다.
 - 우측 Detail Grid는 선택한 Master의 `specId`를 기준으로 `upperCd == specId`인 상세 Spec을 보여줍니다.
 - Master 팝업에는 공정대분류, 공정중분류, CHAMBER SPEC을 노출하지 않습니다.

@@ -20,6 +20,7 @@ public record SpecMaster(
         String chgrEmpno,
         String chgrNm,
         String specDesc,
+        String delYn,
         String regTm,
         String regEmpno,
         String chgDtNm,

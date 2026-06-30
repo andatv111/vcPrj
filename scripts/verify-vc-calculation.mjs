@@ -28,7 +28,7 @@ try {
   const calculatorActionModule = await vite.ssrLoadModule("/src/store/vc/vcCalculator/action.js");
   const specModule = await vite.ssrLoadModule("/src/store/vc/spec/reducer.js");
   const specActionModule = await vite.ssrLoadModule("/src/store/vc/spec/action.js");
-  const specSelectorModule = await vite.ssrLoadModule("/src/store/vc/specSelector.js");
+  const specSelectorModule = await vite.ssrLoadModule("/src/store/vc/spec/specSelector.js");
   const specCoreModule = await vite.ssrLoadModule("/src/components/vc/admin/spec/core/SpecMgmt.core.js");
   const drawingGridModule = await vite.ssrLoadModule("/src/components/vc/nonBim/core/DrawingGrid.core.js");
 
@@ -54,8 +54,8 @@ try {
   assert.equal(specState.selectedDetailSpecId, "DETAIL-11-2");
   specState = specModule.default(specState, specActionModule.default.selectMaster("MASTER-12"));
   assert.equal(specState.selectedSpecId, "MASTER-12");
-  assert.equal(specState.selectedDetailSpecId, "");
-  assert.deepEqual(specState.detailRows, []);
+  assert.equal(specState.selectedDetailSpecId, "DETAIL-12-1");
+  assert.equal(specState.detailRows.length, 64);
   specState = specModule.default(
     specState,
     specActionModule.default.searchSuccess({
@@ -90,10 +90,59 @@ try {
   assert.equal(specCoreModule.getPageForRow(specMasters, "MASTER-16", 10), 1);
   assert.equal(specCoreModule.getPageForRow(specMasters, "MASTER-32", 10), 3);
 
+  // 검색조건 FAB/MODEL/specNm은 팝업 options와 분리하고, 이전 FAB의 늦은 MODEL 응답은 버린다.
+  specState = specModule.default(
+    specState,
+    specActionModule.default.fetchFabOptionsSuccess([
+      { value: "M16", label: "M16" },
+      { value: "M15", label: "M15" },
+    ])
+  );
+  specState = specModule.default(
+    specState,
+    specActionModule.default.setSearchField({ name: "fabId", value: "M16" })
+  );
+  assert.deepEqual(specState.searchOptions.fabIds.map((item) => item.value), ["M16", "M15"]);
+  assert.deepEqual(specState.searchOptions.setModelNms, []);
+  assert.equal(specState.search.setModelNm, "");
+  assert.equal(specState.search.specNm, "");
+
+  specState = specModule.default(
+    specState,
+    specActionModule.default.fetchModelOptionsRequest("M16")
+  );
+  specState = specModule.default(
+    specState,
+    specActionModule.default.setSearchField({ name: "fabId", value: "M15" })
+  );
+  const beforeStaleModelResponse = specState;
+  specState = specModule.default(
+    specState,
+    specActionModule.default.fetchModelOptionsSuccess({
+      fabId: "M16",
+      items: [{ value: "OLD-MODEL", label: "OLD-MODEL" }],
+    })
+  );
+  assert.deepEqual(specState.searchOptions.setModelNms, []);
+  assert.equal(specState, beforeStaleModelResponse);
+
+  specState = specModule.default(
+    specState,
+    specActionModule.default.fetchModelOptionsSuccess({
+      fabId: "M15",
+      items: [{ value: "CURRENT-MODEL", label: "CURRENT-MODEL" }],
+    })
+  );
+  assert.deepEqual(specState.searchOptions.setModelNms.map((item) => item.value), ["CURRENT-MODEL"]);
+  assert.deepEqual(
+    specActionModule.default.fetchSpecNameSuggestionsRequest({ fabId: "M15", specNm: "CVD" }).payload,
+    { fabId: "M15", specNm: "CVD" }
+  );
+
   // 기존 첫 Master도 수정 팝업에서 AREA/MAKER/MODEL 의존값이 즉시 채워져야 한다.
   specState = specModule.default(
     specState,
-    specActionModule.default.initSuccess({
+    specActionModule.default.fetchPopupOptionsSuccess({
       areasByFab: { M12: [{ value: "M12A", label: "M12A" }] },
       makersByArea: { M12A: [{ value: "AMAT", label: "AMAT" }] },
       modelsByMaker: { AMAT: [{ value: "CVD-Legacy-2", label: "CVD-Legacy-2" }] },

@@ -5,7 +5,7 @@ import {
   selectSpecMgmtPopup,
   selectSpecMgmtSearch,
   selectSpecMgmtState,
-} from "@/store/vc/specSelector";
+} from "@/store/vc/spec/specSelector";
 import specApi from "@/service/api/vc/admin/specApi";
 
 const toArray = (value) => {
@@ -94,6 +94,7 @@ const normalizeSpecRow = (row = {}, index = 0) => ({
   chgrEmpno: row.chgrEmpno || "",
   chgrNm: row.chgrNm || "",
   specDesc: row.specDesc || "",
+  delYn: row.delYn || "N",
   raw: row,
 });
 
@@ -138,9 +139,43 @@ const validatePopup = (scope, form) => {
 };
 
 function* loadFilterOptionsFlow() {
-  // 콤보 후보는 grid 조회 결과와 분리된 전용 API에서 받는다.
-  const response = yield call(specApi.selectFilterOptions);
-  yield put(specMasterActions.initSuccess(normalizeOptions(response)));
+  try {
+    // 팝업 콤보 후보는 상단 검색 콤보와 분리된 기존 전용 API에서 받는다.
+    const response = yield call(specApi.selectFilterOptions);
+    yield put(specMasterActions.fetchPopupOptionsSuccess(normalizeOptions(response)));
+  } catch (error) {
+    yield put(specMasterActions.fetchPopupOptionsFailure(getErrorMessage(error)));
+  }
+}
+
+function* loadFabOptionsFlow() {
+  try {
+    const response = yield call(specApi.getFabOptions);
+    yield put(specMasterActions.fetchFabOptionsSuccess(uniqueOptions(response)));
+  } catch (error) {
+    yield put(specMasterActions.fetchFabOptionsFailure(getErrorMessage(error)));
+  }
+}
+
+function* fetchModelOptionsFlow(action) {
+  const fabId = action.payload?.fabId || "";
+  if (!fabId) {
+    yield put(specMasterActions.clearModelOptions());
+    return;
+  }
+
+  try {
+    const response = yield call(specApi.getSpecModelOptions, fabId);
+    yield put(specMasterActions.fetchModelOptionsSuccess({
+      fabId,
+      items: uniqueOptions(response),
+    }));
+  } catch (error) {
+    yield put(specMasterActions.fetchModelOptionsFailure({
+      fabId,
+      error: getErrorMessage(error),
+    }));
+  }
 }
 
 function* loadSpecConditionFlow(action = {}) {
@@ -156,34 +191,41 @@ function* loadSpecConditionFlow(action = {}) {
     });
 
     const allRows = toArray(response.rows || response.content || response);
-    const rows = allRows.map(normalizeSpecRow).filter((row) => !row.upperCd);
+    // B/E 조회조건이 기본이지만, 삭제 데이터가 섞여 와도 grid에는 노출하지 않는다.
+    const rows = allRows.map(normalizeSpecRow).filter((row) => row.delYn !== "Y" && !row.upperCd);
+    const details = toArray(response.details)
+      .map(normalizeSpecRow)
+      .filter((row) => row.delYn !== "Y" && row.upperCd);
     const selectedSpecId = rows.some((row) => row.specId === requestedSpecId)
       ? requestedSpecId
       : rows[0]?.specId || "";
 
     yield put(specMasterActions.searchSuccess({
       rows,
-      details: [],
+      details,
       selectedSpecId,
       selectedDetailSpecId: requestedDetailSpecId,
     }));
-    if (selectedSpecId) {
-      yield put(specMasterActions.selectMaster(selectedSpecId, requestedDetailSpecId));
-    }
   } catch (error) {
     yield put(specMasterActions.searchFailure(getErrorMessage(error)));
   }
 }
 
 function* fetchSpecNameSuggestionsFlow(action) {
-  try {
-    const keyword = action.payload?.keyword || "";
+  const fabId = action.payload?.fabId || "";
+  const specNm = String(action.payload?.specNm || "").trim();
 
+  if (!fabId || !specNm) {
+    yield put(specMasterActions.clearSpecNameSuggestions());
+    return;
+  }
+
+  try {
     yield delay(200);
 
-    const response = yield call(specApi.searchSpecNameSuggestions, keyword);
+    const response = yield call(specApi.searchSpecNameSuggestions, { fabId, specNm });
     const items = toArray(response).map(normalizeOption).filter((item) => item.value);
-    yield put(specMasterActions.fetchSpecNameSuggestionsSuccess(items));
+    yield put(specMasterActions.fetchSpecNameSuggestionsSuccess({ fabId, specNm, items }));
   } catch (error) {
     yield put(specMasterActions.fetchSpecNameSuggestionsFailure(getErrorMessage(error)));
   }
@@ -191,8 +233,12 @@ function* fetchSpecNameSuggestionsFlow(action) {
 
 function* initSpecMasterFlow() {
   try {
-    yield call(loadFilterOptionsFlow);
-    yield call(loadSpecConditionFlow);
+    // 최초 진입에서는 FAB 콤보와 grid만 병렬 조회한다. MODEL/specNm/popup 콤보는 필요할 때 조회한다.
+    yield all([
+      call(loadFabOptionsFlow),
+      call(loadSpecConditionFlow),
+    ]);
+    yield put(specMasterActions.initSuccess());
   } catch (error) {
     const message = getErrorMessage(error);
     yield put(specMasterActions.initFailure(message));
@@ -233,7 +279,6 @@ function* saveSpecMasterFlow() {
       nextSelectedSpecId = savedRow?.specId || "";
     }
 
-    yield call(loadFilterOptionsFlow);
     yield put(specMasterActions.saveSuccess("Spec Master 저장이 완료되었습니다."));
     // 저장한 값이 기존 검색조건에서 벗어나도 정확한 row와 페이지를 다시 찾을 수 있게 전체 목록으로 복귀한다.
     yield put(specMasterActions.resetSearch());
@@ -260,9 +305,8 @@ function* deleteSpecMasterFlow(action) {
     const nextSelectedSpecId = scope === "master" ? nextRow?.specId || "" : state.selectedSpecId;
     const nextSelectedDetailSpecId = scope === "detail" ? nextRow?.specId || "" : "";
 
-    yield call(specApi.deleteSpec, specId, user?.empNo || user?.empno || "");
-    yield call(loadFilterOptionsFlow);
-    yield put(specMasterActions.deleteSuccess("Spec Master 삭제가 완료되었습니다."));
+    yield call(specApi.markSpecDeleted, specId, user?.empNo || user?.empno || "");
+    yield put(specMasterActions.deleteSuccess("Spec Master 삭제 처리가 완료되었습니다."));
     yield put(specMasterActions.searchRequest({
       selectedSpecId: nextSelectedSpecId,
       selectedDetailSpecId: nextSelectedDetailSpecId,
@@ -286,29 +330,19 @@ function* openEditPopupFlow(action) {
   }
 }
 
-function* selectMasterFlow(action) {
-  try {
-    const specId = action.payload?.specId;
-    if (!specId) return;
-    const state = yield select(selectSpecMgmtState);
-    const details = toArray(yield call(specApi.getChildren, specId)).map(normalizeSpecRow);
-
-    yield put(specMasterActions.searchSuccess({
-      rows: state.masterRows,
-      details,
-      selectedSpecId: specId,
-      selectedDetailSpecId: action.payload?.selectedDetailSpecId || "",
-    }));
-  } catch (error) {
-    yield put(specMasterActions.searchFailure(getErrorMessage(error)));
-  }
-}
-
 export function* watchSpecSaga() {
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.INIT_REQUEST, initSpecMasterFlow);
+  yield takeLatest(SPEC_MASTER_ACTION_TYPES.FETCH_FAB_OPTIONS_REQUEST, loadFabOptionsFlow);
+  yield takeLatest(SPEC_MASTER_ACTION_TYPES.FETCH_MODEL_OPTIONS_REQUEST, fetchModelOptionsFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.FETCH_SPEC_NAME_SUGGESTIONS_REQUEST, fetchSpecNameSuggestionsFlow);
+  yield takeLatest(SPEC_MASTER_ACTION_TYPES.FETCH_POPUP_OPTIONS_REQUEST, loadFilterOptionsFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.SEARCH_REQUEST, loadSpecConditionFlow);
-  yield takeLatest(SPEC_MASTER_ACTION_TYPES.SELECT_MASTER, selectMasterFlow);
+  yield takeLatest(
+    [SPEC_MASTER_ACTION_TYPES.OPEN_CREATE_POPUP, SPEC_MASTER_ACTION_TYPES.OPEN_EDIT_POPUP],
+    function* loadPopupOptionsOnOpen() {
+      yield put(specMasterActions.fetchPopupOptionsRequest());
+    }
+  );
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.OPEN_EDIT_POPUP, openEditPopupFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.SAVE_REQUEST, saveSpecMasterFlow);
   yield takeLatest(SPEC_MASTER_ACTION_TYPES.DELETE_REQUEST, deleteSpecMasterFlow);
